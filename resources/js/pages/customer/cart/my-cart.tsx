@@ -192,7 +192,7 @@ export default function MyCart({
 
                     {!isEmpty ? (
                         <>
-                            <div className="mb-8 grid gap-4 lg:grid-cols-[1fr_430px] lg:items-end">
+                            <div className="mb-8 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,430px)] lg:items-end">
                                 <div>
                                     <h1 className="text-[36px] leading-none font-black tracking-normal md:text-[46px]">
                                         My Cart
@@ -230,8 +230,8 @@ export default function MyCart({
                                 </div>
                             )}
 
-                            <div className="mb-12 grid gap-9 lg:grid-cols-[1fr_430px] lg:items-start">
-                                <section>
+                            <div className="mb-12 grid gap-9 lg:grid-cols-[minmax(0,1fr)_minmax(320px,430px)] lg:items-start">
+                                <section className="min-w-0">
                                     <div className="overflow-hidden border border-[#CFCFCF]">
                                         <div className="hidden grid-cols-[1fr_170px_190px_170px_50px] border-b border-[#CFCFCF] bg-white px-6 py-4 text-xs font-black tracking-[0.04em] uppercase lg:grid">
                                             <span>Product</span>
@@ -520,7 +520,7 @@ function OrderSummary({
     onCheckout: () => void;
 }) {
     return (
-        <aside className="border border-[#CFCFCF] bg-white p-6 lg:p-7">
+        <aside className="min-w-0 border border-[#CFCFCF] bg-white p-6 lg:p-7">
             <h2 className="mb-5 text-2xl font-black tracking-normal uppercase">
                 Order Summary
             </h2>
@@ -583,13 +583,13 @@ function SummaryRow({
 }) {
     return (
         <div
-            className={`flex items-center justify-between gap-4 ${accent ? 'font-black text-[#F58220]' : ''}`}
+            className={`flex items-start justify-between gap-4 ${accent ? 'font-black text-[#F58220]' : ''}`}
         >
-            <span className="flex items-center gap-2">
+            <span className="flex min-w-0 items-center gap-2">
                 {label}
                 {icon}
             </span>
-            <span className="font-black tabular-nums">{value}</span>
+            <span className="shrink-0 font-black tabular-nums">{value}</span>
         </div>
     );
 }

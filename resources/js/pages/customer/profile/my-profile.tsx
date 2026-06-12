@@ -1,17 +1,19 @@
 import { Link, useForm, usePage } from '@inertiajs/react';
 import {
-    User,
-    MapPin,
     Eye,
     EyeOff,
+    Home,
     Loader2,
-    LogOut,
+    Lock,
+    MapPin,
+    Upload,
+    User,
 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
+
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import SecurityController from '@/actions/App/Http/Controllers/Settings/SecurityController';
 import ProfileLayout from '@/layouts/profile-layout';
-import { logout } from '@/routes';
 import { dashboard as adminDashboard } from '@/routes/admin';
 
 type UserProp = {
@@ -54,7 +56,6 @@ export default function MyProfile() {
     }>({});
     const isAdmin = user.role.toLowerCase() === 'admin';
 
-    // --- Personal Info Form ---
     const profileForm = useForm<{
         name: string;
         email: string;
@@ -67,8 +68,8 @@ export default function MyProfile() {
         avatar_url: null,
     });
 
-    const submitProfile = (e: React.FormEvent) => {
-        e.preventDefault();
+    const submitProfile = (event: React.FormEvent) => {
+        event.preventDefault();
 
         const nextErrors: { name?: string; phone?: string } = {};
 
@@ -116,7 +117,6 @@ export default function MyProfile() {
         setAvatarPreview(file ? URL.createObjectURL(file) : null);
     };
 
-    // --- Password UI ---
     const [showPassword1, setShowPassword1] = useState(false);
     const [showPassword2, setShowPassword2] = useState(false);
     const [showPassword3, setShowPassword3] = useState(false);
@@ -131,8 +131,8 @@ export default function MyProfile() {
         password_confirmation: '',
     });
 
-    const submitPassword = (e: React.FormEvent) => {
-        e.preventDefault();
+    const submitPassword = (event: React.FormEvent) => {
+        event.preventDefault();
 
         const nextErrors: {
             current_password?: string;
@@ -191,35 +191,18 @@ export default function MyProfile() {
                 { label: 'Pengaturan Profil' },
             ]}
         >
-            {/* Profile Header */}
-            <div className="animate-fade-in-up flex flex-col items-start justify-between border-b border-[#e7e2de] pb-8 md:flex-row md:items-center">
-                <div className="mb-6 flex items-center space-x-6 md:mb-0">
-                    <div
-                        className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-[#e7e2de] bg-white text-[#6f6f6f] md:h-24 md:w-24"
-                    >
-                        {avatarSrc ? (
-                            <img
-                                src={avatarSrc}
-                                alt={user.name}
-                                className="h-full w-full object-cover"
-                            />
-                        ) : (
-                            <User
-                                size={36}
-                                strokeWidth={1.6}
-                                aria-hidden="true"
-                            />
-                        )}
-                    </div>
+            <div className="mb-5 flex flex-col gap-5 border-b border-[#D8D8D8] pb-5 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-center gap-8">
+                    <AvatarFrame avatarSrc={avatarSrc} name={user.name} />
                     <div>
-                        <h2 className="mb-1 font-serif text-xl text-[#151515] md:text-2xl">
+                        <h2 className="text-[30px] leading-none font-black tracking-normal text-[#1A1A1A]">
                             {user.name}
                         </h2>
-                        <p className="mb-1 text-[12px] text-[#6f6f6f] md:text-[13px]">
+                        <p className="mt-2 text-base font-medium text-[#1A1A1A]">
                             {user.email}
                         </p>
                         {user.member_since && (
-                            <p className="mb-3 text-[11px] text-[#6f6f6f]">
+                            <p className="mt-2 text-sm font-medium text-[#707070]">
                                 Member sejak {user.member_since}
                             </p>
                         )}
@@ -227,357 +210,428 @@ export default function MyProfile() {
                 </div>
 
                 {isAdmin && (
-                    <div className="text-left md:text-right">
-                        <p className="mb-1 text-[10px] font-bold tracking-[0.2em] text-[#e7e2de] uppercase">
-                            Peran akun
-                        </p>
-                        <p className="font-serif text-lg text-[#151515] capitalize">
-                            {user.role}
-                        </p>
-                        <Link
-                            href={adminDashboard()}
-                            className="mt-3 inline-flex items-center justify-center rounded-md bg-[#151515] px-4 py-2 text-[11px] font-bold tracking-wider text-white transition-colors hover:bg-[#272727]"
-                        >
-                            Dashboard
-                        </Link>
-                    </div>
+                    <Link
+                        href={adminDashboard()}
+                        className="inline-flex h-10 items-center justify-center border border-[#1A1A1A] px-5 text-sm font-black uppercase hover:bg-[#1A1A1A] hover:text-white"
+                    >
+                        Dashboard
+                    </Link>
                 )}
             </div>
 
-            <div className="grid grid-cols-1 items-start gap-10 md:grid-cols-2 md:gap-12">
-                <form
-                    onSubmit={submitProfile}
-                    className="animate-fade-in-up border-b border-[#e7e2de] pb-10 md:border-b-0"
-                    style={{ animationDelay: '150ms' }}
-                >
-                    <div className="mb-6 flex items-center border-b border-[#e7e2de] pb-4">
-                        <User size={18} className="mr-2 text-[#151515]" />
-                        <h3 className="font-serif text-lg text-[#151515]">
-                            Informasi Pribadi
-                        </h3>
-                    </div>
+            <div className="grid gap-7 xl:grid-cols-[1fr_1fr]">
+                <ProfileInfoCard
+                    profileForm={profileForm}
+                    avatarInputRef={avatarInputRef}
+                    avatarSrc={avatarSrc}
+                    nameError={nameError}
+                    phoneError={phoneError}
+                    setProfileClientErrors={setProfileClientErrors}
+                    selectAvatar={selectAvatar}
+                    submitProfile={submitProfile}
+                />
 
-                    <div className="space-y-4">
-                        {/* Full Name */}
-                        <div>
-                            <label className="mb-1.5 block text-[11px] font-semibold text-[#6f6f6f]">
-                                Nama Lengkap
-                            </label>
-                            <input
-                                type="text"
-                                value={profileForm.data.name}
-                                onChange={(e) => {
-                                    profileForm.setData('name', e.target.value);
-                                    setProfileClientErrors((current) => ({
-                                        ...current,
-                                        name: undefined,
-                                    }));
-                                }}
-                                className={`w-full border-b bg-transparent px-1 py-2.5 text-[13px] text-[#272727] transition-colors focus:outline-none ${
-                                    nameError
-                                        ? 'border-red-400 focus:border-red-400'
-                                        : 'border-[#e7e2de] focus:border-[#151515]'
-                                }`}
-                            />
-                            {nameError && (
-                                <p className="mt-1 text-[10px] text-red-500">
-                                    {nameError}
-                                </p>
-                            )}
-                        </div>
+                <div className="grid gap-5">
+                    <PasswordCard
+                        passwordForm={passwordForm}
+                        passwordClientErrors={passwordClientErrors}
+                        setPasswordClientErrors={setPasswordClientErrors}
+                        submitPassword={submitPassword}
+                        showPassword1={showPassword1}
+                        showPassword2={showPassword2}
+                        showPassword3={showPassword3}
+                        setShowPassword1={setShowPassword1}
+                        setShowPassword2={setShowPassword2}
+                        setShowPassword3={setShowPassword3}
+                    />
 
-                        {/* Email */}
-                        <div>
-                            <label className="mb-1.5 block text-[11px] font-semibold text-[#6f6f6f]">
-                                Alamat Email
-                            </label>
-                            <input
-                                type="email"
-                                value={profileForm.data.email}
-                                onChange={(e) =>
-                                    profileForm.setData('email', e.target.value)
-                                }
-                                className={`w-full border-b bg-transparent px-1 py-2.5 text-[13px] text-[#272727] transition-colors focus:outline-none ${
-                                    profileForm.errors.email
-                                        ? 'border-red-400 focus:border-red-400'
-                                        : 'border-[#e7e2de] focus:border-[#151515]'
-                                }`}
-                            />
-                            {profileForm.errors.email && (
-                                <p className="mt-1 text-[10px] text-red-500">
-                                    {profileForm.errors.email}
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Phone */}
-                        <div>
-                            <label className="mb-1.5 block text-[11px] font-semibold text-[#6f6f6f]">
-                                Nomor Telepon
-                            </label>
-                            <input
-                                type="tel"
-                                inputMode="numeric"
-                                pattern="[0-9]*"
-                                value={profileForm.data.phone}
-                                onChange={(e) => {
-                                    profileForm.setData(
-                                        'phone',
-                                        e.target.value.replace(/\D/g, ''),
-                                    );
-                                    setProfileClientErrors((current) => ({
-                                        ...current,
-                                        phone: undefined,
-                                    }));
-                                }}
-                                placeholder="contoh 08123456789"
-                                className={`w-full border-b bg-transparent px-1 py-2.5 text-[13px] text-[#272727] transition-colors focus:outline-none ${
-                                    phoneError
-                                        ? 'border-red-400 focus:border-red-400'
-                                        : 'border-[#e7e2de] focus:border-[#151515]'
-                                }`}
-                            />
-                            {phoneError && (
-                                <p className="mt-1 text-[10px] text-red-500">
-                                    {phoneError}
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Avatar Upload */}
-                        <div>
-                            <label className="mb-1.5 block text-[11px] font-semibold text-[#6f6f6f]">
-                                Foto Avatar{' '}
-                                <span className="font-normal text-[#6f6f6f]">
-                                    (opsional)
-                                </span>
-                            </label>
-                            <input
-                                ref={avatarInputRef}
-                                type="file"
-                                accept="image/png,image/jpeg,image/webp"
-                                onChange={(e) =>
-                                    selectAvatar(e.target.files?.[0] ?? null)
-                                }
-                                className={`w-full border-b bg-transparent px-1 py-2.5 text-[13px] text-[#272727] transition-colors file:mr-4 file:border-0 file:bg-[#E8D6C1] file:px-3 file:py-1.5 file:text-[11px] file:font-bold file:text-[#151515] focus:outline-none ${
-                                    profileForm.errors.avatar_url
-                                        ? 'border-red-400 focus:border-red-400'
-                                        : 'border-[#e7e2de] focus:border-[#151515]'
-                                }`}
-                            />
-                            {profileForm.errors.avatar_url && (
-                                <p className="mt-1 text-[10px] text-red-500">
-                                    {profileForm.errors.avatar_url}
-                                </p>
-                            )}
-                            <p className="mt-1.5 text-[10px] text-[#6f6f6f]">
-                                JPG, PNG, atau WEBP. Maks 2MB.
-                            </p>
-                        </div>
-
-                        <div className="flex flex-col gap-3 pt-4 sm:flex-row">
-                            <button
-                                type="submit"
-                                disabled={profileForm.processing}
-                                className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-[#B98B63] px-6 py-2.5 text-[12px] font-bold tracking-wider text-white transition-colors hover:bg-[#9A6B45] disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                {profileForm.processing && (
-                                    <Loader2
-                                        size={14}
-                                        className="animate-spin"
-                                    />
-                                )}
-                                Simpan Perubahan
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => profileForm.reset()}
-                                className="rounded-md border border-[#e7e2de] bg-transparent px-6 py-2.5 text-[12px] font-bold tracking-wider text-[#6f6f6f] transition-colors hover:bg-white"
-                            >
-                                Batal
-                            </button>
-                        </div>
-                    </div>
-                </form>
-
-                <div className="space-y-10">
-                    {/* Change Password */}
-                    <form
-                        onSubmit={submitPassword}
-                        className="animate-fade-in-up border-b border-[#e7e2de] pb-10"
-                        style={{ animationDelay: '200ms' }}
-                    >
-                        <div className="mb-6 flex items-center border-b border-[#e7e2de] pb-4">
-                            <LockIcon
-                                size={18}
-                                className="mr-2 text-[#151515]"
-                            />
-                            <h3 className="font-serif text-lg text-[#151515]">
-                                Ubah Kata Sandi
-                            </h3>
-                        </div>
-                        <div className="space-y-4">
-                            <PasswordField
-                                label="Kata Sandi Saat Ini"
-                                show={showPassword1}
-                                onToggle={() =>
-                                    setShowPassword1(!showPassword1)
-                                }
-                                value={passwordForm.data.current_password}
-                                onChange={(value) => {
-                                    passwordForm.setData(
-                                        'current_password',
-                                        value,
-                                    );
-                                    setPasswordClientErrors((current) => ({
-                                        ...current,
-                                        current_password: undefined,
-                                    }));
-                                }}
-                                error={
-                                    passwordClientErrors.current_password ??
-                                    passwordForm.errors.current_password
-                                }
-                                autoComplete="current-password"
-                            />
-                            <PasswordField
-                                label="Kata Sandi Baru"
-                                show={showPassword2}
-                                onToggle={() =>
-                                    setShowPassword2(!showPassword2)
-                                }
-                                value={passwordForm.data.password}
-                                onChange={(value) => {
-                                    passwordForm.setData('password', value);
-                                    setPasswordClientErrors((current) => ({
-                                        ...current,
-                                        password: undefined,
-                                    }));
-                                }}
-                                error={
-                                    passwordClientErrors.password ??
-                                    passwordForm.errors.password
-                                }
-                                autoComplete="new-password"
-                            />
-                            <PasswordField
-                                label="Konfirmasi Kata Sandi Baru"
-                                show={showPassword3}
-                                onToggle={() =>
-                                    setShowPassword3(!showPassword3)
-                                }
-                                value={passwordForm.data.password_confirmation}
-                                onChange={(value) => {
-                                    passwordForm.setData(
-                                        'password_confirmation',
-                                        value,
-                                    );
-                                    setPasswordClientErrors((current) => ({
-                                        ...current,
-                                        password_confirmation: undefined,
-                                    }));
-                                }}
-                                error={
-                                    passwordClientErrors.password_confirmation ??
-                                    passwordForm.errors.password_confirmation
-                                }
-                                autoComplete="new-password"
-                            />
-                            <div className="pt-2">
-                                <button
-                                    type="submit"
-                                    disabled={passwordForm.processing}
-                                    className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#B98B63] px-6 py-2.5 text-[12px] font-bold tracking-wider text-white transition-colors hover:bg-[#9A6B45] disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                    {passwordForm.processing && (
-                                        <Loader2
-                                            size={14}
-                                            className="animate-spin"
-                                        />
-                                    )}
-                                    Perbarui Kata Sandi
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-
-                    {/* Default Address */}
-                    <div
-                        className="animate-fade-in-up"
-                        style={{ animationDelay: '250ms' }}
-                    >
-                        <div className="mb-4 flex items-center justify-between border-b border-[#e7e2de] pb-4">
-                            <div className="flex items-center">
-                                <MapPin
-                                    size={18}
-                                    className="mr-2 text-[#151515]"
-                                />
-                                <h3 className="font-serif text-lg text-[#151515]">
-                                    Alamat Utama
-                                </h3>
-                            </div>
-                        </div>
-                        {defaultAddress ? (
-                            <div className="mb-6 space-y-3 text-[12px]">
-                                <div className="flex items-center justify-between gap-3">
-                                    <p className="font-semibold text-[#272727]">
-                                        {defaultAddress.recipient_name}
-                                    </p>
-                                    <span className="text-[10px] font-bold text-[#151515]">
-                                        {defaultAddress.label ?? 'Utama'}
-                                    </span>
-                                </div>
-                                <p className="text-[#6f6f6f]">
-                                    {defaultAddress.recipient_phone}
-                                </p>
-                                <p className="leading-relaxed text-[#6f6f6f]">
-                                    {defaultAddress.full_address}
-                                </p>
-                                <p className="text-[#6f6f6f]">
-                                    {[
-                                        defaultAddress.district,
-                                        defaultAddress.city,
-                                        defaultAddress.province,
-                                        defaultAddress.postal_code,
-                                    ]
-                                        .filter(Boolean)
-                                        .join(', ')}
-                                </p>
-                                {defaultAddress.note && (
-                                    <p className="border-l border-[#e7e2de] pl-3 text-[#6f6f6f]">
-                                        {defaultAddress.note}
-                                    </p>
-                                )}
-                            </div>
-                        ) : (
-                            <p className="mb-6 text-[12px] leading-relaxed text-[#6f6f6f]">
-                                Belum ada alamat utama. Tambahkan alamat untuk
-                                checkout lebih cepat.
-                            </p>
-                        )}
-                        <Link
-                            href="/address"
-                            className="block w-full rounded-md border border-[#e7e2de] bg-white px-4 py-2 text-center text-[12px] font-bold tracking-wider text-[#151515] transition-colors hover:bg-[#ffffff]"
-                        >
-                            Kelola Alamat
-                        </Link>
-                        <Link
-                            href={logout()}
-                            method="post"
-                            as="button"
-                            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md border border-red-200 bg-white px-4 py-2 text-[12px] font-bold tracking-wider text-red-600 transition-colors hover:bg-red-50 lg:hidden"
-                        >
-                            <LogOut size={15} strokeWidth={1.8} />
-                            Keluar
-                        </Link>
-                    </div>
+                    <AddressCard defaultAddress={defaultAddress} />
                 </div>
             </div>
         </ProfileLayout>
     );
 }
 
-// --- Sub-components ---
+function AvatarFrame({
+    avatarSrc,
+    name,
+}: {
+    avatarSrc: string | null;
+    name: string;
+}) {
+    return (
+        <div className="flex h-24 w-24 items-center justify-center rounded-full border border-[#CFCFCF] bg-[#F8F8F8] text-[#1A1A1A]">
+            {avatarSrc ? (
+                <img
+                    src={avatarSrc}
+                    alt={name}
+                    className="h-full w-full rounded-full object-cover"
+                />
+            ) : (
+                <User size={48} strokeWidth={1.5} />
+            )}
+        </div>
+    );
+}
+
+function ProfileInfoCard({
+    profileForm,
+    avatarInputRef,
+    avatarSrc,
+    nameError,
+    phoneError,
+    setProfileClientErrors,
+    selectAvatar,
+    submitProfile,
+}: {
+    profileForm: ReturnType<
+        typeof useForm<{
+            name: string;
+            email: string;
+            phone: string;
+            avatar_url: File | null;
+        }>
+    >;
+    avatarInputRef: React.RefObject<HTMLInputElement | null>;
+    avatarSrc: string | null;
+    nameError?: string;
+    phoneError?: string;
+    setProfileClientErrors: React.Dispatch<
+        React.SetStateAction<{ name?: string; phone?: string }>
+    >;
+    selectAvatar: (file: File | null) => void;
+    submitProfile: (event: React.FormEvent) => void;
+}) {
+    return (
+        <form
+            onSubmit={submitProfile}
+            className="border border-[#D8D8D8] bg-white px-8 py-6"
+        >
+            <SectionTitle icon={User} title="Informasi Pribadi" />
+
+            <div className="mt-5 grid gap-4">
+                <TextField
+                    label="Nama Lengkap"
+                    value={profileForm.data.name}
+                    onChange={(value) => {
+                        profileForm.setData('name', value);
+                        setProfileClientErrors((current) => ({
+                            ...current,
+                            name: undefined,
+                        }));
+                    }}
+                    error={nameError}
+                />
+                <TextField
+                    label="Alamat Email"
+                    type="email"
+                    value={profileForm.data.email}
+                    onChange={(value) => profileForm.setData('email', value)}
+                    error={profileForm.errors.email}
+                />
+                <TextField
+                    label="Nomor Telepon"
+                    type="tel"
+                    value={profileForm.data.phone}
+                    onChange={(value) => {
+                        profileForm.setData('phone', value.replace(/\D/g, ''));
+                        setProfileClientErrors((current) => ({
+                            ...current,
+                            phone: undefined,
+                        }));
+                    }}
+                    error={phoneError}
+                    inputMode="numeric"
+                    placeholder="0812-3456-7890"
+                />
+
+                <div>
+                    <label className="mb-2 block text-sm font-black">
+                        Foto Avatar{' '}
+                        <span className="font-medium">(opsional)</span>
+                    </label>
+                    <div className=" sm:items-center">
+   
+                        <button
+                            type="button"
+                            onClick={() => avatarInputRef.current?.click()}
+                            className="grid min-h-[76px] place-items-center border border-dashed border-[#1A1A1A] bg-white px-5 text-center transition-colors hover:border-[#F58220] hover:text-[#F58220]"
+                        >
+                            <span className="flex items-center gap-3 text-sm font-black">
+                                <Upload size={24} strokeWidth={1.7} />
+                                Klik untuk mengunggah
+                            </span>
+                            <span className="text-xs font-medium text-[#707070]">
+                                atau seret file ke sini
+                            </span>
+                        </button>
+                    </div>
+                    <input
+                        ref={avatarInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        onChange={(event) =>
+                            selectAvatar(event.target.files?.[0] ?? null)
+                        }
+                        className="sr-only"
+                    />
+                    {profileForm.errors.avatar_url && (
+                        <p className="mt-2 text-xs font-bold text-[#C81E1E]">
+                            {profileForm.errors.avatar_url}
+                        </p>
+                    )}
+                    <p className="mt-2 text-sm font-medium text-[#707070]">
+                        JPG, PNG, atau WEBP. Maks 2MB.
+                    </p>
+                </div>
+
+                <div className="mt-3 grid gap-4 sm:grid-cols-[1fr_0.82fr]">
+                    <button
+                        type="submit"
+                        disabled={profileForm.processing}
+                        className="inline-flex h-12 items-center justify-center gap-2 bg-[#F58220] px-6 text-sm font-black text-white transition-colors hover:bg-[#E67312] disabled:bg-[#CFCFCF] disabled:text-[#707070]"
+                    >
+                        {profileForm.processing && (
+                            <Loader2 size={16} className="animate-spin" />
+                        )}
+                        Simpan Perubahan
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => profileForm.reset()}
+                        className="h-12 border border-[#1A1A1A] bg-white px-6 text-sm font-black hover:bg-[#1A1A1A] hover:text-white"
+                    >
+                        Batal
+                    </button>
+                </div>
+            </div>
+        </form>
+    );
+}
+
+function PasswordCard({
+    passwordForm,
+    passwordClientErrors,
+    setPasswordClientErrors,
+    submitPassword,
+    showPassword1,
+    showPassword2,
+    showPassword3,
+    setShowPassword1,
+    setShowPassword2,
+    setShowPassword3,
+}: {
+    passwordForm: ReturnType<
+        typeof useForm<{
+            current_password: string;
+            password: string;
+            password_confirmation: string;
+        }>
+    >;
+    passwordClientErrors: {
+        current_password?: string;
+        password?: string;
+        password_confirmation?: string;
+    };
+    setPasswordClientErrors: React.Dispatch<
+        React.SetStateAction<{
+            current_password?: string;
+            password?: string;
+            password_confirmation?: string;
+        }>
+    >;
+    submitPassword: (event: React.FormEvent) => void;
+    showPassword1: boolean;
+    showPassword2: boolean;
+    showPassword3: boolean;
+    setShowPassword1: React.Dispatch<React.SetStateAction<boolean>>;
+    setShowPassword2: React.Dispatch<React.SetStateAction<boolean>>;
+    setShowPassword3: React.Dispatch<React.SetStateAction<boolean>>;
+}) {
+    return (
+        <form
+            onSubmit={submitPassword}
+            className="border border-[#D8D8D8] bg-white px-8 py-6"
+        >
+            <SectionTitle icon={Lock} title="Ubah Kata Sandi" />
+            <div className="mt-5 grid gap-4">
+                <PasswordField
+                    label="Kata Sandi Saat Ini"
+                    show={showPassword1}
+                    onToggle={() => setShowPassword1((current) => !current)}
+                    value={passwordForm.data.current_password}
+                    onChange={(value) => {
+                        passwordForm.setData('current_password', value);
+                        setPasswordClientErrors((current) => ({
+                            ...current,
+                            current_password: undefined,
+                        }));
+                    }}
+                    error={
+                        passwordClientErrors.current_password ??
+                        passwordForm.errors.current_password
+                    }
+                    autoComplete="current-password"
+                />
+                <PasswordField
+                    label="Kata Sandi Baru"
+                    show={showPassword2}
+                    onToggle={() => setShowPassword2((current) => !current)}
+                    value={passwordForm.data.password}
+                    onChange={(value) => {
+                        passwordForm.setData('password', value);
+                        setPasswordClientErrors((current) => ({
+                            ...current,
+                            password: undefined,
+                        }));
+                    }}
+                    error={
+                        passwordClientErrors.password ??
+                        passwordForm.errors.password
+                    }
+                    autoComplete="new-password"
+                />
+                <PasswordField
+                    label="Konfirmasi Kata Sandi Baru"
+                    show={showPassword3}
+                    onToggle={() => setShowPassword3((current) => !current)}
+                    value={passwordForm.data.password_confirmation}
+                    onChange={(value) => {
+                        passwordForm.setData('password_confirmation', value);
+                        setPasswordClientErrors((current) => ({
+                            ...current,
+                            password_confirmation: undefined,
+                        }));
+                    }}
+                    error={
+                        passwordClientErrors.password_confirmation ??
+                        passwordForm.errors.password_confirmation
+                    }
+                    autoComplete="new-password"
+                />
+                <button
+                    type="submit"
+                    disabled={passwordForm.processing}
+                    className="mt-1 inline-flex h-12 items-center justify-center gap-2 bg-[#F58220] px-6 text-sm font-black text-white transition-colors hover:bg-[#E67312] disabled:bg-[#CFCFCF] disabled:text-[#707070]"
+                >
+                    {passwordForm.processing && (
+                        <Loader2 size={16} className="animate-spin" />
+                    )}
+                    Perbarui Kata Sandi
+                </button>
+            </div>
+        </form>
+    );
+}
+
+function AddressCard({
+    defaultAddress,
+}: {
+    defaultAddress: AddressProp | null;
+}) {
+    return (
+        <section className="border border-[#D8D8D8] bg-white px-8 py-6">
+            <SectionTitle icon={MapPin} title="Alamat Utama" />
+            <div className="mt-4 sm:items-center">
+
+                <div>
+                    {defaultAddress ? (
+                        <div className="text-sm font-medium text-[#2E2E2E]">
+                            <p className="font-black text-[#1A1A1A]">
+                                {defaultAddress.recipient_name}
+                            </p>
+                            <p className="mt-1">
+                                {defaultAddress.recipient_phone}
+                            </p>
+                            <p className="mt-2 leading-6">
+                                {defaultAddress.full_address}
+                            </p>
+                            <p className="mt-1">
+                                {[
+                                    defaultAddress.district,
+                                    defaultAddress.city,
+                                    defaultAddress.province,
+                                    defaultAddress.postal_code,
+                                ]
+                                    .filter(Boolean)
+                                    .join(', ')}
+                            </p>
+                        </div>
+                    ) : (
+                        <p className="text-sm leading-6 font-medium text-[#707070]">
+                            Belum ada alamat utama. Tambahkan alamat untuk
+                            checkout lebih cepat.
+                        </p>
+                    )}
+                    <Link
+                        href="/address"
+                        className="mt-4 inline-flex h-10 min-w-[160px] items-center justify-center border border-[#1A1A1A] bg-white px-5 text-sm font-black transition-colors hover:bg-[#1A1A1A] hover:text-white"
+                    >
+                        {defaultAddress ? 'Kelola Alamat' : 'Tambah Alamat'}
+                    </Link>
+                </div>
+            </div>
+        </section>
+    );
+}
+
+function SectionTitle({
+    icon: Icon,
+    title,
+}: {
+    icon: typeof User;
+    title: string;
+}) {
+    return (
+        <div className="flex items-center gap-4">
+            <Icon size={27} strokeWidth={1.7} />
+            <h3 className="text-2xl font-black tracking-normal text-[#1A1A1A]">
+                {title}
+            </h3>
+        </div>
+    );
+}
+
+function TextField({
+    label,
+    value,
+    onChange,
+    error,
+    type = 'text',
+    inputMode,
+    placeholder,
+}: {
+    label: string;
+    value: string;
+    onChange: (value: string) => void;
+    error?: string;
+    type?: string;
+    inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
+    placeholder?: string;
+}) {
+    return (
+        <div className="grid gap-2 sm:grid-cols-[120px_1fr] sm:items-center">
+            <label className="text-sm font-black text-[#1A1A1A]">{label}</label>
+            <div>
+                <input
+                    type={type}
+                    inputMode={inputMode}
+                    value={value}
+                    onChange={(event) => onChange(event.target.value)}
+                    placeholder={placeholder}
+                    className={`h-10 w-full border bg-white px-4 text-sm font-medium text-[#1A1A1A] transition-colors outline-none focus:border-[#1A1A1A] ${
+                        error ? 'border-[#C81E1E]' : 'border-[#9A9A9A]'
+                    }`}
+                />
+                {error && (
+                    <p className="mt-1 text-xs font-bold text-[#C81E1E]">
+                        {error}
+                    </p>
+                )}
+            </div>
+        </div>
+    );
+}
 
 function PasswordField({
     label,
@@ -587,8 +641,6 @@ function PasswordField({
     onChange,
     error,
     autoComplete,
-    hint,
-    hintColor = 'text-[#6f6f6f]',
 }: {
     label: string;
     show: boolean;
@@ -597,60 +649,36 @@ function PasswordField({
     onChange: (value: string) => void;
     error?: string;
     autoComplete: string;
-    hint?: string;
-    hintColor?: string;
 }) {
     return (
-        <div>
-            <label className="mb-1.5 block text-[11px] font-semibold text-[#6f6f6f]">
-                {label}
-            </label>
-            <div className="relative">
-                <input
-                    type={show ? 'text' : 'password'}
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
-                    autoComplete={autoComplete}
-                    className={`w-full border-b bg-transparent px-1 py-2.5 pr-10 text-[13px] text-[#272727] transition-colors focus:outline-none ${
-                        error
-                            ? 'border-red-400 focus:border-red-400'
-                            : 'border-[#e7e2de] focus:border-[#151515]'
-                    }`}
-                />
-                <button
-                    type="button"
-                    onClick={onToggle}
-                    className="absolute top-1/2 right-3 -translate-y-1/2 text-[#e7e2de] hover:text-[#272727]"
-                >
-                    {show ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
+        <div className="grid gap-2 sm:grid-cols-[140px_1fr] sm:items-center">
+            <label className="text-sm font-black text-[#1A1A1A]">{label}</label>
+            <div>
+                <div className="relative">
+                    <input
+                        type={show ? 'text' : 'password'}
+                        value={value}
+                        onChange={(event) => onChange(event.target.value)}
+                        autoComplete={autoComplete}
+                        className={`h-10 w-full border bg-white px-4 pr-11 text-sm font-medium text-[#1A1A1A] transition-colors outline-none focus:border-[#1A1A1A] ${
+                            error ? 'border-[#C81E1E]' : 'border-[#9A9A9A]'
+                        }`}
+                    />
+                    <button
+                        type="button"
+                        onClick={onToggle}
+                        className="absolute top-1/2 right-3 flex h-7 w-7 -translate-y-1/2 items-center justify-center text-[#1A1A1A] transition-colors hover:text-[#F58220]"
+                        aria-label={show ? 'Hide password' : 'Show password'}
+                    >
+                        {show ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                </div>
+                {error && (
+                    <p className="mt-1 text-xs font-bold text-[#C81E1E]">
+                        {error}
+                    </p>
+                )}
             </div>
-            {error && <p className="mt-1 text-[10px] text-red-500">{error}</p>}
-            {hint && (
-                <p className={`mt-1.5 text-[10px] ${hintColor}`}>{hint}</p>
-            )}
         </div>
-    );
-}
-
-function LockIcon(props: React.SVGProps<SVGSVGElement> & { size?: number }) {
-    const { size = 24, ...svgProps } = props;
-
-    return (
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width={size}
-            height={size}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            {...svgProps}
-        >
-            <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-        </svg>
     );
 }
