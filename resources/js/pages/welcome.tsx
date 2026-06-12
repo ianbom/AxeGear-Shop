@@ -1,7 +1,27 @@
 import { Head, Link } from '@inertiajs/react';
-import { ChevronLeft, ChevronRight, Clock, RotateCcw, Star } from 'lucide-react';
+import {
+    Bike,
+    Car,
+    ChevronRight,
+    Clock3,
+    Dumbbell,
+    Eye,
+    Facebook,
+    Flame,
+    Gauge,
+    Goal,
+    Instagram,
+    Mail,
+    Medal,
+    Mountain,
+    Shield,
+    Snowflake,
+    Waves,
+    Youtube,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { ComponentType, ReactNode } from 'react';
+
 import ShopLayout from '@/layouts/shop-layout';
 import { detail, list } from '@/routes';
 
@@ -48,17 +68,201 @@ type Props = {
     mostLoved: ProductCard[];
 };
 
-const fallbackImages = [
-    '/img/abdul-raheem-kannath-aNWfK46QWto-unsplash.webp',
-    '/img/ainur-iman-qcNmigFPTQM-unsplash.webp',
-    '/img/atiyeh-fathi-CvdzGjVX9DA-unsplash.webp',
-    '/img/hasan-almasi-_X2UAmIcpko-unsplash.webp',
-    '/img/ike-ellyana-2F70bGqQVa4-unsplash.webp',
-    '/img/khaled-ghareeb-n84s3jgzhKk-unsplash.webp',
-    '/img/m-ghufanil-muta-ali-vAyDuvcjXcs-unsplash.webp',
-    '/img/mina-rad-2O2cXJemDmo-unsplash.webp',
-    '/img/monody-le-7YrRbgOPibw-unsplash.webp',
-    '/img/omar-elsharawy-gFHBofW3ncQ-unsplash.webp',
+type IconType = ComponentType<{
+    className?: string;
+    size?: number;
+    strokeWidth?: number;
+}>;
+
+const productImages = [
+    'https://www.100percent.com/cdn/shop/files/59057-00001-P_1.jpg?v=1764788225&width=1100',
+    'https://www.100percent.com/cdn/shop/files/SP26_SPEEDCRAFT_SL_60008-00025_3Q.jpg?v=1772487312&width=500',
+    'https://www.100percent.com/cdn/shop/files/2000x2000-eComm_20PDP-Casual_Staple_20Tee_0010_Layer_2015.jpg?v=1764633157&width=1200',
+    'https://www.100percent.com/cdn/shop/files/2000x2000-eComm_20PDP-Casual_Region_20Tee_0001_Layer_2030.jpg?v=1764633177&width=1200',
+    'https://www.100percent.com/cdn/shop/files/FA25_LS_OS_TEE_REGION__2020142-10002_F-002.jpg?v=1764633155&width=1100',
+    'https://www.100percent.com/cdn/shop/files/59057-00001-P_1.jpg?v=1764788225&width=900',
+];
+
+const campaignImages = {
+    hero: 'https://images.unsplash.com/photo-1541625602330-2277a4c46182?q=80&w=1800&auto=format&fit=crop',
+    goggle: 'https://images.unsplash.com/photo-1607706189992-eae578626c86?q=80&w=1000&auto=format&fit=crop',
+    moto: 'https://images.unsplash.com/photo-1558980664-10e7170b5df9?q=80&w=1100&auto=format&fit=crop',
+    cycling:
+        'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=1100&auto=format&fit=crop',
+    trail: 'https://images.unsplash.com/photo-1593764592116-bfb2a97c642a?q=80&w=1100&auto=format&fit=crop',
+    race: 'https://images.unsplash.com/photo-1525105124529-8d368a72d47c?q=80&w=1100&auto=format&fit=crop',
+    weather:
+        'https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=1100&auto=format&fit=crop',
+};
+
+const fallbackProducts: ProductCard[] = [
+    {
+        id: 901,
+        slug: 'axeview-pro-speedcraft',
+        name: 'AXEVIEW PRO SPEEDCRAFT',
+        price: 2899000,
+        sale_price: 2319000,
+        label: 'SALE',
+        image: productImages[0],
+        category: 'Sunglasses',
+        collection: 'Race Vision',
+        colors: [],
+    },
+    {
+        id: 902,
+        slug: 'racevision-mx-goggle',
+        name: 'RACEVISION MX GOGGLE',
+        price: 2199000,
+        sale_price: null,
+        label: 'NEW',
+        image: productImages[1],
+        category: 'Goggles',
+        collection: 'Moto',
+        colors: [],
+    },
+    {
+        id: 903,
+        slug: 'staple-performance-tee',
+        name: 'STAPLE PERFORMANCE TEE',
+        price: 699000,
+        sale_price: null,
+        label: null,
+        image: productImages[2],
+        category: 'Apparel',
+        collection: 'Casual',
+        colors: [],
+    },
+    {
+        id: 904,
+        slug: 'region-casual-tee',
+        name: 'REGION CASUAL TEE',
+        price: 749000,
+        sale_price: 599000,
+        label: 'SALE',
+        image: productImages[3],
+        category: 'Apparel',
+        collection: 'Lifestyle',
+        colors: [],
+    },
+    {
+        id: 905,
+        slug: 'region-long-sleeve-tee',
+        name: 'REGION LONG SLEEVE TEE',
+        price: 899000,
+        sale_price: null,
+        label: 'NEW',
+        image: productImages[4],
+        category: 'Apparel',
+        collection: 'Weather Ready',
+        colors: [],
+    },
+    {
+        id: 906,
+        slug: 'axegear-lens-kit-x1',
+        name: 'AXEGEAR LENS KIT X1',
+        price: 1299000,
+        sale_price: 999000,
+        label: 'SALE',
+        image: productImages[5],
+        category: 'Lens Kit',
+        collection: 'Essentials',
+        colors: [],
+    },
+];
+
+const categoryShortcuts: Array<{
+    label: string;
+    icon: IconType;
+    href: string;
+}> = [
+    {
+        label: 'Sunglasses',
+        icon: Eye,
+        href: `${list.url()}?category=sunglasses`,
+    },
+    {
+        label: 'Moto/MTB Goggles',
+        icon: Mountain,
+        href: `${list.url()}?category=goggles`,
+    },
+    { label: 'Gloves', icon: Shield, href: `${list.url()}?category=gloves` },
+    {
+        label: 'Snow Goggles',
+        icon: Snowflake,
+        href: `${list.url()}?category=snow-goggles`,
+    },
+    { label: 'Casual', icon: Dumbbell, href: `${list.url()}?category=apparel` },
+];
+
+const sportCards: Array<{ name: string; image: string; icon: IconType }> = [
+    { name: 'Moto', image: campaignImages.moto, icon: Flame },
+    {
+        name: 'MTB',
+        image: 'https://images.unsplash.com/photo-1593764592116-bfb2a97c642a?q=80&w=900&auto=format&fit=crop',
+        icon: Mountain,
+    },
+    { name: 'Snow', image: campaignImages.weather, icon: Snowflake },
+    {
+        name: 'Baseball',
+        image: 'https://images.unsplash.com/photo-1508344928928-7165b67de128?q=80&w=900&auto=format&fit=crop',
+        icon: Goal,
+    },
+    { name: 'Cycling', image: campaignImages.cycling, icon: Bike },
+    {
+        name: 'Running',
+        image: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?q=80&w=900&auto=format&fit=crop',
+        icon: Gauge,
+    },
+    {
+        name: 'Outdoor',
+        image: 'https://images.unsplash.com/photo-1551632811-561732d1e306?q=80&w=900&auto=format&fit=crop',
+        icon: Mountain,
+    },
+    {
+        name: 'Watersports',
+        image: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?q=80&w=900&auto=format&fit=crop',
+        icon: Waves,
+    },
+    {
+        name: 'Motorsports',
+        image: 'https://images.unsplash.com/photo-1541447271487-09612b3f49f7?q=80&w=900&auto=format&fit=crop',
+        icon: Car,
+    },
+    {
+        name: 'ATV/UTV',
+        image: 'https://images.unsplash.com/photo-1521412644187-c49fa049e84d?q=80&w=900&auto=format&fit=crop',
+        icon: Gauge,
+    },
+];
+
+const featuredCollections = [
+    { title: 'Cycling Collection', image: campaignImages.cycling },
+    { title: 'Trail Performance', image: campaignImages.trail },
+    { title: 'Race Day Essentials', image: campaignImages.race },
+    { title: 'Weather Ready Gear', image: campaignImages.weather },
+];
+
+const benefits: Array<{ title: string; body: string; icon: IconType }> = [
+    {
+        title: 'Ultra-light performance',
+        body: 'Built for long sessions at race pace.',
+        icon: Gauge,
+    },
+    {
+        title: 'Impact protection',
+        body: 'Tough lens and frame systems for hard use.',
+        icon: Shield,
+    },
+    {
+        title: 'Athlete-tested design',
+        body: 'Fit, ventilation, and clarity proven outside.',
+        icon: Medal,
+    },
+    {
+        title: 'Fast shipping',
+        body: 'Packed fast so your gear is ready sooner.',
+        icon: Clock3,
+    },
 ];
 
 const formatPrice = (value: number) =>
@@ -68,371 +272,465 @@ const formatPrice = (value: number) =>
         maximumFractionDigits: 0,
     }).format(value);
 
-const productImage = (product: ProductCard | undefined, index: number) =>
-    product?.image ?? fallbackImages[index % fallbackImages.length];
-const bannerImage = (banner: BannerCard | undefined, fallback: string) =>
-    banner?.image_desktop_url ?? fallback;
+const productImage = (product: ProductCard, index: number) =>
+    product.image ?? productImages[index % productImages.length];
 
-export default function Home({
-    heroBanners,
-    ctaBanner,
-    collectionBanners,
-    categories,
-    wePresent,
-    mostLoved,
-}: Props) {
+export default function Home({ recentAdditions }: Props) {
+    const newArrivals = [...recentAdditions, ...fallbackProducts].slice(0, 6);
+
     return (
         <ShopLayout>
-            <Head title="Brand Fashion Muslim No.1 - Anemi" />
+            <Head title="AxeGear - Performance Eyewear & Sport Gear" />
 
-            <FadeInOnScroll>
-                <HeroSlider heroBanners={heroBanners} />
-            </FadeInOnScroll>
-
-            {/* Feature Strip */}
-            <div className="flex w-full flex-col items-center justify-center border-b border-[#e7e2de] bg-white px-4 py-5 text-[10px] font-medium tracking-[0.08em] text-[#272727] uppercase md:flex-row md:px-10 md:text-xs">
-                <div className="mb-2 flex w-full items-center justify-center gap-4 md:mb-0 md:w-auto md:gap-10">
-                    <div className="flex items-center gap-2">
-                        <Clock size={16} strokeWidth={1.5} />
-                        <span>Koleksi Lengkap</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Star size={16} strokeWidth={1.5} />
-                        <span>Harga Terjangkau</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <RotateCcw size={16} strokeWidth={1.5} />
-                        <span>Nyaman & Stylish</span>
-                    </div>
-                </div>
+            <div className="bg-[#1A1A1A] px-4 py-2 text-center text-[11px] font-extrabold tracking-[0.08em] text-white uppercase md:text-xs">
+                Mid Season Sale: Up to 20% Off Performance Eyewear{' '}
+                <Link
+                    href={list.url()}
+                    className="text-[#F58220] underline-offset-4 hover:underline"
+                >
+                    Shop Now
+                </Link>
             </div>
 
-            {/* Category Section */}
-            <section className="mx-auto max-w-[1500px] px-4 py-10 md:px-10 md:py-14">
-                <FadeInOnScroll>
-                    <div className="mb-8 text-center md:mb-10">
-                        <h2 className="text-2xl tracking-normal text-[#171717] uppercase md:text-3xl">
-                            Category
-                        </h2>
-                    </div>
-                </FadeInOnScroll>
-
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-                    {categories?.map((category, index) => (
-                        <FadeInOnScroll key={index} delay={index * 100}>
-                            <Link
-                                href={`/list?category=${encodeURIComponent(category.slug)}`}
-                                className="group relative flex aspect-[3/4] w-full items-end justify-center overflow-hidden bg-[#f7f7f7]"
-                            >
-                                <img
-                                    src={
-                                        category.image_url ??
-                                        fallbackImages[
-                                            index % fallbackImages.length
-                                        ]
-                                    }
-                                    alt={category.name}
-                                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/5 to-transparent transition-colors duration-500 group-hover:from-black/55" />
-                                <span className="relative z-10 mb-5 text-center text-sm font-medium tracking-[0.18em] text-white uppercase drop-shadow-md md:text-base">
-                                    {category.name}
-                                </span>
-                            </Link>
-                        </FadeInOnScroll>
-                    ))}
-                </div>
-            </section>
-
-            <section className="mx-auto max-w-[1500px] px-4 py-12 md:px-10 md:py-16">
-                <SectionTitle
-                    title="Kami Hadirkan Untukmu..."
-                    subtitle="Lebih Banyak Cinta. Tambahan Spesial, Eksklusif Untukmu"
-                />
-
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-5 lg:grid-cols-5">
-                    {wePresent.map((item, index) => (
-                        <ProductTile
-                            key={item.id}
-                            product={item}
-                            index={index}
-                            button
-                        />
-                    ))}
-                </div>
-            </section>
-
-            <NewCollectionsSection collectionBanners={collectionBanners} />
-
-            <section className="mx-auto max-w-[1500px] px-4 py-12 md:px-10 md:py-20">
-                <SectionTitle
-                    title="Most Loved Essentials"
-                    subtitle="Classics And Verified By Many, To Be Your Next Favorites"
-                />
-
-                <div className="relative">
-                    <div className="hide-scrollbar relative flex w-full snap-x snap-mandatory gap-4 overflow-x-auto pb-4 md:grid md:grid-cols-2 md:gap-6 md:overflow-visible md:pb-0 lg:grid-cols-4">
-                        {mostLoved.map((item, index) => (
-                            <ProductTile
-                                key={item.id}
-                                product={item}
-                                index={index}
-                                button
-                                wide
-                            />
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* CTA Section */}
-            <CtaSection ctaBanner={ctaBanner} />
-
-            <style
-                dangerouslySetInnerHTML={{
-                    __html: `
-                    .hide-scrollbar::-webkit-scrollbar { display: none; }
-                    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-                `,
-                }}
-            />
+            <HeroSection />
+            <CategoryStrip />
+            <ShopBySport />
+            <CampaignBand />
+            <NewArrivals products={newArrivals} />
+            <FeaturedCollections />
+            <BenefitStrip />
+            <CommunityBand />
         </ShopLayout>
     );
 }
 
-function CtaSection({ ctaBanner }: { ctaBanner: BannerCard }) {
+function HeroSection() {
+    return (
+        <section className="relative overflow-hidden border-b border-[#1A1A1A] bg-white">
+            <div className="mx-auto grid min-h-[610px] max-w-[1600px] grid-cols-1 lg:grid-cols-[0.92fr_1.08fr]">
+                <FadeInOnScroll className="relative z-10 flex flex-col justify-center px-5 py-14 sm:px-8 lg:px-12 xl:px-16">
+                    <div className="mb-6 flex items-center gap-3 text-[12px] font-extrabold tracking-[0.22em] text-[#F58220] uppercase">
+                        <span className="h-1 w-10 bg-[#F58220]" />
+                        Performance eyewear
+                    </div>
+                    <h1 className="max-w-[690px] text-[52px] leading-[0.92] font-black tracking-normal text-[#1A1A1A] uppercase sm:text-[72px] lg:text-[86px] xl:text-[96px]">
+                        Built for speed. Designed for clarity.
+                    </h1>
+                    <p className="mt-6 max-w-[560px] text-base leading-7 font-medium text-[#2E2E2E] md:text-lg">
+                        Premium sports sunglasses, moto goggles, and technical
+                        gear engineered for fast days, sharp vision, and total
+                        confidence.
+                    </p>
+                    <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                        <Link
+                            href={list.url()}
+                            className="inline-flex h-12 items-center justify-center bg-[#F58220] px-8 text-sm font-extrabold tracking-[0.08em] text-white uppercase transition-colors hover:bg-[#E67312]"
+                        >
+                            Shop Now
+                        </Link>
+                        <Link
+                            href={`${list.url()}?collection=performance`}
+                            className="inline-flex h-12 items-center justify-center border border-[#1A1A1A] bg-white px-8 text-sm font-extrabold tracking-[0.08em] text-[#1A1A1A] uppercase transition-colors hover:bg-[#1A1A1A] hover:text-white"
+                        >
+                            Explore Collection
+                        </Link>
+                    </div>
+                    <div
+                        className="mt-12 flex items-center gap-3"
+                        aria-hidden="true"
+                    >
+                        <span className="h-1 w-12 bg-[#1A1A1A]" />
+                        <span className="h-1 w-8 bg-[#CFCFCF]" />
+                        <span className="h-1 w-8 bg-[#CFCFCF]" />
+                    </div>
+                </FadeInOnScroll>
+
+                <FadeInOnScroll
+                    className="relative min-h-[430px] overflow-hidden lg:min-h-[610px]"
+                    delay={100}
+                >
+                    <img
+                        src={campaignImages.hero}
+                        alt="Cyclist wearing AxeGear performance eyewear"
+                        className="absolute inset-0 h-full w-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/20 via-transparent to-transparent" />
+                    <div className="absolute right-5 bottom-8 max-w-[360px] -skew-x-12 bg-[#1A1A1A] px-7 py-5 text-white shadow-[10px_10px_0_#F58220] md:right-10 md:bottom-12">
+                        <p className="skew-x-12 text-2xl leading-none font-black tracking-normal uppercase md:text-3xl">
+                            See it. Feel it. Own it.
+                        </p>
+                    </div>
+                </FadeInOnScroll>
+            </div>
+        </section>
+    );
+}
+
+function CategoryStrip() {
+    return (
+        <section className="border-b border-[#CFCFCF] bg-white">
+            <div className="mx-auto grid max-w-[1600px] grid-cols-2 divide-x divide-y divide-[#E5E5E5] sm:grid-cols-3 lg:grid-cols-5 lg:divide-y-0">
+                {categoryShortcuts.map((item, index) => {
+                    const Icon = item.icon;
+
+                    return (
+                        <FadeInOnScroll key={item.label} delay={index * 45}>
+                            <Link
+                                href={item.href}
+                                className="group flex min-h-[126px] flex-col items-center justify-center gap-3 bg-white px-4 text-center transition-colors hover:bg-[#FFF3E8]"
+                            >
+                                <Icon
+                                    className="h-8 w-8 text-[#1A1A1A] transition-colors group-hover:text-[#F58220]"
+                                    strokeWidth={1.8}
+                                />
+                                <span className="text-sm font-extrabold tracking-[0.08em] text-[#1A1A1A] uppercase">
+                                    {item.label}
+                                </span>
+                            </Link>
+                        </FadeInOnScroll>
+                    );
+                })}
+            </div>
+        </section>
+    );
+}
+
+function ShopBySport() {
+    return (
+        <section className="bg-white px-4 py-12 md:px-8 md:py-16">
+            <div className="mx-auto max-w-[1600px]">
+                <SectionHeader
+                    kicker="Find your lane"
+                    title="Shop by sport"
+                    action="Shop all sports"
+                />
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-5 md:gap-4">
+                    {sportCards.map((sport, index) => {
+                        const Icon = sport.icon;
+
+                        return (
+                            <FadeInOnScroll key={sport.name} delay={index * 35}>
+                                <Link
+                                    href={`${list.url()}?sport=${encodeURIComponent(sport.name.toLowerCase())}`}
+                                    className="group relative flex aspect-[1.02] overflow-hidden border border-[#1A1A1A] bg-[#1A1A1A]"
+                                >
+                                    <img
+                                        src={sport.image}
+                                        alt={`${sport.name} sport`}
+                                        className="absolute inset-0 h-full w-full object-cover opacity-80 transition-transform duration-700 group-hover:scale-105"
+                                        loading="lazy"
+                                        decoding="async"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+                                    <div className="relative z-10 mt-auto flex w-full items-end justify-between p-4 text-white md:p-5">
+                                        <span className="text-xl font-black tracking-normal uppercase md:text-2xl">
+                                            {sport.name}
+                                        </span>
+                                        <Icon
+                                            className="h-6 w-6 text-[#F58220]"
+                                            strokeWidth={2.1}
+                                        />
+                                    </div>
+                                </Link>
+                            </FadeInOnScroll>
+                        );
+                    })}
+                </div>
+            </div>
+        </section>
+    );
+}
+
+function CampaignBand() {
     return (
         <FadeInOnScroll>
-            <section className="mx-auto mt-6 mb-12 max-w-[1500px] px-4 md:mt-10 md:mb-20 md:px-10">
-                <div className="group relative min-h-[280px] overflow-hidden md:min-h-[500px]">
-                    <img
-                        src={bannerImage(
-                            ctaBanner,
-                            '/img/sarah-khan-R7p66Oj8ZOQ-unsplash.webp',
-                        )}
-                        alt={ctaBanner?.title ?? 'Anemi collection banner'}
-                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-[1.5s] group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-black/25" />
-                    <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/65 via-black/25 to-transparent" />
-
-                    <div className="relative z-10 flex min-h-[280px] items-end justify-start px-6 py-10 text-left md:min-h-[500px] md:px-10 md:py-16">
-                        <div className="max-w-[560px]">
-                            <p className="mb-3 text-[10px] font-semibold tracking-[0.22em] text-white/80 uppercase md:text-xs">
-                                {ctaBanner?.subtitle ?? 'New Collection'}
-                            </p>
-                            <h2 className="text-3xl leading-tight font-light tracking-[0.08em] text-white uppercase md:text-5xl">
-                                {ctaBanner?.title ?? 'Discover Your Style'}
-                            </h2>
+            <section className="grid min-h-[520px] grid-cols-1 overflow-hidden border-y border-[#1A1A1A] bg-[#1A1A1A] lg:grid-cols-[1fr_0.9fr_1fr]">
+                <img
+                    src={campaignImages.goggle}
+                    alt="AxeGear goggle lens detail"
+                    className="h-[320px] w-full object-cover lg:h-full"
+                    loading="lazy"
+                    decoding="async"
+                />
+                <div className="relative flex items-center justify-center bg-white px-5 py-12 lg:-mx-10 lg:skew-x-[-7deg]">
+                    <div className="max-w-[460px] text-center lg:skew-x-[7deg]">
+                        <div className="mb-5 text-3xl font-black tracking-[0.12em] text-[#F58220]">
+                            ///
+                        </div>
+                        <h2 className="text-[40px] leading-[0.95] font-black tracking-normal text-[#1A1A1A] uppercase md:text-[58px]">
+                            Engineered for the fastest moments
+                        </h2>
+                        <p className="mx-auto mt-5 max-w-[390px] text-base leading-7 font-medium text-[#2E2E2E]">
+                            High-contrast lenses, locked-in fit, and
+                            no-wasted-motion details for riders and athletes who
+                            need instant clarity.
+                        </p>
+                        <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
                             <Link
-                                href={ctaBanner?.button_url ?? list.url()}
-                                className="mt-7 inline-flex border border-white px-8 py-3 text-[10px] font-semibold tracking-[0.18em] text-white uppercase backdrop-blur-sm transition-colors hover:bg-white hover:text-black md:text-[11px]"
+                                href={`${list.url()}?category=goggles`}
+                                className="inline-flex h-12 items-center justify-center bg-[#F58220] px-7 text-sm font-extrabold tracking-[0.08em] text-white uppercase hover:bg-[#E67312]"
                             >
-                                {ctaBanner?.button_text ?? 'Discover'}
+                                Shop Goggles
+                            </Link>
+                            <Link
+                                href={list.url()}
+                                className="inline-flex h-12 items-center justify-center border border-[#1A1A1A] px-7 text-sm font-extrabold tracking-[0.08em] text-[#1A1A1A] uppercase hover:bg-[#1A1A1A] hover:text-white"
+                            >
+                                View Gear
                             </Link>
                         </div>
                     </div>
                 </div>
+                <img
+                    src={campaignImages.moto}
+                    alt="Motorsport athlete wearing performance gear"
+                    className="h-[320px] w-full object-cover lg:h-full"
+                    loading="lazy"
+                    decoding="async"
+                />
             </section>
         </FadeInOnScroll>
     );
 }
 
-function NewCollectionsSection({
-    collectionBanners,
-}: {
-    collectionBanners: BannerCard[];
-}) {
-    const [mainBanner, secondaryBanner] = collectionBanners;
-
+function NewArrivals({ products }: { products: ProductCard[] }) {
     return (
-        <FadeInOnScroll>
-            <section className="bg-[#f7f7f7] px-5 py-8 md:px-10 md:py-12">
-                <div className="relative mx-auto flex max-w-[1188px] flex-col gap-8 overflow-hidden lg:min-h-[768px]">
-                    <img
-                        src={bannerImage(
-                            mainBanner,
-                            '/img/shedrack-salami-DRjeesi2kFM-unsplash.webp',
-                        )}
-                        alt={
-                            mainBanner?.title ??
-                            'Model wearing red fashion collection'
-                        }
-                        className="order-3 h-[520px] w-full object-cover md:h-[680px] lg:absolute lg:top-0 lg:left-0 lg:order-none lg:h-[752px] lg:w-[430px]"
-                    />
-
-                    <h2 className="order-1 text-[42px] leading-[0.88] font-light tracking-[-0.045em] text-[#111111] uppercase md:text-[58px] lg:absolute lg:top-0 lg:left-[455px]">
-                        NEW
-                        <br />
-                        COLLECTIONS
-                    </h2>
-
-                    <Link
-                        href={list.url()}
-                        className="order-2 flex w-fit items-center gap-3 text-sm font-semibold text-[#111111] lg:absolute lg:top-5 lg:right-[22px]"
-                    >
-                        <span>See more</span>
-                        <span className="relative block h-px w-[43px] bg-[#111111] after:absolute after:top-1/2 after:right-0 after:h-2 after:w-2 after:-translate-y-1/2 after:rotate-45 after:border-t after:border-r after:border-[#111111] after:content-['']" />
-                    </Link>
-
-                    <div className="order-4 max-w-[255px] text-[15px] leading-[1.55] text-[#333333] lg:absolute lg:top-[156px] lg:left-[816px]">
-                        <p>{mainBanner?.subtitle ?? ''}</p>
-                        <p className="mt-3">{secondaryBanner?.subtitle ?? ''}</p>
-                    </div>
-
-                    <img
-                        src={bannerImage(
-                            secondaryBanner,
-                            '/img/sajimon-sahadevan-AWC94dVpTPc-unsplash.webp',
-                        )}
-                        alt={
-                            secondaryBanner?.title ??
-                            'Model wearing black fashion collection'
-                        }
-                        className="order-5 h-[377px] w-[249px] object-cover lg:absolute lg:top-[376px] lg:left-[456px] lg:order-none"
-                    />
+        <section className="bg-white px-4 py-12 md:px-8 md:py-16">
+            <div className="mx-auto max-w-[1600px]">
+                <SectionHeader
+                    kicker="Latest drop"
+                    title="New arrivals"
+                    action="View all"
+                />
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 lg:gap-4">
+                    {products.map((product, index) => (
+                        <ProductTile
+                            key={`${product.id}-${product.slug}`}
+                            product={product}
+                            index={index}
+                        />
+                    ))}
                 </div>
-            </section>
-        </FadeInOnScroll>
-    );
-}
-
-function HeroSlider({ heroBanners }: { heroBanners: BannerCard[] }) {
-    const slides =
-        heroBanners && heroBanners.length > 0
-            ? heroBanners.map((banner) => ({
-                  desktop: bannerImage(
-                      banner,
-                      '/img/omar-elsharawy-gFHBofW3ncQ-unsplash.webp',
-                  ),
-                  mobile:
-                      banner?.image_mobile_url ??
-                      bannerImage(
-                          banner,
-                          '/img/omar-elsharawy-gFHBofW3ncQ-unsplash.webp',
-                      ),
-              }))
-            : [
-                  {
-                      desktop: '/img/omar-elsharawy-gFHBofW3ncQ-unsplash.webp',
-                      mobile: '/img/omar-elsharawy-gFHBofW3ncQ-unsplash.webp',
-                  },
-                  {
-                      desktop:
-                          '/img/abdul-raheem-kannath-aNWfK46QWto-unsplash.webp',
-                      mobile: '/img/abdul-raheem-kannath-aNWfK46QWto-unsplash.webp',
-                  },
-                  {
-                      desktop: '/img/ainur-iman-qcNmigFPTQM-unsplash.webp',
-                      mobile: '/img/ainur-iman-qcNmigFPTQM-unsplash.webp',
-                  },
-              ];
-
-    const sliderRef = useRef<HTMLDivElement>(null);
-    const [currentIndex, setCurrentIndex] = useState(0);
-
-    const goToSlide = (index: number) => {
-        const slider = sliderRef.current;
-        const slideIndex = (index + slides.length) % slides.length;
-
-        if (!slider) {
-            return;
-        }
-
-        slider.scrollTo({
-            behavior: 'smooth',
-            left: slider.clientWidth * slideIndex,
-        });
-        setCurrentIndex(slideIndex);
-    };
-
-    const updateCurrentSlide = () => {
-        const slider = sliderRef.current;
-
-        if (!slider) {
-            return;
-        }
-
-        setCurrentIndex(
-            Math.min(
-                slides.length - 1,
-                Math.round(slider.scrollLeft / slider.clientWidth),
-            ),
-        );
-    };
-
-    useEffect(() => {
-        const timer = setInterval(() => {
-            const nextIndex = (currentIndex + 1) % slides.length;
-            goToSlide(nextIndex);
-        }, 5000);
-
-        return () => clearInterval(timer);
-    }, [currentIndex, slides.length]);
-
-    return (
-        <section className="relative h-[calc(100svh-4rem)] w-full overflow-hidden bg-[#f7f7f7] md:h-[82vh]">
-            <div
-                ref={sliderRef}
-                onScroll={updateCurrentSlide}
-                className="hide-scrollbar flex h-full snap-x snap-mandatory overflow-x-hidden scroll-smooth"
-            >
-                {slides.map((slide, index) => (
-                    <Link
-                        key={index}
-                        href={list.url()}
-                        className="relative h-full min-w-full snap-start"
-                    >
-                        <picture className="block h-full w-full">
-                            <source
-                                media="(max-width: 767px)"
-                                srcSet={slide.mobile}
-                            />
-                            <img
-                                src={slide.desktop}
-                                alt={`Hero Banner ${index + 1}`}
-                                draggable={false}
-                                className="h-full w-full object-cover"
-                            />
-                        </picture>
-                        <div className="absolute inset-0 bg-black/5" />
-                    </Link>
-                ))}
-            </div>
-
-            <div className="absolute right-0 bottom-24 left-0 z-20 flex justify-center gap-3 md:bottom-8">
-                {slides.map((_, index) => (
-                    <span
-                        key={index}
-                        className={`h-0.5 transition-all duration-300 ${
-                            index === currentIndex
-                                ? 'w-10 bg-white'
-                                : 'w-6 bg-white/45'
-                        }`}
-                        aria-hidden="true"
-                    />
-                ))}
-            </div>
-
-            <div className="absolute right-4 bottom-20 left-4 z-30 flex items-center justify-between md:bottom-6 md:right-8 md:left-8">
-                <button
-                    type="button"
-                    onClick={() => goToSlide(currentIndex - 1)}
-                    className="flex h-7 w-7 items-center justify-center border border-white/25 bg-black/5 text-white/60 backdrop-blur-[2px] transition-colors hover:border-white/55 hover:bg-white/10 hover:text-white md:h-8 md:w-8"
-                    aria-label="Previous hero banner"
-                >
-                    <ChevronLeft size={16} strokeWidth={1.4} />
-                </button>
-                <button
-                    type="button"
-                    onClick={() => goToSlide(currentIndex + 1)}
-                    className="flex h-7 w-7 items-center justify-center border border-white/25 bg-black/5 text-white/60 backdrop-blur-[2px] transition-colors hover:border-white/55 hover:bg-white/10 hover:text-white md:h-8 md:w-8"
-                    aria-label="Next hero banner"
-                >
-                    <ChevronRight size={16} strokeWidth={1.4} />
-                </button>
             </div>
         </section>
+    );
+}
+
+function FeaturedCollections() {
+    return (
+        <section className="border-y border-[#1A1A1A] bg-[#F8F8F8] px-4 py-12 md:px-8 md:py-16">
+            <div className="mx-auto max-w-[1600px]">
+                <SectionHeader
+                    kicker="Built sets"
+                    title="Featured collections"
+                    action="Explore"
+                />
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                    {featuredCollections.map((item, index) => (
+                        <FadeInOnScroll key={item.title} delay={index * 60}>
+                            <Link
+                                href={`${list.url()}?collection=${encodeURIComponent(item.title.toLowerCase())}`}
+                                className="group relative block aspect-[4/5] overflow-hidden border border-[#1A1A1A] bg-[#1A1A1A]"
+                            >
+                                <img
+                                    src={item.image}
+                                    alt={item.title}
+                                    className="absolute inset-0 h-full w-full object-cover opacity-85 transition-transform duration-700 group-hover:scale-105"
+                                    loading="lazy"
+                                    decoding="async"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+                                <div className="absolute inset-x-0 bottom-0 p-5">
+                                    <p className="mb-3 text-[12px] font-extrabold tracking-[0.18em] text-[#F58220] uppercase">
+                                        Collection
+                                    </p>
+                                    <h3 className="text-3xl leading-none font-black tracking-normal text-white uppercase">
+                                        {item.title}
+                                    </h3>
+                                </div>
+                            </Link>
+                        </FadeInOnScroll>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+}
+
+function BenefitStrip() {
+    return (
+        <section className="bg-white">
+            <div className="mx-auto grid max-w-[1600px] grid-cols-1 divide-y divide-[#E5E5E5] border-x border-[#E5E5E5] md:grid-cols-4 md:divide-x md:divide-y-0">
+                {benefits.map((benefit) => {
+                    const Icon = benefit.icon;
+
+                    return (
+                        <div
+                            key={benefit.title}
+                            className="flex min-h-[150px] items-start gap-4 px-5 py-7"
+                        >
+                            <Icon
+                                className="mt-1 h-8 w-8 shrink-0 text-[#F58220]"
+                                strokeWidth={1.9}
+                            />
+                            <div>
+                                <h3 className="text-base font-black tracking-[0.04em] text-[#1A1A1A] uppercase">
+                                    {benefit.title}
+                                </h3>
+                                <p className="mt-2 text-sm leading-6 font-medium text-[#707070]">
+                                    {benefit.body}
+                                </p>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </section>
+    );
+}
+
+function CommunityBand() {
+    return (
+        <section className="bg-[#1A1A1A] px-4 py-12 text-white md:px-8 md:py-16">
+            <div className="mx-auto grid max-w-[1600px] gap-8 md:grid-cols-[1fr_0.9fr] md:items-center">
+                <FadeInOnScroll>
+                    <p className="mb-4 text-4xl font-black tracking-[0.12em] text-[#F58220]">
+                        ///
+                    </p>
+                    <h2 className="max-w-[780px] text-[42px] leading-[0.95] font-black tracking-normal uppercase md:text-[64px]">
+                        Join the AxeGear community
+                    </h2>
+                    <p className="mt-5 max-w-[600px] text-base leading-7 font-medium text-white/72">
+                        Get first access to product drops, race-week promos, and
+                        athlete-tested gear notes.
+                    </p>
+                </FadeInOnScroll>
+                <FadeInOnScroll delay={80}>
+                    <form className="flex flex-col gap-3 sm:flex-row">
+                        <label className="sr-only" htmlFor="community-email">
+                            Email address
+                        </label>
+                        <input
+                            id="community-email"
+                            type="email"
+                            placeholder="EMAIL ADDRESS"
+                            className="h-12 flex-1 border border-white/45 bg-transparent px-4 text-sm font-bold tracking-[0.08em] text-white uppercase outline-none placeholder:text-white/55 focus:border-[#F58220]"
+                        />
+                        <button
+                            type="submit"
+                            className="inline-flex h-12 items-center justify-center bg-[#F58220] px-8 text-sm font-extrabold tracking-[0.08em] text-white uppercase hover:bg-[#E67312]"
+                        >
+                            Join Now
+                        </button>
+                    </form>
+                    <div className="mt-6 flex items-center gap-3">
+                        {[Instagram, Facebook, Youtube, Mail].map(
+                            (Icon, index) => (
+                                <Link
+                                    key={index}
+                                    href="#"
+                                    className="flex h-11 w-11 items-center justify-center border border-white/30 text-white transition-colors hover:border-[#F58220] hover:text-[#F58220]"
+                                    aria-label="AxeGear social link"
+                                >
+                                    <Icon size={18} strokeWidth={1.8} />
+                                </Link>
+                            ),
+                        )}
+                    </div>
+                </FadeInOnScroll>
+            </div>
+        </section>
+    );
+}
+
+function ProductTile({
+    product,
+    index,
+}: {
+    product: ProductCard;
+    index: number;
+}) {
+    const hasSale = product.sale_price !== null;
+
+    return (
+        <FadeInOnScroll delay={index * 45}>
+            <Link
+                href={detail.url({ query: { product: product.slug } })}
+                className="group block overflow-hidden border border-[#E5E5E5] bg-white transition-colors hover:border-[#1A1A1A]"
+            >
+                <div className="relative aspect-square bg-[#F8F8F8] p-4">
+                    {(hasSale || product.label) && (
+                        <span className="absolute top-3 right-3 z-10 bg-[#F58220] px-2.5 py-1.5 text-[11px] font-black tracking-[0.08em] text-white uppercase">
+                            {hasSale ? 'Sale' : product.label}
+                        </span>
+                    )}
+                    <img
+                        src={productImage(product, index)}
+                        alt={product.name}
+                        className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                        decoding="async"
+                    />
+                </div>
+                <div className="border-t border-[#E5E5E5] p-4">
+                    <p className="mb-2 min-h-[40px] text-sm leading-5 font-black tracking-normal text-[#1A1A1A] uppercase">
+                        {product.name}
+                    </p>
+                    <p className="mb-3 text-xs font-bold tracking-[0.08em] text-[#707070] uppercase">
+                        {product.category ??
+                            product.collection ??
+                            'AxeGear Performance'}
+                    </p>
+                    <div className="mb-4 flex flex-wrap items-center gap-2 text-sm font-black">
+                        <span
+                            className={
+                                hasSale ? 'text-[#F58220]' : 'text-[#1A1A1A]'
+                            }
+                        >
+                            {formatPrice(product.sale_price ?? product.price)}
+                        </span>
+                        {hasSale && (
+                            <span className="text-[#9A9A9A] line-through">
+                                {formatPrice(product.price)}
+                            </span>
+                        )}
+                    </div>
+                    <span className="flex h-10 items-center justify-center bg-[#1A1A1A] text-xs font-black tracking-[0.08em] text-white uppercase transition-colors group-hover:bg-[#F58220]">
+                        Quick Add
+                    </span>
+                </div>
+            </Link>
+        </FadeInOnScroll>
+    );
+}
+
+function SectionHeader({
+    kicker,
+    title,
+    action,
+}: {
+    kicker: string;
+    title: string;
+    action: string;
+}) {
+    return (
+        <div className="mb-7 flex flex-col gap-4 md:mb-9 md:flex-row md:items-end md:justify-between">
+            <div>
+                <p className="mb-2 text-[12px] font-extrabold tracking-[0.18em] text-[#F58220] uppercase">
+                    {kicker}
+                </p>
+                <h2 className="text-[34px] leading-none font-black tracking-normal text-[#1A1A1A] uppercase md:text-[48px]">
+                    {title}
+                </h2>
+            </div>
+            <Link
+                href={list.url()}
+                className="inline-flex w-fit items-center gap-2 text-sm font-extrabold tracking-[0.08em] text-[#1A1A1A] uppercase transition-colors hover:text-[#F58220]"
+            >
+                {action}
+                <ChevronRight size={18} strokeWidth={2.4} />
+            </Link>
+        </div>
     );
 }
 
@@ -462,7 +760,7 @@ function FadeInOnScroll({
                     observer.unobserve(entry.target);
                 }
             },
-            { rootMargin: '0px 0px -12% 0px', threshold: 0.16 },
+            { rootMargin: '0px 0px -10% 0px', threshold: 0.12 },
         );
 
         observer.observe(element);
@@ -473,106 +771,10 @@ function FadeInOnScroll({
     return (
         <div
             ref={ref}
-            className={`${className} transition-all duration-700 ease-out motion-reduce:translate-y-0 motion-reduce:opacity-100 ${
-                visible
-                    ? 'translate-y-0 opacity-100'
-                    : 'translate-y-6 opacity-0'
-            }`}
+            className={`${className} transition-all duration-700 ease-out motion-reduce:translate-y-0 motion-reduce:opacity-100 ${visible ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0'}`}
             style={{ transitionDelay: `${delay}ms` }}
         >
             {children}
         </div>
-    );
-}
-
-function SectionTitle({
-    title,
-    subtitle,
-}: {
-    title: string;
-    subtitle: string;
-}) {
-    return (
-        <div className="mb-8 text-center md:mb-10">
-            <h2 className="mb-2 text-2xl tracking-normal text-[#171717] uppercase md:text-3xl">
-                {title}
-            </h2>
-            <p className="mx-auto max-w-xl text-[10px] tracking-[0.12em] text-[#6f6f6f] uppercase md:text-xs">
-                {subtitle}
-            </p>
-        </div>
-    );
-}
-
-function ProductTile({
-    product,
-    index,
-    button = false,
-    centered = false,
-    wide = false,
-}: {
-    product: ProductCard;
-    index: number;
-    button?: boolean;
-    centered?: boolean;
-    wide?: boolean;
-}) {
-    return (
-        <FadeInOnScroll
-            className={`${centered ? 'min-w-[45%] sm:min-w-[30%]' : ''} ${
-                wide ? 'min-w-[65%] sm:min-w-[45%]' : ''
-            } snap-start md:min-w-0`}
-            delay={index * 60}
-        >
-            <Link
-                href={detail.url({ query: { product: product.slug } })}
-                className={`group flex cursor-pointer flex-col ${centered ? 'text-center' : ''}`}
-            >
-                <div className="relative mb-3 aspect-[3/4] overflow-hidden bg-[#f7f7f7]">
-                    {product.label && (
-                        <span
-                            className={`absolute top-2 left-2 z-10 px-2 py-1 text-[8px] font-bold tracking-widest uppercase ${
-                                product.label.includes('%')
-                                    ? 'bg-[#d83f3f] text-white'
-                                    : 'bg-white/90 text-[#151515]'
-                            }`}
-                        >
-                            {product.label}
-                        </span>
-                    )}
-                    <img
-                        src={productImage(product, index)}
-                        alt={product.name}
-                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                        loading="lazy"
-                        decoding="async"
-                    />
-                </div>
-                <div className={centered ? 'px-1 text-center' : 'px-1'}>
-                    <h3 className="mb-1 line-clamp-2 min-h-[2.75em] text-[10px] leading-snug font-medium text-[#272727] md:text-xs">
-                        {product.name}
-                    </h3>
-                    <div className="mb-2 flex flex-wrap items-center gap-1.5 text-[10px] font-medium text-[#3d3d3d] md:mb-3 md:text-xs">
-                        <span>
-                            {formatPrice(product.sale_price ?? product.price)}
-                        </span>
-                        {product.sale_price !== null && (
-                            <span className="text-[#8b827c] line-through">
-                                {formatPrice(product.price)}
-                            </span>
-                        )}
-                    </div>
-                    {button ? (
-                        <span className="block w-full bg-[#B98B63] py-2.5 text-center text-[9px] font-semibold tracking-[0.16em] text-white uppercase transition-colors hover:bg-[#9A6B45] md:text-[10px]">
-                            Choose options
-                        </span>
-                    ) : (
-                        <span className="border-b border-[#B98B63] pb-0.5 text-[9px] font-semibold tracking-[0.14em] text-[#B98B63] uppercase transition-colors hover:border-[#9A6B45] hover:text-[#9A6B45] md:text-[10px]">
-                            Choose options
-                        </span>
-                    )}
-                </div>
-            </Link>
-        </FadeInOnScroll>
     );
 }

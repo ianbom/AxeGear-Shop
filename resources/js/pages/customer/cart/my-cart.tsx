@@ -1,15 +1,19 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
-    Box,
-    Heart,
+    BadgeCheck,
+    ChevronLeft,
+    FileText,
+    Info,
     Minus,
     Plus,
+    RotateCcw,
     ShieldCheck,
-    ShoppingBag,
     Trash2,
+    Truck,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+
 import {
     removeCartItem,
     updateCartItemQuantity,
@@ -61,11 +65,11 @@ type PageProps = {
 };
 
 const fallbackImages = [
-    '/img/abdul-raheem-kannath-aNWfK46QWto-unsplash.webp',
-    '/img/ainur-iman-qcNmigFPTQM-unsplash.webp',
-    '/img/atiyeh-fathi-CvdzGjVX9DA-unsplash.webp',
-    '/img/hasan-almasi-_X2UAmIcpko-unsplash.webp',
-    '/img/ike-ellyana-2F70bGqQVa4-unsplash.webp',
+    'https://www.100percent.com/cdn/shop/files/59057-00001-P_1.jpg?v=1764788225&width=1100',
+    'https://www.100percent.com/cdn/shop/files/SP26_SPEEDCRAFT_SL_60008-00025_3Q.jpg?v=1772487312&width=500',
+    'https://www.100percent.com/cdn/shop/files/2000x2000-eComm_20PDP-Casual_Staple_20Tee_0010_Layer_2015.jpg?v=1764633157&width=1200',
+    'https://www.100percent.com/cdn/shop/files/2000x2000-eComm_20PDP-Casual_Region_20Tee_0001_Layer_2030.jpg?v=1764633177&width=1200',
+    'https://www.100percent.com/cdn/shop/files/FA25_LS_OS_TEE_REGION__2020142-10002_F-002.jpg?v=1764633155&width=1100',
 ];
 
 const formatPrice = (price: number) =>
@@ -77,6 +81,10 @@ const formatPrice = (price: number) =>
     })
         .format(price)
         .replace('Rp', 'Rp ');
+
+const itemMeta = (item: CartItem) =>
+    [item.color, item.size].filter(Boolean).join(' / ') ||
+    'AxeGear Performance';
 
 export default function MyCart({
     cartItems,
@@ -103,21 +111,19 @@ export default function MyCart({
 
     const stockIssueMessage = (item: CartItem) => {
         if (item.available_stock <= 0) {
-            return 'Produk sudah habis. Tidak bisa checkout.';
+            return 'Product is out of stock. Checkout is unavailable.';
         }
 
         if (item.available_stock < item.quantity) {
-            return `Stok tidak mencukupi. Stok tersedia hanya ${item.available_stock}. Tidak bisa checkout.`;
+            return `Only ${item.available_stock} left in stock. Update quantity before checkout.`;
         }
 
-        return 'Produk tidak tersedia. Tidak bisa checkout.';
+        return 'Product is unavailable. Checkout is unavailable.';
     };
 
     const continueToCheckout = () => {
         if (hasStockIssues) {
-            toast.error(
-                'Stok barang telah habis/tidak mencukupi. Perbarui keranjang sebelum checkout.',
-            );
+            toast.error('Update unavailable cart items before checkout.');
 
             return;
         }
@@ -172,486 +178,501 @@ export default function MyCart({
 
     return (
         <ShopLayout>
-            <Head title="Keranjang Saya - Aurea Syari" />
+            <Head title="My Cart - AxeGear" />
 
-            <main className="mx-auto min-h-screen max-w-[1200px] px-4 py-8 md:px-8 md:py-12">
-                <div className="mb-6 flex items-center space-x-2 text-[10px] font-medium tracking-wide text-[#6f6f6f] md:mb-8 md:text-xs">
-                    <Link
-                        href="/"
-                        className="transition-colors hover:text-black"
-                    >
-                        Beranda
-                    </Link>
-                    <span>/</span>
-                    <span className="text-[#272727]">Keranjang Saya</span>
-                </div>
-
-                {!isEmpty ? (
-                    <>
-                        <div className="mb-8 md:mb-10">
-                            <h1 className="mb-2 font-serif text-3xl text-[#151515] italic md:text-4xl">
-                                Keranjang Saya
-                            </h1>
-                            <p className="text-xs text-[#6f6f6f] md:text-sm">
-                                Tinjau item pilihanmu sebelum checkout.
-                            </p>
-                            {errorMessage && (
-                                <div className="mt-4 rounded-xl border border-[#E7C9C9] bg-[#FFF6F6] px-4 py-3 text-[12px] font-medium text-[#B24B4B]">
-                                    {errorMessage}
-                                </div>
-                            )}
-                            {hasStockIssues && (
-                                <div className="mt-4 rounded-xl border border-[#E7C9C9] bg-[#FFF6F6] px-4 py-3 text-[12px] font-medium text-[#B24B4B]">
-                                    Beberapa item stoknya habis atau tidak
-                                    mencukupi. Perbarui keranjang sebelum
-                                    checkout.
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="relative flex flex-col gap-8 lg:flex-row lg:gap-10">
-                            <div className="flex-1 space-y-4 md:space-y-6">
-                                {cartItems.map((item, index) => {
-                                    const isUpdating =
-                                        processingItemId === item.id &&
-                                        processingAction === 'update';
-                                    const isRemoving =
-                                        processingItemId === item.id &&
-                                        processingAction === 'remove';
-                                    const itemDisabled =
-                                        isUpdating || isRemoving;
-                                    const productHref = item.product_slug
-                                        ? detail.url({
-                                              query: {
-                                                  product: item.product_slug,
-                                              },
-                                          })
-                                        : undefined;
-                                    const canIncrease =
-                                        item.is_available &&
-                                        item.quantity <
-                                            Math.max(1, item.available_stock);
-
-                                    return (
-                                        <div
-                                            key={item.id}
-                                            className="group animate-fade-in-up relative border-b border-[#E5D8D2] py-6 last:border-b-0"
-                                            style={{
-                                                animationDelay: `${index * 100}ms`,
-                                            }}
-                                        >
-                                            <div className="flex items-stretch gap-4 sm:gap-6">
-                                                {/* Image */}
-                                                {productHref ? (
-                                                    <Link
-                                                        href={productHref}
-                                                        className="relative h-[110px] w-[85px] flex-shrink-0 overflow-hidden rounded-2xl bg-[#E8D6C1] shadow-inner sm:h-[140px] sm:w-[110px]"
-                                                    >
-                                                        <img
-                                                            src={
-                                                                item.image ??
-                                                                fallbackImages[
-                                                                    index %
-                                                                        fallbackImages.length
-                                                                ]
-                                                            }
-                                                            alt={item.title}
-                                                            className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
-                                                            loading="lazy"
-                                                            decoding="async"
-                                                        />
-                                                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                                                    </Link>
-                                                ) : (
-                                                    <div className="relative h-[110px] w-[85px] flex-shrink-0 overflow-hidden rounded-2xl bg-[#E8D6C1] shadow-inner sm:h-[140px] sm:w-[110px]">
-                                                        <img
-                                                            src={
-                                                                item.image ??
-                                                                fallbackImages[
-                                                                    index %
-                                                                        fallbackImages.length
-                                                                ]
-                                                            }
-                                                            alt={item.title}
-                                                            className="h-full w-full object-cover"
-                                                            loading="lazy"
-                                                            decoding="async"
-                                                        />
-                                                    </div>
-                                                )}
-
-                                                {/* Content */}
-                                                <div className="flex flex-1 flex-col justify-between py-1">
-                                                    <div>
-                                                        <div className="flex items-start justify-between gap-3">
-                                                            <div className="pr-2">
-                                                                {productHref ? (
-                                                                    <Link
-                                                                        href={
-                                                                            productHref
-                                                                        }
-                                                                        className="line-clamp-2 font-serif text-[13px] leading-snug font-semibold text-[#272727] transition-colors hover:text-black sm:text-base"
-                                                                    >
-                                                                        {
-                                                                            item.title
-                                                                        }
-                                                                    </Link>
-                                                                ) : (
-                                                                    <h3 className="line-clamp-2 font-serif text-[13px] leading-snug font-semibold text-[#272727] sm:text-base">
-                                                                        {
-                                                                            item.title
-                                                                        }
-                                                                    </h3>
-                                                                )}
-                                                                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-medium text-[#6f6f6f] sm:mt-2 sm:text-xs">
-                                                                    {item.color && (
-                                                                        <span className="flex items-center gap-1.5">
-                                                                            <span
-                                                                                className="block h-2.5 w-2.5 rounded-full border border-gray-200/60 shadow-sm"
-                                                                                style={{
-                                                                                    backgroundColor:
-                                                                                        item.color_hex ||
-                                                                                        '#ccc',
-                                                                                }}
-                                                                            />
-                                                                            {
-                                                                                item.color
-                                                                            }
-                                                                        </span>
-                                                                    )}
-                                                                    {item.size && (
-                                                                        <span className="flex items-center gap-1.5">
-                                                                            <span className="h-1 w-1 rounded-full bg-[#e7e2de]" />
-                                                                            {
-                                                                                item.size
-                                                                            }
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                <p className="mt-1.5 text-[10px] font-semibold text-[#6f6f6f] sm:text-[11px]">
-                                                                    Stok:{' '}
-                                                                    {
-                                                                        item.available_stock
-                                                                    }
-                                                                </p>
-                                                                {!item.is_available && (
-                                                                    <p className="mt-1.5 text-[10px] font-semibold text-[#B24B4B] sm:text-[11px]">
-                                                                        {stockIssueMessage(
-                                                                            item,
-                                                                        )}
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    removeItem(
-                                                                        item,
-                                                                    )
-                                                                }
-                                                                disabled={
-                                                                    itemDisabled
-                                                                }
-                                                                className="-mt-1 -mr-1 flex-shrink-0 rounded-full p-2 text-gray-400 transition-all hover:bg-red-50 hover:text-red-500 active:scale-90 disabled:opacity-50"
-                                                                aria-label="Hapus item"
-                                                            >
-                                                                <Trash2
-                                                                    size={16}
-                                                                    strokeWidth={
-                                                                        1.5
-                                                                    }
-                                                                />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="mt-4 flex items-end justify-between sm:mt-auto">
-                                                        <span className="text-[14px] font-bold tracking-tight text-[#4A3B32] sm:text-base">
-                                                            {formatPrice(
-                                                                item.subtotal,
-                                                            )}
-                                                        </span>
-
-                                                        <div className="flex items-center overflow-hidden rounded-full border border-[#F2EFEA] bg-[#ffffff] p-0.5 shadow-sm">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    updateQuantity(
-                                                                        item,
-                                                                        item.quantity -
-                                                                            1,
-                                                                    )
-                                                                }
-                                                                disabled={
-                                                                    itemDisabled ||
-                                                                    item.quantity <=
-                                                                        1
-                                                                }
-                                                                className="flex h-7 w-7 items-center justify-center rounded-full text-[#6B5E55] transition-colors hover:bg-white hover:text-black hover:shadow-sm disabled:bg-transparent disabled:opacity-40 disabled:shadow-none sm:h-8 sm:w-8"
-                                                            >
-                                                                <Minus
-                                                                    size={12}
-                                                                    strokeWidth={
-                                                                        2.5
-                                                                    }
-                                                                />
-                                                            </button>
-                                                            <span className="w-6 text-center text-[11px] font-bold text-[#4A3B32] sm:w-8 sm:text-xs">
-                                                                {item.quantity}
-                                                            </span>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    updateQuantity(
-                                                                        item,
-                                                                        item.quantity +
-                                                                            1,
-                                                                    )
-                                                                }
-                                                                disabled={
-                                                                    itemDisabled ||
-                                                                    !canIncrease
-                                                                }
-                                                                className="flex h-7 w-7 items-center justify-center rounded-full text-[#6B5E55] transition-colors hover:bg-white hover:text-black hover:shadow-sm disabled:bg-transparent disabled:opacity-40 disabled:shadow-none sm:h-8 sm:w-8"
-                                                            >
-                                                                <Plus
-                                                                    size={12}
-                                                                    strokeWidth={
-                                                                        2.5
-                                                                    }
-                                                                />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-
-                            <div className="h-px w-full bg-[#E5D8D2] lg:hidden" />
-
-                            <div className="hidden self-stretch lg:block lg:w-px lg:bg-[#E5D8D2]" />
-
-                            <div className="w-full flex-shrink-0 lg:w-[380px]">
-                                <div className="sticky top-24 lg:top-32">
-                                    <h2 className="mb-6 font-serif text-xl tracking-tight text-[#272727] md:text-2xl">
-                                        Ringkasan Pesanan
-                                    </h2>
-
-                                    <div className="mb-6 space-y-4 text-[13px] text-[#6f6f6f]">
-                                        <div>
-                                            <span>
-                                                Item ({summary.item_count})
-                                            </span>
-                                            <div className="mt-3 space-y-3 text-[11px] text-[#6f6f6f]">
-                                                {cartItems.map((item) => (
-                                                    <div
-                                                        key={`summary-item-${item.id}`}
-                                                        className="flex items-start justify-between gap-4"
-                                                    >
-                                                        <div>
-                                                            <p className="font-bold">
-                                                                {item.title}
-                                                            </p>
-                                                            {(item.color ||
-                                                                item.size) && (
-                                                                <p className="mt-1 text-[10px] text-[#A1857B]">
-                                                                    {[
-                                                                        item.color,
-                                                                        item.size,
-                                                                    ]
-                                                                        .filter(
-                                                                            Boolean,
-                                                                        )
-                                                                        .join(
-                                                                            ' / ',
-                                                                        )}
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                        <span className="font-semibold text-[#272727]">
-                                                            {formatPrice(
-                                                                item.subtotal,
-                                                            )}
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="border-t border-[#e7e2de] pt-5 pb-6">
-                                        <div className="flex items-end justify-between">
-                                            <span className="text-sm font-semibold text-[#272727]">
-                                                Total
-                                            </span>
-                                            <span className="font-serif text-2xl text-[#272727]">
-                                                {formatPrice(summary.total)}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        <button
-                                            type="button"
-                                            onClick={continueToCheckout}
-                                            className="block w-full rounded-lg bg-[#B98B63] py-4 text-center text-[13px] font-bold tracking-wider text-white transition-all hover:bg-[#9A6B45] hover:shadow-lg hover:shadow-[#B98B63]/20 active:scale-[0.98]"
-                                        >
-                                            Lanjut ke Checkout
-                                        </button>
-                                        <div className="text-center">
-                                            <Link
-                                                href={list.url()}
-                                                className="inline-block text-[12px] font-medium text-[#6f6f6f] underline underline-offset-4 transition-colors hover:text-black"
-                                            >
-                                                Lanjut Belanja
-                                            </Link>
-                                        </div>
-                                    </div>
-
-                                    <div className="mt-8 space-y-4 border-t border-[#e7e2de]/60 pt-6">
-                                        <div className="flex items-start space-x-3 text-[11px] text-[#6f6f6f]">
-                                            <ShieldCheck
-                                                size={16}
-                                                className="mt-0.5 flex-shrink-0 text-[#e7e2de]"
-                                                strokeWidth={1.5}
-                                            />
-                                            <p>
-                                                Pembayaran aman didukung
-                                                Midtrans
-                                            </p>
-                                        </div>
-                                        <div className="flex items-start space-x-3 text-[11px] text-[#6f6f6f]">
-                                            <Box
-                                                size={16}
-                                                className="mt-0.5 flex-shrink-0 text-[#e7e2de]"
-                                                strokeWidth={1.5}
-                                            />
-                                            <p>
-                                                Ongkir dihitung memakai Biteship
-                                                saat checkout
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* <div className="pb-safe fixed right-0 bottom-0 left-0 z-40 flex translate-y-0 items-center justify-between bg-[#151515] p-4 text-white shadow-[0_-10px_40px_rgba(0,0,0,0.15)] transition-transform lg:hidden">
-                            <div>
-                                <p className="mb-0.5 text-[10px] font-medium text-white/60">
-                                    Total
-                                </p>
-                                <p className="font-serif text-lg">
-                                    {formatPrice(summary.total)}
-                                </p>
-                            </div>
-                            <Link
-                                href={checkoutHref}
-                                className="rounded-md bg-[#E8D6C1] px-6 py-3 text-xs font-bold tracking-wide text-[#B98B63] transition-colors hover:bg-white active:scale-95"
-                            >
-                                Checkout ({summary.item_count})
-                            </Link>
-                        </div> */}
-                    </>
-                ) : (
-                    <div className="animate-fade-in-up flex flex-col items-center justify-center py-20 md:py-32">
-                        <div className="relative mb-8 w-40 text-[#e7e2de] drop-shadow-xl md:w-48">
-                            <svg
-                                viewBox="0 0 200 200"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-full w-full"
-                            >
-                                <path
-                                    d="M50 80L40 180H160L150 80H50Z"
-                                    fill="#E8D6C1"
-                                    stroke="#6f6f6f"
-                                    strokeWidth="2"
-                                    strokeLinejoin="round"
-                                />
-                                <path
-                                    d="M75 80V50C75 36.1929 86.1929 25 100 25C113.807 25 125 36.1929 125 50V80"
-                                    stroke="#6f6f6f"
-                                    strokeWidth="3"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                />
-                                <path
-                                    d="M45 150L60 90C65 70 80 60 100 60C120 60 135 70 140 90L155 150"
-                                    stroke="white"
-                                    strokeOpacity="0.5"
-                                    strokeWidth="1"
-                                />
-                                <path
-                                    d="M160 40C160 40 165 42 165 47C165 42 170 40 170 40C170 40 165 38 165 33C165 38 160 40 160 40Z"
-                                    fill="#6f6f6f"
-                                />
-                            </svg>
-                        </div>
-                        <h2 className="mb-4 font-serif text-3xl text-[#151515] italic md:text-4xl">
-                            Keranjangmu kosong
-                        </h2>
-                        <p className="mb-10 max-w-sm text-center text-sm text-[#6f6f6f] md:text-base">
-                            Sepertinya kamu belum menambahkan apa pun ke
-                            keranjang.
-                        </p>
-                        <Link
-                            href={list.url()}
-                            className="rounded-lg bg-[#B98B63] px-8 py-4 text-sm font-bold tracking-wider text-white transition-all hover:-translate-y-1 hover:bg-[#9A6B45] hover:shadow-xl active:translate-y-0"
-                        >
-                            Jelajahi Koleksi
+            <main className="bg-white px-4 py-5 text-[#1A1A1A] md:px-9 md:py-7">
+                <div className="mx-auto max-w-[1760px]">
+                    <div className="mb-8 flex items-center gap-2 text-sm font-medium">
+                        <Link href="/" className="hover:text-[#F58220]">
+                            Home
                         </Link>
+                        <span className="text-[#707070]">/</span>
+                        <span className="font-extrabold">My Cart</span>
                     </div>
-                )}
 
-                {!isEmpty && suggestedProducts.length > 0 && (
-                    <div className="mt-20 mb-10 md:mt-32 lg:mb-20">
-                        <h2 className="relative mb-8 inline-block font-serif text-xl text-[#272727] md:text-2xl">
-                            Kamu Mungkin Suka
-                            <span className="absolute bottom-[-8px] left-0 h-px w-1/2 bg-[#6f6f6f]" />
-                        </h2>
-                        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
-                            {suggestedProducts.map((product, idx) => (
-                                <Link
-                                    href={detail.url({
-                                        query: { product: product.slug },
-                                    })}
-                                    key={product.id}
-                                    className="group animate-fade-in-up flex cursor-pointer flex-col"
-                                    style={{
-                                        animationDelay: `${(idx + cartItems.length) * 100}ms`,
-                                    }}
-                                >
-                                    <div className="relative mb-4 aspect-[3/4] overflow-hidden rounded-lg bg-[#E8D6C1] shadow-sm transition-all duration-500 hover:shadow-lg">
-                                        <img
-                                            src={
-                                                product.image ??
-                                                fallbackImages[
-                                                    idx % fallbackImages.length
-                                                ]
-                                            }
-                                            alt={product.title}
-                                            className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                                            loading="lazy"
-                                            decoding="async"
-                                        />
-                                        <div className="pointer-events-none absolute inset-0 bg-black/0 transition-colors duration-500 group-hover:bg-black/5" />
-                                    </div>
-                                    <h3 className="mb-1 truncate text-[12px] font-semibold text-[#272727] transition-colors group-hover:text-black md:text-sm">
-                                        {product.title}
-                                    </h3>
-                                    <p className="mb-4 text-[11px] font-medium text-[#6f6f6f] md:text-xs">
-                                        {formatPrice(product.price)}
+                    {!isEmpty ? (
+                        <>
+                            <div className="mb-8 grid gap-4 lg:grid-cols-[1fr_430px] lg:items-end">
+                                <div>
+                                    <h1 className="text-[36px] leading-none font-black tracking-normal md:text-[46px]">
+                                        My Cart
+                                    </h1>
+                                    <p className="mt-3 text-base font-medium text-[#2E2E2E]">
+                                        Review your items before checkout.
                                     </p>
-                                </Link>
-                            ))}
-                        </div>
-                    </div>
-                )}
+                                    <Link
+                                        href={list.url()}
+                                        className="mt-2 inline-flex items-center gap-1 text-sm font-extrabold hover:text-[#F58220]"
+                                    >
+                                        <ChevronLeft
+                                            size={18}
+                                            className="text-[#F58220]"
+                                        />
+                                        Continue Shopping
+                                    </Link>
+                                </div>
+                                <p className="text-sm font-medium lg:text-center">
+                                    Have an account?{' '}
+                                    <Link
+                                        href="/login"
+                                        className="font-extrabold text-[#F58220] hover:underline"
+                                    >
+                                        Log in
+                                    </Link>{' '}
+                                    to check out faster.
+                                </p>
+                            </div>
+
+                            {(errorMessage || hasStockIssues) && (
+                                <div className="mb-8 border border-[#F7B06A] bg-[#FFF3E8] px-4 py-3 text-sm font-bold text-[#1A1A1A]">
+                                    {errorMessage ||
+                                        'Some items are out of stock or unavailable. Update your cart before checkout.'}
+                                </div>
+                            )}
+
+                            <div className="mb-12 grid gap-9 lg:grid-cols-[1fr_430px] lg:items-start">
+                                <section>
+                                    <div className="overflow-hidden border border-[#CFCFCF]">
+                                        <div className="hidden grid-cols-[1fr_170px_190px_170px_50px] border-b border-[#CFCFCF] bg-white px-6 py-4 text-xs font-black tracking-[0.04em] uppercase lg:grid">
+                                            <span>Product</span>
+                                            <span>Price</span>
+                                            <span>Quantity</span>
+                                            <span>Subtotal</span>
+                                            <span />
+                                        </div>
+
+                                        {cartItems.map((item, index) => {
+                                            const isUpdating =
+                                                processingItemId === item.id &&
+                                                processingAction === 'update';
+                                            const isRemoving =
+                                                processingItemId === item.id &&
+                                                processingAction === 'remove';
+                                            const itemDisabled =
+                                                isUpdating || isRemoving;
+                                            const productHref =
+                                                item.product_slug
+                                                    ? detail.url({
+                                                          query: {
+                                                              product:
+                                                                  item.product_slug,
+                                                          },
+                                                      })
+                                                    : undefined;
+                                            const canIncrease =
+                                                item.is_available &&
+                                                item.quantity <
+                                                    Math.max(
+                                                        1,
+                                                        item.available_stock,
+                                                    );
+                                            const image =
+                                                item.image ??
+                                                fallbackImages[
+                                                    index %
+                                                        fallbackImages.length
+                                                ];
+
+                                            return (
+                                                <article
+                                                    key={item.id}
+                                                    className="grid gap-4 border-b border-[#D8D8D8] bg-white p-4 last:border-b-0 lg:grid-cols-[1fr_170px_190px_170px_50px] lg:items-center lg:px-6 lg:py-3"
+                                                >
+                                                    <div className="grid grid-cols-[118px_1fr] items-center gap-4 md:grid-cols-[260px_1fr]">
+                                                        {productHref ? (
+                                                            <Link
+                                                                href={
+                                                                    productHref
+                                                                }
+                                                                className="block h-[110px] bg-[#F8F8F8] p-2 md:h-[118px]"
+                                                            >
+                                                                <img
+                                                                    src={image}
+                                                                    alt={
+                                                                        item.title
+                                                                    }
+                                                                    className="h-full w-full object-contain"
+                                                                    loading="lazy"
+                                                                    decoding="async"
+                                                                />
+                                                            </Link>
+                                                        ) : (
+                                                            <div className="h-[110px] bg-[#F8F8F8] p-2 md:h-[118px]">
+                                                                <img
+                                                                    src={image}
+                                                                    alt={
+                                                                        item.title
+                                                                    }
+                                                                    className="h-full w-full object-contain"
+                                                                    loading="lazy"
+                                                                    decoding="async"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                        <div>
+                                                            {productHref ? (
+                                                                <Link
+                                                                    href={
+                                                                        productHref
+                                                                    }
+                                                                    className="text-base font-black tracking-normal uppercase hover:text-[#F58220]"
+                                                                >
+                                                                    {item.title}
+                                                                </Link>
+                                                            ) : (
+                                                                <h2 className="text-base font-black tracking-normal uppercase">
+                                                                    {item.title}
+                                                                </h2>
+                                                            )}
+                                                            <p className="mt-2 text-sm font-medium text-[#2E2E2E]">
+                                                                {itemMeta(item)}
+                                                            </p>
+                                                            <p className="mt-1 text-sm font-medium text-[#2E2E2E]">
+                                                                {item.variant
+                                                                    .sku ??
+                                                                    'AxeGear'}
+                                                            </p>
+                                                            {!item.is_available && (
+                                                                <p className="mt-2 text-xs font-extrabold text-[#C81E1E]">
+                                                                    {stockIssueMessage(
+                                                                        item,
+                                                                    )}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center justify-between lg:block">
+                                                        <span className="text-xs font-black text-[#707070] uppercase lg:hidden">
+                                                            Price
+                                                        </span>
+                                                        <span className="font-black tabular-nums">
+                                                            {formatPrice(
+                                                                item.price,
+                                                            )}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex items-center justify-between lg:block">
+                                                        <span className="text-xs font-black text-[#707070] uppercase lg:hidden">
+                                                            Quantity
+                                                        </span>
+                                                        <QuantityControl
+                                                            quantity={
+                                                                item.quantity
+                                                            }
+                                                            disabled={
+                                                                itemDisabled
+                                                            }
+                                                            canIncrease={
+                                                                canIncrease
+                                                            }
+                                                            onDecrease={() =>
+                                                                updateQuantity(
+                                                                    item,
+                                                                    item.quantity -
+                                                                        1,
+                                                                )
+                                                            }
+                                                            onIncrease={() =>
+                                                                updateQuantity(
+                                                                    item,
+                                                                    item.quantity +
+                                                                        1,
+                                                                )
+                                                            }
+                                                        />
+                                                    </div>
+
+                                                    <div className="flex items-center justify-between lg:block">
+                                                        <span className="text-xs font-black text-[#707070] uppercase lg:hidden">
+                                                            Subtotal
+                                                        </span>
+                                                        <span className="font-black tabular-nums">
+                                                            {formatPrice(
+                                                                item.subtotal,
+                                                            )}
+                                                        </span>
+                                                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            removeItem(item)
+                                                        }
+                                                        disabled={itemDisabled}
+                                                        className="flex h-10 w-10 items-center justify-center justify-self-end text-[#1A1A1A] transition-colors hover:text-[#F58220] disabled:opacity-40"
+                                                        aria-label="Remove item"
+                                                    >
+                                                        <Trash2
+                                                            size={18}
+                                                            strokeWidth={1.8}
+                                                        />
+                                                    </button>
+                                                </article>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <CartActionBar />
+                                </section>
+
+                                <OrderSummary
+                                    summary={summary}
+                                    hasStockIssues={hasStockIssues}
+                                    onCheckout={continueToCheckout}
+                                />
+                            </div>
+
+                            {suggestedProducts.length > 0 && (
+                                <SuggestedProducts
+                                    products={suggestedProducts}
+                                />
+                            )}
+                        </>
+                    ) : (
+                        <EmptyCart />
+                    )}
+                </div>
             </main>
         </ShopLayout>
+    );
+}
+
+function QuantityControl({
+    quantity,
+    disabled,
+    canIncrease,
+    onDecrease,
+    onIncrease,
+}: {
+    quantity: number;
+    disabled: boolean;
+    canIncrease: boolean;
+    onDecrease: () => void;
+    onIncrease: () => void;
+}) {
+    return (
+        <div className="inline-grid h-10 grid-cols-3 border border-[#CFCFCF] bg-white text-sm font-black">
+            <button
+                type="button"
+                onClick={onDecrease}
+                disabled={disabled || quantity <= 1}
+                className="flex w-10 items-center justify-center transition-colors hover:bg-[#F8F8F8] disabled:opacity-35"
+                aria-label="Decrease quantity"
+            >
+                <Minus size={16} strokeWidth={2} />
+            </button>
+            <span className="flex w-10 items-center justify-center tabular-nums">
+                {quantity}
+            </span>
+            <button
+                type="button"
+                onClick={onIncrease}
+                disabled={disabled || !canIncrease}
+                className="flex w-10 items-center justify-center text-[#F58220] transition-colors hover:bg-[#FFF3E8] disabled:opacity-35"
+                aria-label="Increase quantity"
+            >
+                <Plus size={17} strokeWidth={2.4} />
+            </button>
+        </div>
+    );
+}
+
+function CartActionBar() {
+    return (
+        <div className="mt-2 grid gap-2 border border-[#CFCFCF] bg-white p-3 text-sm font-bold lg:grid-cols-[190px_210px_1fr_420px_170px] lg:items-center">
+            <button className="flex h-10 items-center gap-3 px-3 text-left hover:text-[#F58220]">
+                <FileText size={20} strokeWidth={1.7} />
+                Add Order Note
+            </button>
+            <button className="flex h-10 items-center gap-3 px-3 text-left hover:text-[#F58220]">
+                <Truck size={22} strokeWidth={1.7} />
+                Estimate Shipping
+            </button>
+            <label htmlFor="promo-code" className="text-left lg:text-right">
+                Have a Promo Code?
+            </label>
+            <div className="grid grid-cols-[1fr_92px]">
+                <input
+                    id="promo-code"
+                    placeholder="Enter promo code"
+                    className="h-10 border border-[#CFCFCF] px-4 text-sm font-medium outline-none focus:border-[#1A1A1A]"
+                />
+                <button className="h-10 border border-[#F58220] text-xs font-black tracking-[0.04em] text-[#F58220] uppercase hover:bg-[#F58220] hover:text-white">
+                    Apply
+                </button>
+            </div>
+            <button className="h-10 border border-[#1A1A1A] text-xs font-black tracking-[0.04em] uppercase hover:bg-[#1A1A1A] hover:text-white">
+                Update Cart
+            </button>
+        </div>
+    );
+}
+
+function OrderSummary({
+    summary,
+    hasStockIssues,
+    onCheckout,
+}: {
+    summary: CartSummary;
+    hasStockIssues: boolean;
+    onCheckout: () => void;
+}) {
+    return (
+        <aside className="border border-[#CFCFCF] bg-white p-6 lg:p-7">
+            <h2 className="mb-5 text-2xl font-black tracking-normal uppercase">
+                Order Summary
+            </h2>
+            <div className="space-y-4 text-base font-medium">
+                <SummaryRow
+                    label={`Subtotal (${summary.item_count} items)`}
+                    value={formatPrice(summary.subtotal)}
+                />
+                <SummaryRow
+                    label="Estimated Shipping"
+                    value={formatPrice(summary.shipping)}
+                    icon={<Info size={17} strokeWidth={1.8} />}
+                />
+                <SummaryRow
+                    label="Discount"
+                    value={`-${formatPrice(summary.discount)}`}
+                    accent
+                />
+            </div>
+            <div className="my-6 border-t border-[#CFCFCF]" />
+            <div className="mb-3 flex items-end justify-between gap-4">
+                <span className="text-2xl font-black uppercase">Total</span>
+                <span className="text-[30px] leading-none font-black text-[#F58220] tabular-nums">
+                    {formatPrice(summary.total)}
+                </span>
+            </div>
+            <p className="mb-7 text-sm font-medium text-[#2E2E2E]">
+                Taxes and shipping calculated at checkout.
+            </p>
+            <button
+                type="button"
+                onClick={onCheckout}
+                disabled={hasStockIssues}
+                className="h-12 w-full bg-[#F58220] text-sm font-black tracking-[0.06em] text-white uppercase transition-colors hover:bg-[#E67312] disabled:bg-[#CFCFCF] disabled:text-[#707070]"
+            >
+                Proceed to Checkout
+            </button>
+            <button className="mt-4 h-11 w-full border border-[#1A1A1A] text-sm font-black tracking-[0.04em] uppercase hover:bg-[#1A1A1A] hover:text-white">
+                Express Checkout
+            </button>
+            <div className="mt-8 grid grid-cols-3 gap-3 text-center text-xs font-medium">
+                <TrustItem icon={ShieldCheck} label="Secure Checkout" />
+                <TrustItem icon={RotateCcw} label="30-Day Returns" />
+                <TrustItem icon={BadgeCheck} label="1-Year Warranty" />
+            </div>
+        </aside>
+    );
+}
+
+function SummaryRow({
+    label,
+    value,
+    accent = false,
+    icon,
+}: {
+    label: string;
+    value: string;
+    accent?: boolean;
+    icon?: React.ReactNode;
+}) {
+    return (
+        <div
+            className={`flex items-center justify-between gap-4 ${accent ? 'font-black text-[#F58220]' : ''}`}
+        >
+            <span className="flex items-center gap-2">
+                {label}
+                {icon}
+            </span>
+            <span className="font-black tabular-nums">{value}</span>
+        </div>
+    );
+}
+
+function TrustItem({
+    icon: Icon,
+    label,
+}: {
+    icon: typeof ShieldCheck;
+    label: string;
+}) {
+    return (
+        <div className="flex flex-col items-center gap-2">
+            <Icon className="h-8 w-8" strokeWidth={1.7} />
+            <span>{label}</span>
+        </div>
+    );
+}
+
+function SuggestedProducts({ products }: { products: SuggestedProduct[] }) {
+    return (
+        <section className="mt-8 pb-3">
+            <h2 className="mb-2 text-2xl font-black tracking-normal uppercase">
+                You May Also Like
+            </h2>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {products.slice(0, 4).map((product, index) => (
+                    <Link
+                        key={product.id}
+                        href={detail.url({ query: { product: product.slug } })}
+                        className="grid min-h-[132px] grid-cols-[180px_1fr] border border-[#E5E5E5] bg-white p-4 transition-colors hover:border-[#1A1A1A]"
+                    >
+                        <div className="bg-[#F8F8F8] p-2">
+                            <img
+                                src={
+                                    product.image ??
+                                    fallbackImages[
+                                        index % fallbackImages.length
+                                    ]
+                                }
+                                alt={product.title}
+                                className="h-full w-full object-contain"
+                                loading="lazy"
+                                decoding="async"
+                            />
+                        </div>
+                        <div className="flex flex-col pl-4">
+                            <h3 className="text-base leading-tight font-black uppercase">
+                                {product.title}
+                            </h3>
+                            <p className="mt-1 text-sm font-medium text-[#2E2E2E]">
+                                AxeGear Performance
+                            </p>
+                            <p className="mt-1 text-sm font-black">
+                                {formatPrice(product.price)}
+                            </p>
+                            <span className="mt-auto flex h-8 items-center justify-center border border-[#F58220] text-xs font-black tracking-[0.05em] text-[#F58220] uppercase hover:bg-[#F58220] hover:text-white">
+                                {index === 2 ? 'View Product' : 'Quick Add'}
+                            </span>
+                        </div>
+                    </Link>
+                ))}
+            </div>
+        </section>
+    );
+}
+
+function EmptyCart() {
+    return (
+        <section className="flex min-h-[520px] flex-col items-center justify-center border border-[#CFCFCF] bg-white px-6 py-20 text-center">
+            <h1 className="text-[40px] leading-none font-black uppercase md:text-[56px]">
+                Your cart is empty
+            </h1>
+            <p className="mt-4 max-w-md text-base font-medium text-[#707070]">
+                Add performance eyewear, goggles, and race-day essentials before
+                checkout.
+            </p>
+            <Link
+                href={list.url()}
+                className="mt-8 inline-flex h-12 items-center justify-center bg-[#F58220] px-8 text-sm font-black tracking-[0.06em] text-white uppercase hover:bg-[#E67312]"
+            >
+                Continue Shopping
+            </Link>
+        </section>
     );
 }

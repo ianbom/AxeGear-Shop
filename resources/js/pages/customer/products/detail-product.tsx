@@ -1,16 +1,26 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
-    ChevronRight,
+    Bell,
+    ChevronDown,
+    ChevronUp,
+    Cloud,
+    Gem,
     Heart,
+    Home,
     MessageCircle,
     Minus,
     Plus,
-    ShoppingBag,
+    Search,
+    Star,
+    Store,
+    SunMedium,
+    Truck,
     X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { FormEvent, ReactNode } from 'react';
+import type { ComponentType, FormEvent, ReactNode } from 'react';
 import { toast } from 'sonner';
+
 import { addProductVariantToCart as addProductVariantToCartRoute } from '@/actions/App/Http/Controllers/Customer/CartController';
 import {
     destroyProduct as removeWishlistProduct,
@@ -26,7 +36,10 @@ type Variant = {
     color_name: string | null;
     color_hex: string | null;
     size: string | null;
-    additional_price: number;
+    additional_price?: number | null;
+    regular_price?: number | null;
+    sale_price?: number | null;
+    package_type?: string | null;
     stock: number;
     reserved_stock: number;
     available_stock: number;
@@ -80,12 +93,18 @@ type Props = {
     recentProducts: ProductCard[];
 };
 
+type IconType = ComponentType<{
+    className?: string;
+    size?: number;
+    strokeWidth?: number;
+}>;
+
 const fallbackImages = [
-    '/img/abdul-raheem-kannath-aNWfK46QWto-unsplash.webp',
-    '/img/ainur-iman-qcNmigFPTQM-unsplash.webp',
-    '/img/atiyeh-fathi-CvdzGjVX9DA-unsplash.webp',
-    '/img/hasan-almasi-_X2UAmIcpko-unsplash.webp',
-    '/img/ike-ellyana-2F70bGqQVa4-unsplash.webp',
+    'https://www.100percent.com/cdn/shop/files/59057-00001-P_1.jpg?v=1764788225&width=1100',
+    'https://www.100percent.com/cdn/shop/files/SP26_SPEEDCRAFT_SL_60008-00025_3Q.jpg?v=1772487312&width=500',
+    'https://www.100percent.com/cdn/shop/files/2000x2000-eComm_20PDP-Casual_Staple_20Tee_0010_Layer_2015.jpg?v=1764633157&width=1200',
+    'https://www.100percent.com/cdn/shop/files/2000x2000-eComm_20PDP-Casual_Region_20Tee_0001_Layer_2030.jpg?v=1764633177&width=1200',
+    'https://www.100percent.com/cdn/shop/files/FA25_LS_OS_TEE_REGION__2020142-10002_F-002.jpg?v=1764633155&width=1100',
 ];
 
 const formatPrice = (value: number) =>
@@ -146,8 +165,7 @@ function DetailProductContent({
             },
         ];
     }, [product]);
-
-    const colors = useMemo(
+    const colorVariants = useMemo(
         () =>
             variants
                 .filter((variant) => variant.color_name || variant.color_hex)
@@ -170,7 +188,7 @@ function DetailProductContent({
     const [mainImage, setMainImage] = useState(
         gallery[0]?.url ?? fallbackImages[0],
     );
-    const [selectedVariantId, setSelectedVariantId] = useState(
+    const [selectedVariantId, setSelectedVariantId] = useState<number | null>(
         initialVariant?.id ?? null,
     );
     const [quantity, setQuantity] = useState(1);
@@ -206,10 +224,14 @@ function DetailProductContent({
         [selectedColor, variants],
     );
 
-    const currentPrice =
+    const variantPrice =
+        selectedVariant?.sale_price ??
+        selectedVariant?.regular_price ??
         (product.sale_price ?? product.price) +
-        (selectedVariant?.additional_price ?? 0);
-    const basePrice = product.price + (selectedVariant?.additional_price ?? 0);
+            (selectedVariant?.additional_price ?? 0);
+    const basePrice =
+        selectedVariant?.regular_price ??
+        product.price + (selectedVariant?.additional_price ?? 0);
     const selectedAvailableStock =
         selectedVariant?.available_stock ?? product.available_stock;
     const selectedCartQuantity = selectedVariant?.cart_quantity ?? 0;
@@ -218,16 +240,42 @@ function DetailProductContent({
         selectedAvailableStock - selectedCartQuantity,
     );
     const maxQuantity = Math.max(1, selectedAvailableStock);
+    const effectiveQuantity = Math.min(quantity, maxQuantity);
     const cartStockExceeded =
         selectedVariant !== undefined &&
-        selectedCartQuantity + quantity > selectedAvailableStock;
+        selectedCartQuantity + effectiveQuantity > selectedAvailableStock;
     const isAvailable =
         product.available_stock > 0 && selectedAvailableStock > 0;
     const productDescription = product.description || product.short_description;
-    const decreaseQuantity = () =>
-        setQuantity((current) => Math.max(1, current - 1));
-    const increaseQuantity = () =>
-        setQuantity((current) => Math.min(maxQuantity, current + 1));
+    const railProducts =
+        relatedProducts.length > 0 ? relatedProducts : recentProducts;
+
+    const decreaseQuantity = () => {
+        const nextQuantity = Math.max(1, effectiveQuantity - 1);
+
+        setQuantity(nextQuantity);
+        cartForm.setData('quantity', nextQuantity);
+    };
+    const increaseQuantity = () => {
+        const nextQuantity = Math.min(maxQuantity, effectiveQuantity + 1);
+
+        setQuantity(nextQuantity);
+        cartForm.setData('quantity', nextQuantity);
+    };
+    const selectVariant = (variantId: number | null) => {
+        setSelectedVariantId(variantId);
+        setQuantity(1);
+        cartForm.setData('quantity', 1);
+
+        const nextVariant = variants.find(
+            (variant) => variant.id === variantId,
+        );
+
+        if (nextVariant?.image_url) {
+            setMainImage(nextVariant.image_url);
+        }
+    };
+
     const addProductVariantToCart = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
@@ -236,15 +284,17 @@ function DetailProductContent({
         }
 
         if (cartStockExceeded) {
-            toast.error('Jumlah di keranjang melebihi stok tersedia.');
+            toast.error('Cart quantity exceeds available stock.');
 
             return;
         }
 
+        cartForm.setData('quantity', effectiveQuantity);
         cartForm.submit(addProductVariantToCartRoute(selectedVariant.id), {
             preserveScroll: true,
         });
     };
+
     const buyItNow = () => {
         if (!selectedVariant || !isAvailable || cartForm.processing) {
             return;
@@ -257,16 +307,18 @@ function DetailProductContent({
         }
 
         if (cartStockExceeded) {
-            toast.error('Jumlah di keranjang melebihi stok tersedia.');
+            toast.error('Cart quantity exceeds available stock.');
 
             return;
         }
 
+        cartForm.setData('quantity', effectiveQuantity);
         cartForm.submit(addProductVariantToCartRoute(selectedVariant.id), {
             preserveScroll: true,
             onSuccess: () => router.visit(cart.url()),
         });
     };
+
     const toggleWishlist = () => {
         if (isWishlistProcessing) {
             return;
@@ -289,436 +341,111 @@ function DetailProductContent({
         router.post(addWishlistItem.url(product.id), {}, options);
     };
 
-    useEffect(() => {
-        setSelectedVariantId(initialVariant?.id ?? null);
-        setIsWishlisted(product.is_wishlisted);
-    }, [initialVariant?.id, product.id]);
-
-    useEffect(() => {
-        setQuantity((current) => Math.min(current, maxQuantity));
-    }, [maxQuantity]);
-
-    useEffect(() => {
-        cartForm.setData('quantity', quantity);
-    }, [quantity]);
-
-    useEffect(() => {
-        if (!selectedVariant) {
-            return;
-        }
-
-        const nextImage =
-            selectedVariant.image_url ??
-            gallery.find((image) => image.url === mainImage)?.url ??
-            gallery[0]?.url ??
-            fallbackImages[0];
-
-        setMainImage(nextImage);
-    }, [gallery, selectedVariant?.id]);
-
     return (
         <ShopLayout>
-            <Head title={`${product.title} - Aurea Syari`} />
+            <Head title={`${product.title} - AxeGear`} />
 
-            <main className="mx-auto max-w-[1500px] px-4 py-6 md:px-10 md:py-10">
-                <FadeInOnScroll>
-                    <div className="mb-8 flex flex-wrap items-center gap-2 text-[11px] tracking-wide text-secondary-foreground">
-                        <Link
-                            href={list.url()}
-                            className="transition hover:text-primary"
-                        >
-                            Produk
-                        </Link>
-                        <ChevronRight size={13} />
-                        {product.category && (
-                            <>
-                                <Link
-                                    href={list.url({
-                                        query: {
-                                            category: product.category_slug,
-                                        },
-                                    })}
-                                    className="transition hover:text-primary"
-                                >
-                                    {product.category}
-                                </Link>
-                                <ChevronRight size={13} />
-                            </>
-                        )}
-                        <span className="font-semibold text-foreground">
-                            {product.title}
-                        </span>
-                    </div>
-                </FadeInOnScroll>
+            <main className="bg-white text-[#1A1A1A]">
+                <div className="mx-auto max-w-[1760px] px-4 py-5 md:px-8 md:py-6">
+                    <Breadcrumb product={product} />
 
-                <div className="flex flex-col gap-8 lg:grid lg:grid-cols-12 lg:gap-16">
-                    <FadeInOnScroll className="w-full lg:col-span-6">
-                        <div className="group relative mb-3 aspect-[3/4] cursor-zoom-in overflow-hidden rounded-sm bg-muted">
-                            <img
-                                src={mainImage}
-                                alt={product.title}
-                                className="h-full w-full object-cover transition-transform duration-1000 ease-in-out group-hover:scale-[1.03]"
-                                decoding="async"
+                    <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr] lg:gap-12 xl:grid-cols-[940px_1fr]">
+                        <FadeInOnScroll>
+                            <ProductGallery
+                                gallery={gallery}
+                                mainImage={mainImage}
+                                productTitle={product.title}
+                                onSelectImage={setMainImage}
                             />
-                        </div>
+                        </FadeInOnScroll>
 
-                        <div className="mt-3 grid grid-cols-5 gap-3">
-                            {gallery.map((image, index) => (
-                                <button
-                                    key={`${image.url}-${index}`}
-                                    type="button"
-                                    onClick={() => setMainImage(image.url)}
-                                    className={`relative aspect-square cursor-pointer overflow-hidden rounded-sm transition-all ${
-                                        mainImage === image.url
-                                            ? 'border border-primary opacity-100'
-                                            : 'border border-transparent opacity-60 hover:opacity-100 hover:shadow-md'
-                                    }`}
-                                >
-                                    <img
-                                        src={image.url}
-                                        alt={image.alt}
-                                        className="h-full w-full object-cover"
-                                        loading="lazy"
-                                        decoding="async"
+                        <FadeInOnScroll delay={80}>
+                            <section className="pt-1 lg:pt-6">
+                                <ProductHeader
+                                    product={product}
+                                    price={variantPrice}
+                                    basePrice={basePrice}
+                                    isWishlisted={isWishlisted}
+                                    isWishlistProcessing={isWishlistProcessing}
+                                    onToggleWishlist={toggleWishlist}
+                                />
+
+                                {colorVariants.length > 0 && (
+                                    <StylePicker
+                                        variants={variants}
+                                        colorVariants={colorVariants}
+                                        selectedColor={selectedColor}
+                                        productImage={product.image}
+                                        galleryImage={gallery[0]?.url}
+                                        onSelectVariant={selectVariant}
                                     />
-                                    {mainImage === image.url && (
-                                        <div className="absolute inset-0 flex items-center justify-center bg-black/10">
-                                            <span className="h-2 w-2 rounded-full bg-white shadow" />
-                                        </div>
-                                    )}
-                                </button>
-                            ))}
-                        </div>
-                    </FadeInOnScroll>
+                                )}
 
-                    <FadeInOnScroll
-                        className="w-full max-w-full pl-0 lg:col-span-6 lg:max-w-[600px] lg:pl-4"
-                        delay={120}
-                    >
-                        <div className="mb-5 flex flex-wrap gap-2">
-                            <span className="rounded-sm border border-border bg-secondary px-2 py-1 text-[10px] font-semibold tracking-wider text-secondary-foreground uppercase">
-                                {isAvailable ? 'Tersedia' : 'Habis'}
-                            </span>
-                            {product.badge && (
-                                <span className="rounded-sm bg-primary px-2 py-1 text-[10px] font-semibold tracking-wider text-primary-foreground uppercase">
-                                    {product.badge}
-                                </span>
-                            )}
-                            {product.collection && (
-                                <span className="rounded-sm border border-border bg-secondary px-2 py-1 text-[10px] font-semibold tracking-wider text-secondary-foreground uppercase">
-                                    {product.collection}
-                                </span>
-                            )}
-                        </div>
-
-                        <div className="mb-6">
-                            <h1 className="mb-3 text-xl font-semibold tracking-wide text-foreground">
-                                {product.title}
-                            </h1>
-                            {product.short_description && (
-                                <p className="mb-4 text-[11px] leading-[1.8] font-medium tracking-wide text-secondary-foreground">
-                                    {product.short_description}
-                                </p>
-                            )}
-                            <div className="flex items-center justify-between">
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <span className="text-sm font-semibold tracking-wide text-secondary-foreground">
-                                        {formatPrice(currentPrice)}
-                                    </span>
-                                    {product.sale_price !== null && (
-                                        <span className="text-[12px] text-muted-foreground line-through">
-                                            {formatPrice(basePrice)}
-                                        </span>
-                                    )}
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={toggleWishlist}
-                                    disabled={isWishlistProcessing}
-                                    className="cursor-pointer text-gray-400 transition-colors hover:scale-110 hover:text-primary active:scale-95 disabled:cursor-default disabled:text-primary"
-                                    aria-label={
-                                        isWishlisted
-                                            ? 'Hapus produk dari wishlist'
-                                            : 'Tambah produk ke wishlist'
-                                    }
-                                >
-                                    <Heart
-                                        size={20}
-                                        fill={
-                                            isWishlisted
-                                                ? 'currentColor'
-                                                : 'none'
+                                {sizes.length > 0 && (
+                                    <SizePicker
+                                        sizes={sizes}
+                                        variants={variants}
+                                        selectedColor={selectedColor}
+                                        selectedSize={selectedSize}
+                                        onSelectVariant={selectVariant}
+                                        onOpenSizeGuide={() =>
+                                            setIsSizeGuideOpen(true)
                                         }
-                                        strokeWidth={1.5}
                                     />
-                                </button>
-                            </div>
-                        </div>
+                                )}
 
-                        <div className="mb-8 flex items-center justify-between rounded-md border border-border bg-secondary/70 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
-                            <div className="flex items-center gap-3">
-                                <div className="rounded-full bg-primary/10 p-2 text-primary">
-                                    <ShoppingBag size={18} strokeWidth={1.7} />
-                                </div>
-                                <div>
-                                    <p className="mb-0.5 text-[11px] font-semibold tracking-wide text-foreground">
-                                        Lengkapi pesanan dengan checkout aman
-                                    </p>
-                                    <p className="text-[10px] tracking-wide text-muted-foreground">
-                                        Pilih varian dan jumlah sebelum membeli
-                                    </p>
-                                </div>
-                            </div>
-                            <ChevronRight
-                                size={16}
-                                className="text-muted-foreground"
-                            />
-                        </div>
-
-                        {colors.length > 0 && (
-                            <div className="mb-6">
-                                <h3 className="mb-3 text-[11px] font-semibold tracking-wide text-foreground">
-                                    Warna
-                                </h3>
-                                <div className="flex flex-wrap gap-4">
-                                    {colors.map((variant) => {
-                                        const variantImage =
-                                            variant.image_url ??
-                                            product.image ??
-                                            gallery[0]?.url ??
-                                            fallbackImages[0];
-                                        const colorAvailable = variants.some(
-                                            (candidate) =>
-                                                candidate.color_name ===
-                                                    (variant.color_name ??
-                                                        '') &&
-                                                candidate.available_stock > 0,
-                                        );
-                                        const isSelected =
-                                            selectedColor ===
-                                            (variant.color_name ?? '');
-
-                                        return (
-                                            <button
-                                                key={`${variant.color_name}-${variant.color_hex}`}
-                                                type="button"
-                                                disabled={!colorAvailable}
-                                                onClick={() => {
-                                                    if (!colorAvailable) {
-                                                        return;
-                                                    }
-
-                                                    const nextVariant =
-                                                        variants.find(
-                                                            (candidate) =>
-                                                                candidate.color_name ===
-                                                                    (variant.color_name ??
-                                                                        '') &&
-                                                                candidate.size ===
-                                                                    selectedSize &&
-                                                                candidate.available_stock >
-                                                                    0,
-                                                        ) ??
-                                                        variants.find(
-                                                            (candidate) =>
-                                                                candidate.color_name ===
-                                                                    (variant.color_name ??
-                                                                        '') &&
-                                                                candidate.available_stock >
-                                                                    0,
-                                                        ) ??
-                                                        initialVariant;
-
-                                                    setSelectedVariantId(
-                                                        nextVariant?.id ?? null,
-                                                    );
-                                                    setMainImage(variantImage);
-                                                }}
-                                                className={`group flex flex-col items-center transition-transform ${
-                                                    colorAvailable
-                                                        ? 'cursor-pointer hover:-translate-y-1'
-                                                        : 'cursor-not-allowed opacity-45'
-                                                }`}
-                                            >
-                                                <span
-                                                    className={`mb-2 h-[65px] w-[50px] overflow-hidden rounded-sm border p-0.5 transition-all ${
-                                                        isSelected
-                                                            ? 'border-primary'
-                                                            : 'border-transparent group-hover:border-border'
-                                                    }`}
-                                                >
-                                                    <img
-                                                        src={variantImage}
-                                                        className={`h-full w-full rounded-sm object-cover ${
-                                                            colorAvailable
-                                                                ? ''
-                                                                : 'grayscale'
-                                                        }`}
-                                                        alt={
-                                                            variant.color_name ??
-                                                            product.title
-                                                        }
-                                                    />
-                                                </span>
-                                                <span
-                                                    className={`text-[9px] font-medium ${
-                                                        isSelected
-                                                            ? 'text-primary'
-                                                            : 'text-muted-foreground group-hover:text-primary'
-                                                    }`}
-                                                >
-                                                    {variant.color_name ??
-                                                        variant.color_hex ??
-                                                        'Warna'}
-                                                </span>
-                                                {!colorAvailable && (
-                                                    <span className="mt-1 text-[8px] font-semibold tracking-wider text-[#d83f3f] uppercase">
-                                                        Habis
-                                                    </span>
-                                                )}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-
-                        {sizes.length > 0 && (
-                            <div className="mb-6">
-                                <div className="mb-4 flex items-center justify-between">
-                                    <h3 className="text-[11px] font-semibold tracking-wide text-foreground">
-                                        Ukuran
-                                    </h3>
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsSizeGuideOpen(true)}
-                                        className="group flex items-center text-accent transition-colors hover:text-primary"
-                                    >
-                                        <span className="text-[10px] font-medium tracking-wide">
-                                            Panduan Ukuran
-                                        </span>
-                                        <ChevronRight
-                                            size={14}
-                                            className="ml-1 transition-transform group-hover:translate-x-0.5"
-                                        />
-                                    </button>
-                                </div>
-                                <div className="flex flex-wrap gap-3">
-                                    {sizes.map((size) => {
-                                        const sizeVariant =
-                                            variants.find(
-                                                (variant) =>
-                                                    variant.size === size &&
-                                                    variant.color_name ===
-                                                        selectedColor,
-                                            ) ??
-                                            variants.find(
-                                                (variant) =>
-                                                    variant.size === size,
-                                            );
-                                        const sizeAvailable =
-                                            (sizeVariant?.available_stock ??
-                                                0) > 0;
-
-                                        return (
-                                            <button
-                                                key={size}
-                                                type="button"
-                                                disabled={!sizeAvailable}
-                                                onClick={() => {
-                                                    if (!sizeAvailable) {
-                                                        return;
-                                                    }
-
-                                                    setSelectedVariantId(
-                                                        sizeVariant?.id ?? null,
-                                                    );
-                                                }}
-                                                className={`rounded-md border px-7 py-2.5 text-[11px] font-semibold tracking-wide transition-all ${
-                                                    !sizeAvailable
-                                                        ? 'cursor-not-allowed border-border bg-muted/50 text-muted-foreground/45 line-through'
-                                                        : selectedSize === size
-                                                          ? 'border-primary text-primary shadow-sm hover:bg-secondary'
-                                                          : 'border-border text-muted-foreground hover:border-primary hover:text-primary'
-                                                }`}
-                                            >
-                                                {size}
-                                                {!sizeAvailable && (
-                                                    <span className="ml-2 text-[8px] font-semibold tracking-wider text-[#d83f3f] no-underline uppercase">
-                                                        Habis
-                                                    </span>
-                                                )}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="mb-10">
-                            <div className="mb-6 flex w-max items-center rounded-md border border-border bg-card shadow-sm">
-                                <button
-                                    type="button"
-                                    onClick={decreaseQuantity}
-                                    className="flex h-9 w-10 items-center justify-center rounded-l-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                                >
-                                    <Minus size={14} strokeWidth={2} />
-                                </button>
-                                <span className="w-10 text-center text-[12px] font-semibold text-foreground">
-                                    {quantity}
-                                </span>
-                                <button
-                                    type="button"
-                                    onClick={increaseQuantity}
-                                    className="flex h-9 w-10 items-center justify-center rounded-r-md bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground"
-                                >
-                                    <Plus size={14} strokeWidth={2} />
-                                </button>
-                            </div>
-                            {selectedCartQuantity > 0 && (
-                                <p
-                                    className={`mb-4 text-[11px] font-medium ${
-                                        cartStockExceeded
-                                            ? 'text-destructive'
-                                            : 'text-muted-foreground'
-                                    }`}
-                                >
-                                    {cartStockExceeded
-                                        ? 'Stock keranjang melebihi stock tersedia.'
-                                        : `Di keranjang: ${selectedCartQuantity}. Sisa stok tersedia: ${remainingStock}.`}
-                                </p>
-                            )}
-
-                            <div className="grid grid-cols-2 gap-3">
                                 <form
                                     onSubmit={addProductVariantToCart}
-                                    className="min-w-0"
+                                    className="mt-5 border-y border-[#CFCFCF] py-4"
                                 >
-                                    <button
-                                        type="submit"
-                                        disabled={
-                                            !isAvailable ||
-                                            !selectedVariant ||
-                                            cartForm.processing
-                                        }
-                                        className={`flex h-full min-h-12 w-full items-center justify-center border border-[#B98B63] px-3 py-3.5 text-center text-[10px] font-semibold tracking-[0.16em] text-[#B98B63] uppercase transition-all active:scale-[0.99] sm:text-[11px] ${
-                                            isAvailable &&
-                                            selectedVariant &&
-                                            !cartForm.processing
-                                                ? 'hover:bg-[#B98B63] hover:text-white'
-                                                : 'cursor-not-allowed opacity-50'
-                                        }`}
-                                    >
-                                        {cartForm.processing
-                                            ? 'Menambahkan...'
-                                            : 'Add to cart'}
-                                    </button>
+                                    <div className="grid gap-3 sm:grid-cols-[92px_160px_1fr] sm:items-center">
+                                        <label className="text-sm font-black">
+                                            Quantity
+                                        </label>
+                                        <QuantityControl
+                                            quantity={effectiveQuantity}
+                                            onDecrease={decreaseQuantity}
+                                            onIncrease={increaseQuantity}
+                                            disableDecrease={quantity <= 1}
+                                            disableIncrease={
+                                                effectiveQuantity >=
+                                                    maxQuantity || !isAvailable
+                                            }
+                                        />
+                                        <button
+                                            type="submit"
+                                            disabled={
+                                                !isAvailable ||
+                                                !selectedVariant ||
+                                                cartForm.processing
+                                            }
+                                            className="h-12 bg-[#F58220] px-8 text-sm font-black tracking-[0.06em] text-white uppercase transition-colors hover:bg-[#E67312] disabled:bg-[#CFCFCF] disabled:text-[#707070]"
+                                        >
+                                            {cartForm.processing
+                                                ? 'Adding...'
+                                                : 'Add to Cart'}
+                                        </button>
+                                    </div>
                                     {cartForm.errors.product_variant_id && (
-                                        <p className="mt-2 text-center text-[11px] font-medium text-destructive">
+                                        <p className="mt-3 text-sm font-bold text-[#C81E1E]">
                                             {cartForm.errors.product_variant_id}
                                         </p>
                                     )}
+                                    {selectedCartQuantity > 0 && (
+                                        <p
+                                            className={`mt-3 text-sm font-bold ${
+                                                cartStockExceeded
+                                                    ? 'text-[#C81E1E]'
+                                                    : 'text-[#707070]'
+                                            }`}
+                                        >
+                                            {cartStockExceeded
+                                                ? 'Cart quantity exceeds available stock.'
+                                                : `In cart: ${selectedCartQuantity}. Remaining stock: ${remainingStock}.`}
+                                        </p>
+                                    )}
                                 </form>
+
                                 <button
                                     type="button"
                                     onClick={buyItNow}
@@ -727,125 +454,646 @@ function DetailProductContent({
                                         !selectedVariant ||
                                         cartForm.processing
                                     }
-                                    className={`flex min-h-12 min-w-0 items-center justify-center bg-[#B98B63] px-3 py-3.5 text-center text-[10px] font-semibold tracking-[0.16em] text-white uppercase transition-all active:scale-[0.99] sm:text-[11px] ${
-                                        isAvailable &&
-                                        selectedVariant &&
-                                        !cartForm.processing
-                                            ? 'hover:bg-[#9A6B45]'
-                                            : 'cursor-not-allowed opacity-50'
-                                    }`}
+                                    className="sr-only"
                                 >
-                                    {cartForm.processing
-                                        ? 'Menambahkan...'
-                                        : 'Buy it now'}
+                                    Buy it now
                                 </button>
-                            </div>
-                        </div>
 
-                        <div className="mb-8 space-y-5 border-t border-border pt-8 text-[11px] leading-[1.9] font-medium tracking-wide text-secondary-foreground">
-                            <HTMLRender
-                                html={productDescription}
-                                className="text-[11px] leading-[1.9] font-medium tracking-wide text-secondary-foreground [&_h1]:text-base [&_h2]:text-sm [&_strong]:text-foreground"
-                                emptyFallback={
-                                    <p>
-                                        {product.title} is crafted for modest
-                                        everyday styling with refined details
-                                        and comfortable wear.
-                                    </p>
-                                }
-                            />
+                                <ServiceStrip isAvailable={isAvailable} />
 
-                            <div className="space-y-1">
-                                {product.material && (
-                                    <p>
-                                        <span className="font-bold text-foreground">
-                                            Material:
-                                        </span>{' '}
-                                        {product.material}
-                                    </p>
-                                )}
-                                {product.care_instruction && (
-                                    <p>
-                                        <span className="font-bold text-foreground">
-                                            Care:
-                                        </span>{' '}
-                                        {product.care_instruction}
-                                    </p>
-                                )}
-                                {product.weight !== null && (
-                                    <p>
-                                        <span className="font-bold text-foreground">
-                                            Weight:
-                                        </span>{' '}
-                                        {product.weight} gram
-                                    </p>
-                                )}
-                            </div>
-                        </div>
+                                <ProductSpecs
+                                    product={product}
+                                    selectedVariant={selectedVariant}
+                                    productDescription={productDescription}
+                                />
+                            </section>
+                        </FadeInOnScroll>
+                    </div>
 
-                        <button className="flex w-full items-center justify-center rounded-full border border-input py-3.5 text-[11px] font-bold tracking-wide text-secondary-foreground transition-colors hover:bg-secondary hover:shadow-sm active:scale-[0.99]">
-                            <MessageCircle
-                                size={16}
-                                className="mr-2"
-                                strokeWidth={2}
-                            />{' '}
-                            Message Support
-                        </button>
-                    </FadeInOnScroll>
+                    <OtherStyles products={railProducts} />
                 </div>
 
-                <ProductRail
-                    title="You Might Also Like"
-                    products={relatedProducts}
-                />
-                <ProductRail
-                    title="Recent Viewed"
-                    products={recentProducts}
-                    compact
-                />
+                <FloatingActions />
             </main>
 
             {isSizeGuideOpen && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-label="Size guide"
-                    onClick={() => setIsSizeGuideOpen(false)}
-                >
-                    <div
-                        className="relative max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-sm bg-background shadow-2xl"
-                        onClick={(event) => event.stopPropagation()}
-                    >
-                        <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                            <div>
-                                <p className="text-[11px] font-semibold tracking-[0.24em] text-foreground uppercase">
-                                    Size Guide
-                                </p>
-                                <p className="mt-1 text-[10px] tracking-wide text-muted-foreground">
-                                    Gunakan panduan ukuran sebelum memilih size.
-                                </p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setIsSizeGuideOpen(false)}
-                                className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:border-primary hover:text-primary"
-                                aria-label="Close size guide"
-                            >
-                                <X size={16} />
-                            </button>
-                        </div>
-                        <div className="max-h-[calc(90vh-74px)] overflow-auto bg-muted/30 p-3">
-                            <img
-                                src="/size-guide.webp"
-                                alt="Size guide"
-                                className="mx-auto h-auto w-full max-w-full rounded-sm object-contain"
-                            />
-                        </div>
-                    </div>
-                </div>
+                <SizeGuideModal onClose={() => setIsSizeGuideOpen(false)} />
             )}
         </ShopLayout>
+    );
+}
+
+function Breadcrumb({ product }: { product: ProductDetail }) {
+    return (
+        <nav className="mb-6 flex flex-wrap items-center gap-3 text-sm font-medium text-[#1A1A1A]">
+            <Link href={list.url()} className="hover:text-[#F58220]">
+                Shop
+            </Link>
+            <span className="text-[#707070]">/</span>
+            {product.category && (
+                <>
+                    <Link
+                        href={list.url({
+                            query: { category: product.category_slug },
+                        })}
+                        className="hover:text-[#F58220]"
+                    >
+                        {product.category}
+                    </Link>
+                    <span className="text-[#707070]">/</span>
+                </>
+            )}
+            <span>{product.collection ?? product.title}</span>
+        </nav>
+    );
+}
+
+function ProductGallery({
+    gallery,
+    mainImage,
+    productTitle,
+    onSelectImage,
+}: {
+    gallery: Array<{ url: string; alt: string }>;
+    mainImage: string;
+    productTitle: string;
+    onSelectImage: (image: string) => void;
+}) {
+    const galleryItems = gallery.slice(0, 6);
+
+    return (
+        <section className="grid gap-4 md:grid-cols-[110px_1fr]">
+            <div className="order-2 flex gap-3 overflow-x-auto pb-1 md:order-1 md:flex-col md:items-center md:overflow-visible md:pb-0">
+                <button
+                    type="button"
+                    className="hidden h-8 w-8 items-center justify-center md:flex"
+                    aria-label="Previous thumbnails"
+                >
+                    <ChevronUp size={22} strokeWidth={1.8} />
+                </button>
+                {galleryItems.map((image, index) => (
+                    <button
+                        key={`${image.url}-${index}`}
+                        type="button"
+                        onClick={() => onSelectImage(image.url)}
+                        className={`h-[84px] w-[100px] shrink-0 border bg-white p-2 transition-colors md:h-[90px] md:w-[104px] ${
+                            mainImage === image.url
+                                ? 'border-[#F58220]'
+                                : 'border-[#D8D8D8] hover:border-[#1A1A1A]'
+                        }`}
+                    >
+                        <img
+                            src={image.url}
+                            alt={image.alt}
+                            className="h-full w-full object-contain"
+                            loading="lazy"
+                            decoding="async"
+                        />
+                    </button>
+                ))}
+                <button
+                    type="button"
+                    className="hidden h-8 w-8 items-center justify-center md:flex"
+                    aria-label="Next thumbnails"
+                >
+                    <ChevronDown size={22} strokeWidth={1.8} />
+                </button>
+            </div>
+
+            <div className="group relative order-1 flex min-h-[420px] items-center justify-center border border-[#D8D8D8] bg-white p-5 md:order-2 lg:min-h-[560px] xl:min-h-[640px]">
+                <img
+                    src={mainImage}
+                    alt={productTitle}
+                    className="h-full max-h-[620px] w-full object-contain transition-transform duration-700 group-hover:scale-[1.02]"
+                    decoding="async"
+                />
+                <button
+                    type="button"
+                    className="absolute top-5 right-5 flex h-12 w-12 items-center justify-center rounded-full border border-[#D8D8D8] bg-white text-[#1A1A1A] transition-colors hover:border-[#F58220] hover:text-[#F58220]"
+                    aria-label="Zoom product image"
+                >
+                    <Search size={24} strokeWidth={1.8} />
+                </button>
+            </div>
+        </section>
+    );
+}
+
+function ProductHeader({
+    product,
+    price,
+    basePrice,
+    isWishlisted,
+    isWishlistProcessing,
+    onToggleWishlist,
+}: {
+    product: ProductDetail;
+    price: number;
+    basePrice: number;
+    isWishlisted: boolean;
+    isWishlistProcessing: boolean;
+    onToggleWishlist: () => void;
+}) {
+    const hasSale = product.sale_price !== null || price < basePrice;
+
+    return (
+        <header className="relative pr-14">
+            <p className="mb-3 text-xs font-black tracking-[0.08em] text-[#F58220] uppercase">
+                {product.collection ?? product.category ?? 'AxeGear Series'}
+            </p>
+            <h1 className="max-w-[720px] text-[30px] leading-[0.98] font-black tracking-normal text-[#1A1A1A] uppercase md:text-[38px]">
+                {product.title}
+            </h1>
+            <button
+                type="button"
+                onClick={onToggleWishlist}
+                disabled={isWishlistProcessing}
+                className="absolute top-8 right-0 flex h-11 w-11 items-center justify-center text-[#1A1A1A] transition-colors hover:text-[#F58220] disabled:opacity-45"
+                aria-label={
+                    isWishlisted
+                        ? 'Remove product from wishlist'
+                        : 'Add product to wishlist'
+                }
+            >
+                <Heart
+                    size={29}
+                    fill={isWishlisted ? 'currentColor' : 'none'}
+                    strokeWidth={1.7}
+                />
+            </button>
+
+            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm font-medium">
+                <span className="flex items-center gap-0.5 text-[#F58220]">
+                    {Array.from({ length: 5 }).map((_, index) => (
+                        <Star
+                            key={index}
+                            size={19}
+                            fill="currentColor"
+                            strokeWidth={0}
+                        />
+                    ))}
+                </span>
+                <span>4.8 (124 reviews)</span>
+                <span className="h-5 w-px bg-[#CFCFCF]" />
+                <button className="hover:text-[#F58220]">Write a review</button>
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-end gap-3">
+                <span className="text-[28px] leading-none font-black tabular-nums">
+                    {formatPrice(price)}
+                </span>
+                {hasSale && (
+                    <span className="text-base font-bold text-[#9A9A9A] tabular-nums line-through">
+                        {formatPrice(basePrice)}
+                    </span>
+                )}
+            </div>
+            <p className="mt-2 text-sm font-black text-[#F58220]">
+                Earn 199 points with AxeGear Rewards
+            </p>
+            <p className="mt-3 flex items-center gap-2 text-sm font-medium">
+                <Truck size={22} strokeWidth={1.7} />
+                Free standard shipping on orders over $75
+            </p>
+        </header>
+    );
+}
+
+function StylePicker({
+    variants,
+    colorVariants,
+    selectedColor,
+    productImage,
+    galleryImage,
+    onSelectVariant,
+}: {
+    variants: Variant[];
+    colorVariants: Variant[];
+    selectedColor: string;
+    productImage: string | null;
+    galleryImage: string | undefined;
+    onSelectVariant: (variantId: number | null) => void;
+}) {
+    return (
+        <section className="mt-6">
+            <h2 className="mb-3 text-sm font-black uppercase">Other styles</h2>
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                {colorVariants.slice(0, 8).map((variant) => {
+                    const colorAvailable = variants.some(
+                        (candidate) =>
+                            candidate.color_name ===
+                                (variant.color_name ?? '') &&
+                            candidate.available_stock > 0,
+                    );
+                    const isSelected =
+                        selectedColor === (variant.color_name ?? '');
+                    const variantImage =
+                        variant.image_url ??
+                        productImage ??
+                        galleryImage ??
+                        fallbackImages[0];
+
+                    return (
+                        <button
+                            key={`${variant.color_name}-${variant.color_hex}`}
+                            type="button"
+                            disabled={!colorAvailable}
+                            onClick={() => {
+                                const nextVariant = variants.find(
+                                    (candidate) =>
+                                        candidate.color_name ===
+                                            variant.color_name &&
+                                        candidate.available_stock > 0,
+                                );
+
+                                onSelectVariant(nextVariant?.id ?? variant.id);
+                            }}
+                            className={`border bg-white p-2 text-left transition-colors ${
+                                isSelected
+                                    ? 'border-[#F58220]'
+                                    : 'border-[#D8D8D8] hover:border-[#1A1A1A]'
+                            } ${!colorAvailable ? 'cursor-not-allowed opacity-45' : ''}`}
+                        >
+                            <span className="block aspect-[1.7] bg-[#F8F8F8] p-1">
+                                <img
+                                    src={variantImage}
+                                    alt={variant.color_name ?? 'Product style'}
+                                    className="h-full w-full object-contain"
+                                    loading="lazy"
+                                    decoding="async"
+                                />
+                            </span>
+                            <span className="mt-2 block truncate text-[11px] font-black uppercase">
+                                {variant.color_name ??
+                                    variant.color_hex ??
+                                    'Style'}
+                            </span>
+                        </button>
+                    );
+                })}
+            </div>
+        </section>
+    );
+}
+
+function SizePicker({
+    sizes,
+    variants,
+    selectedColor,
+    selectedSize,
+    onSelectVariant,
+    onOpenSizeGuide,
+}: {
+    sizes: string[];
+    variants: Variant[];
+    selectedColor: string;
+    selectedSize: string;
+    onSelectVariant: (variantId: number | null) => void;
+    onOpenSizeGuide: () => void;
+}) {
+    return (
+        <section className="mt-5">
+            <div className="mb-3 flex items-center justify-between gap-4">
+                <h2 className="text-sm font-black uppercase">Size</h2>
+                <button
+                    type="button"
+                    onClick={onOpenSizeGuide}
+                    className="text-xs font-black text-[#F58220] uppercase hover:underline"
+                >
+                    Size Guide
+                </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+                {sizes.map((size) => {
+                    const sizeVariant =
+                        variants.find(
+                            (variant) =>
+                                variant.size === size &&
+                                variant.color_name === selectedColor,
+                        ) ?? variants.find((variant) => variant.size === size);
+                    const sizeAvailable =
+                        (sizeVariant?.available_stock ?? 0) > 0;
+
+                    return (
+                        <button
+                            key={size}
+                            type="button"
+                            disabled={!sizeAvailable}
+                            onClick={() => {
+                                if (!sizeAvailable) {
+                                    return;
+                                }
+
+                                onSelectVariant(sizeVariant?.id ?? null);
+                            }}
+                            className={`min-h-10 min-w-14 border px-4 text-sm font-black transition-colors ${
+                                !sizeAvailable
+                                    ? 'cursor-not-allowed border-[#D8D8D8] text-[#9A9A9A] line-through'
+                                    : selectedSize === size
+                                      ? 'border-[#F58220] text-[#F58220]'
+                                      : 'border-[#CFCFCF] hover:border-[#1A1A1A]'
+                            }`}
+                        >
+                            {size}
+                        </button>
+                    );
+                })}
+            </div>
+        </section>
+    );
+}
+
+function QuantityControl({
+    quantity,
+    onDecrease,
+    onIncrease,
+    disableDecrease,
+    disableIncrease,
+}: {
+    quantity: number;
+    onDecrease: () => void;
+    onIncrease: () => void;
+    disableDecrease: boolean;
+    disableIncrease: boolean;
+}) {
+    return (
+        <div className="inline-grid h-12 w-[150px] grid-cols-3 border border-[#CFCFCF] bg-white text-base font-black">
+            <button
+                type="button"
+                onClick={onDecrease}
+                disabled={disableDecrease}
+                className="flex items-center justify-center text-[#9A9A9A] transition-colors hover:bg-[#F8F8F8] hover:text-[#1A1A1A] disabled:opacity-35"
+                aria-label="Decrease quantity"
+            >
+                <Minus size={18} strokeWidth={2} />
+            </button>
+            <span className="flex items-center justify-center tabular-nums">
+                {quantity}
+            </span>
+            <button
+                type="button"
+                onClick={onIncrease}
+                disabled={disableIncrease}
+                className="flex items-center justify-center transition-colors hover:bg-[#FFF3E8] hover:text-[#F58220] disabled:opacity-35"
+                aria-label="Increase quantity"
+            >
+                <Plus size={20} strokeWidth={2.4} />
+            </button>
+        </div>
+    );
+}
+
+function ServiceStrip({ isAvailable }: { isAvailable: boolean }) {
+    const items: Array<{ title: string; body: string; icon: IconType }> = [
+        {
+            title: isAvailable ? 'In Stock' : 'Out of Stock',
+            body: isAvailable
+                ? 'Ships within 24 hours'
+                : 'Choose another style',
+            icon: Home,
+        },
+        { title: 'Pick Up In Store', body: 'Check availability', icon: Store },
+        { title: 'Notify Me', body: 'When back in stock', icon: Bell },
+    ];
+
+    return (
+        <div className="grid grid-cols-1 gap-4 border-b border-[#CFCFCF] py-4 sm:grid-cols-3">
+            {items.map((item) => {
+                const Icon = item.icon;
+
+                return (
+                    <div key={item.title} className="flex items-start gap-3">
+                        <Icon className="mt-0.5 h-7 w-7" strokeWidth={1.7} />
+                        <div>
+                            <p className="text-sm font-black">{item.title}</p>
+                            <p className="mt-1 text-sm font-medium text-[#2E2E2E]">
+                                {item.body}
+                            </p>
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+function ProductSpecs({
+    product,
+    selectedVariant,
+    productDescription,
+}: {
+    product: ProductDetail;
+    selectedVariant: Variant | undefined;
+    productDescription: string | null;
+}) {
+    return (
+        <section className="grid gap-6 py-6 md:grid-cols-[0.88fr_1.12fr]">
+            <div className="border-b border-[#CFCFCF] pb-6 md:border-r md:border-b-0 md:pr-6">
+                <h2 className="text-base font-black uppercase">
+                    {selectedVariant?.color_name ?? 'Performance Lens'}
+                </h2>
+                <SpecMeter label="Light Transmission" value="29%" active={2} />
+                <SpecMeter label="Light Filter" value="CAT 2" active={5} />
+                <div className="mt-7 flex flex-wrap gap-8 text-sm font-medium">
+                    <span className="flex items-center gap-2">
+                        <SunMedium size={28} strokeWidth={1.4} /> Medium Light
+                    </span>
+                    <span className="flex items-center gap-2">
+                        <Cloud size={30} strokeWidth={1.4} /> Partly Cloudy
+                    </span>
+                </div>
+            </div>
+
+            <div>
+                <h2 className="text-base font-black uppercase">
+                    Feel nothing. See everything.
+                </h2>
+                <HTMLRender
+                    html={productDescription}
+                    className="mt-4 text-sm leading-6 font-medium text-[#2E2E2E] [&_a]:text-[#F58220] [&_h1]:text-lg [&_h2]:text-base [&_strong]:font-black [&_strong]:text-[#1A1A1A] [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5"
+                    emptyFallback={
+                        <p>
+                            The {product.title} is engineered for speed and
+                            clarity. Ultra-light, locked-in, and ready for long
+                            sessions.
+                        </p>
+                    }
+                />
+                <ul className="mt-4 list-disc space-y-2 pl-5 text-sm font-medium text-[#2E2E2E]">
+                    <li>
+                        <span className="font-black text-[#1A1A1A]">
+                            Included:
+                        </span>{' '}
+                        Hard Case, Microfiber Bag, Replacement Lens, Extra
+                        Nosepad
+                    </li>
+                    {product.material && (
+                        <li>
+                            <span className="font-black text-[#1A1A1A]">
+                                Material:
+                            </span>{' '}
+                            {product.material}
+                        </li>
+                    )}
+                    {product.care_instruction && (
+                        <li>
+                            <span className="font-black text-[#1A1A1A]">
+                                Care:
+                            </span>{' '}
+                            {product.care_instruction}
+                        </li>
+                    )}
+                    {product.weight !== null && (
+                        <li>
+                            <span className="font-black text-[#1A1A1A]">
+                                Weight:
+                            </span>{' '}
+                            {product.weight} gram
+                        </li>
+                    )}
+                </ul>
+            </div>
+        </section>
+    );
+}
+
+function SpecMeter({
+    label,
+    value,
+    active,
+}: {
+    label: string;
+    value: string;
+    active: number;
+}) {
+    return (
+        <div className="mt-5">
+            <p className="text-sm font-bold">
+                {label}: <span className="font-black">{value}</span>
+            </p>
+            <div className="mt-3 grid grid-cols-8 gap-2">
+                {Array.from({ length: 8 }).map((_, index) => (
+                    <span
+                        key={index}
+                        className={`h-1 ${
+                            index === active ? 'bg-[#F58220]' : 'bg-[#CFCFCF]'
+                        }`}
+                    />
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function OtherStyles({ products }: { products: ProductCard[] }) {
+    if (products.length === 0) {
+        return null;
+    }
+
+    return (
+        <FadeInOnScroll className="mt-6">
+            <h2 className="mb-2 text-2xl font-black tracking-normal uppercase">
+                Other Styles
+            </h2>
+            <div className="grid gap-5 md:grid-cols-3 xl:grid-cols-6">
+                {products.slice(0, 6).map((product, index) => (
+                    <Link
+                        key={product.id}
+                        href={detail.url({ query: { product: product.slug } })}
+                        className="group border border-[#D8D8D8] bg-white p-4 transition-colors hover:border-[#1A1A1A]"
+                    >
+                        <div className="aspect-[1.7] bg-[#F8F8F8] p-2">
+                            <img
+                                src={
+                                    product.image ??
+                                    fallbackImages[
+                                        index % fallbackImages.length
+                                    ]
+                                }
+                                alt={product.title}
+                                className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
+                                loading="lazy"
+                                decoding="async"
+                            />
+                        </div>
+                        <div className="mt-4 flex items-end justify-between gap-3">
+                            <h3 className="line-clamp-2 text-sm leading-tight font-black uppercase">
+                                {product.title}
+                            </h3>
+                            <span className="shrink-0 text-sm font-black tabular-nums">
+                                {formatPrice(
+                                    product.sale_price ?? product.price,
+                                )}
+                            </span>
+                        </div>
+                    </Link>
+                ))}
+            </div>
+        </FadeInOnScroll>
+    );
+}
+
+function FloatingActions() {
+    return (
+        <div className="fixed right-5 bottom-20 z-30 hidden flex-col gap-3 md:flex">
+            <button
+                type="button"
+                className="flex h-16 w-16 items-center justify-center rounded-full bg-[#F58220] text-white shadow-[0_8px_24px_rgba(26,26,26,0.22)] hover:bg-[#E67312]"
+                aria-label="AxeGear rewards"
+            >
+                <Gem size={34} strokeWidth={1.8} />
+            </button>
+            <button
+                type="button"
+                className="flex h-14 w-14 items-center justify-center rounded-full bg-[#1A1A1A] text-white shadow-[0_8px_24px_rgba(26,26,26,0.22)] hover:bg-[#F58220]"
+                aria-label="Message support"
+            >
+                <MessageCircle size={25} strokeWidth={1.8} />
+            </button>
+        </div>
+    );
+}
+
+function SizeGuideModal({ onClose }: { onClose: () => void }) {
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Size guide"
+            onClick={onClose}
+        >
+            <div
+                className="relative max-h-[90vh] w-full max-w-3xl overflow-hidden bg-white shadow-[0_24px_60px_rgba(26,26,26,0.22)]"
+                onClick={(event) => event.stopPropagation()}
+            >
+                <div className="flex items-center justify-between border-b border-[#CFCFCF] px-5 py-4">
+                    <div>
+                        <p className="text-sm font-black tracking-[0.08em] uppercase">
+                            Size Guide
+                        </p>
+                        <p className="mt-1 text-sm font-medium text-[#707070]">
+                            Use this guide before selecting a size.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="flex h-10 w-10 items-center justify-center border border-[#CFCFCF] hover:border-[#F58220] hover:text-[#F58220]"
+                        aria-label="Close size guide"
+                    >
+                        <X size={18} />
+                    </button>
+                </div>
+                <div className="max-h-[calc(90vh-80px)] overflow-auto bg-[#F8F8F8] p-4">
+                    <img
+                        src="/size-guide.webp"
+                        alt="Size guide"
+                        className="mx-auto h-auto w-full max-w-full object-contain"
+                    />
+                </div>
+            </div>
+        </div>
     );
 }
 
@@ -895,72 +1143,5 @@ function FadeInOnScroll({
         >
             {children}
         </div>
-    );
-}
-
-function ProductRail({
-    title,
-    products,
-    compact = false,
-}: {
-    title: string;
-    products: ProductCard[];
-    compact?: boolean;
-}) {
-    if (products.length === 0) {
-        return null;
-    }
-
-    return (
-        <FadeInOnScroll className={compact ? 'mt-20' : 'mt-28'}>
-            <div className="mb-8 flex items-center justify-between border-b border-border pb-4">
-                <h2 className="text-[13px] font-bold tracking-wider text-foreground">
-                    {title}
-                </h2>
-            </div>
-            <div className="scrollbar-hide flex gap-5 overflow-x-auto pb-6">
-                {products.map((product, index) => (
-                    <FadeInOnScroll
-                        key={product.id}
-                        className="max-w-[170px] min-w-[170px]"
-                        delay={index * 60}
-                    >
-                        <Link
-                            href={detail.url({
-                                query: { product: product.slug },
-                            })}
-                            className="group flex cursor-pointer flex-col transition-transform duration-300 hover:-translate-y-1"
-                        >
-                            <div className="relative mb-3 aspect-[3/4] overflow-hidden rounded-sm bg-muted shadow-sm transition-shadow group-hover:shadow-md">
-                                <img
-                                    src={
-                                        product.image ??
-                                        fallbackImages[
-                                            index % fallbackImages.length
-                                        ]
-                                    }
-                                    className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                                    alt={product.title}
-                                    loading="lazy"
-                                    decoding="async"
-                                />
-                                <div className="pointer-events-none absolute inset-0 bg-black/0 transition-colors duration-500 group-hover:bg-black/5" />
-                                <div className="absolute right-2 bottom-2 rounded-full bg-card/90 p-2 text-foreground shadow transition-all hover:scale-110 hover:bg-card">
-                                    <ShoppingBag size={14} strokeWidth={2} />
-                                </div>
-                            </div>
-                            <h3 className="mb-1.5 line-clamp-2 text-[11px] leading-[1.4] font-bold tracking-wide text-foreground transition-colors group-hover:text-primary">
-                                {product.title}
-                            </h3>
-                            <p className="mt-auto text-[11px] font-medium text-secondary-foreground">
-                                {formatPrice(
-                                    product.sale_price ?? product.price,
-                                )}
-                            </p>
-                        </Link>
-                    </FadeInOnScroll>
-                ))}
-            </div>
-        </FadeInOnScroll>
     );
 }

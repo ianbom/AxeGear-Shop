@@ -10,6 +10,7 @@ use App\Models\ProductMarketplaceLink;
 use App\Models\ProductVariant;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 class ProductSeeder extends Seeder
@@ -19,7 +20,7 @@ class ProductSeeder extends Seeder
         DB::transaction(function (): void {
             $categories = Category::query()->pluck('id', 'slug');
             $collections = Collection::query()->pluck('id', 'slug');
-            $products = $this->products();
+            $products = self::products();
             $seededSkus = [];
 
             foreach ($products as $index => $product) {
@@ -42,7 +43,7 @@ class ProductSeeder extends Seeder
                         'sale_price' => $product['sale_price'],
                         'short_description' => $product['short_description'],
                         'description' => $product['description'],
-                        'stock_status' => 'in_stock',
+                        'stock_status' => $product['stock_status'],
                         'weight' => $product['weight'],
                         'length' => $product['length'],
                         'width' => $product['width'],
@@ -183,141 +184,166 @@ class ProductSeeder extends Seeder
         );
     }
 
-    private function products(): array
+    public static function products(): array
     {
+        $path = base_path('scraping_produk_100percent.md');
+
+        if (! file_exists($path)) {
+            throw new RuntimeException("File scraping_produk_100percent.md tidak ditemukan di [{$path}].");
+        }
+
+        $content = file_get_contents($path);
+
+        if ($content === false) {
+            throw new RuntimeException("Gagal membaca file [{$path}].");
+        }
+
+        preg_match_all('/^##\s+\d+\.\s+(.+?)\R+(?<body>.*?)(?=\R+---\R+|\z)/ms', $content, $matches, PREG_SET_ORDER);
+
+        return collect($matches)
+            ->map(fn (array $match, int $index): array => self::mapScrapedProduct($match[1], $match['body'], $index))
+            ->values()
+            ->all();
+    }
+
+    private static function mapScrapedProduct(string $name, string $body, int $index): array
+    {
+        $categoryName = self::field($body, 'Kategori');
+        $categorySlug = match ($categoryName) {
+            'Moto/MTB Goggles' => 'goggles',
+            'Active Performance Sunglasses' => 'sunglasses',
+            'T-Shirts' => 'apparel-accessories',
+            default => 'sunglasses',
+        };
+
+        $priceStr = self::field($body, 'Harga sale') ?: self::field($body, 'Harga sekarang') ?: self::field($body, 'Harga');
+        $priceStr = str_replace('From ', '', $priceStr);
+        $regularPriceStr = self::field($body, 'Harga regular/compare at') ?: self::field($body, 'Harga sebelum diskon');
+        $regularPriceStr = $regularPriceStr ?: $priceStr;
+
+        $sku = self::field($body, 'SKU') ?: self::field($body, 'SKU utama yang terlihat') ?: 'AXG-' . strtoupper(Str::slug(substr($name, 0, 15))) . '-' . str_pad((string)($index + 1), 3, '0', STR_PAD_LEFT);
+        $lensColor = self::field($body, 'Lens Color') ?: 'Default Lens';
+        $lightTransmission = self::field($body, 'Light Transmission') ?: 'N/A';
+        $lightFilter = self::field($body, 'Light Filter') ?: 'N/A';
+        $description = self::field($body, 'Deskripsi') ?: "Premium 100% $categoryName. ".trim("Eyewear dengan {$lensColor}, transmisi cahaya {$lightTransmission}, filter {$lightFilter}.");
+        $variantName = self::field($body, 'Variant') ?: 'Default Title';
+        $isOutOfStock = str_contains($body, '**Status pada halaman:** Out of Stock') || str_contains($body, '**Status:** Sold Out');
+        $images = self::images($body);
+        $productLine = self::productLine($name);
+        $salePrice = self::toRupiah($priceStr);
+        $beforeDiscount = self::toRupiah($regularPriceStr);
+
+        if ($priceStr === '' || $images === []) {
+            throw new RuntimeException("Data scraping produk [{$name}] tidak lengkap.");
+        }
+
+        $collectionSlugs = [];
+        if ($categorySlug === 'sunglasses') {
+            $collectionSlugs[] = 'sport-performance';
+        } elseif ($categorySlug === 'goggles') {
+            $collectionSlugs[] = 'explore-essentials';
+        } elseif ($categorySlug === 'apparel-accessories') {
+            $collectionSlugs[] = 'explore-essentials';
+        }
+        
+        if ($salePrice < $beforeDiscount) {
+            $collectionSlugs[] = 'sale';
+        }
+        if ($index < 10) {
+            $collectionSlugs[] = 'new-arrivals';
+        }
+
         return [
-            [
-                'name' => 'AXEVIEW PRO',
-                'slug' => 'axeview-pro',
-                'sku' => 'AXG-SUN-001',
-                'category_slug' => 'sunglasses',
-                'collection_slugs' => ['new-arrivals', 'sport-performance', 'sale'],
-                'product_line' => 'AXEVIEW',
-                'style_name' => 'Matte Black Mirror Orange Lens',
-                'short_description' => 'Performance shield sunglasses with matte black frame and orange mirror lens.',
-                'description' => 'AXEVIEW PRO is built for fast rides, hot tracks, and open-road training. The wrap shield profile gives wide coverage while the lightweight frame keeps the fit stable for long sessions.',
-                'regular_price' => 1490000,
-                'sale_price' => 1190000,
-                'weight' => 250,
-                'length' => 18,
-                'width' => 9,
-                'height' => 8,
-                'is_featured' => true,
-                'is_new_arrival' => true,
-                'is_best_seller' => true,
-                'images' => [
-                    'https://www.100percent.com/cdn/shop/files/59057-00001-P_1.jpg?v=1764788225&width=1100',
-                ],
-                'variants' => [
-                    ['code' => 'MBK-ORG', 'name' => 'Matte Black / Mirror Orange', 'color_name' => 'Matte Black', 'color_hex' => '#111111', 'size' => 'One Size', 'package_type' => 'Sunglasses', 'stock' => 42],
-                ],
-            ],
-            [
-                'name' => 'RACEVISION MX',
-                'slug' => 'racevision-mx',
-                'sku' => 'AXG-GOG-002',
-                'category_slug' => 'goggles',
-                'collection_slugs' => ['sport-performance'],
-                'product_line' => 'RACEVISION',
-                'style_name' => 'Navy Gold Strap Clear Lens',
-                'short_description' => 'Motocross goggles with navy frame, gold strap, and clear all-terrain lens.',
-                'description' => 'RACEVISION MX protects sight lines on dirt, gravel, and wet trail days. The secure strap and wide eyeport help riders keep focus through changing terrain.',
-                'regular_price' => 890000,
-                'sale_price' => null,
-                'weight' => 320,
-                'length' => 20,
-                'width' => 10,
-                'height' => 10,
-                'is_featured' => true,
-                'is_new_arrival' => false,
-                'is_best_seller' => true,
-                'images' => [
-                    'https://www.100percent.com/cdn/shop/files/SP26_SPEEDCRAFT_SL_60008-00025_3Q.jpg?v=1772487312&width=500',
-                ],
-                'variants' => [
-                    ['code' => 'NVY-CLR', 'name' => 'Navy / Clear Lens', 'color_name' => 'Navy', 'color_hex' => '#17233F', 'size' => 'One Size', 'package_type' => 'Goggle', 'stock' => 36],
-                ],
-            ],
-            [
-                'name' => 'STAPLE TEE',
-                'slug' => 'staple-tee',
-                'sku' => 'AXG-APP-003',
-                'category_slug' => 'apparel-accessories',
-                'collection_slugs' => ['explore-essentials'],
-                'product_line' => 'STAPLE',
-                'style_name' => 'Casual Black Tee',
-                'short_description' => 'Everyday AxeGear casual tee for training days, travel, and pit lane downtime.',
-                'description' => 'STAPLE TEE keeps the AxeGear identity clean and simple. Soft cotton construction and a relaxed fit make it easy to wear before or after high-output activity.',
-                'regular_price' => 390000,
-                'sale_price' => null,
-                'weight' => 280,
-                'length' => 28,
-                'width' => 22,
-                'height' => 4,
-                'is_featured' => false,
-                'is_new_arrival' => true,
-                'is_best_seller' => false,
-                'images' => [
-                    'https://www.100percent.com/cdn/shop/files/2000x2000-eComm_20PDP-Casual_Staple_20Tee_0010_Layer_2015.jpg?v=1764633157&width=1200',
-                ],
-                'variants' => [
-                    ['code' => 'BLK-M', 'name' => 'Black / M', 'color_name' => 'Black', 'color_hex' => '#111111', 'size' => 'M', 'package_type' => 'T-Shirt', 'stock' => 28],
-                    ['code' => 'BLK-L', 'name' => 'Black / L', 'color_name' => 'Black', 'color_hex' => '#111111', 'size' => 'L', 'package_type' => 'T-Shirt', 'stock' => 31],
-                ],
-            ],
-            [
-                'name' => 'REGION TEE',
-                'slug' => 'region-tee',
-                'sku' => 'AXG-APP-004',
-                'category_slug' => 'apparel-accessories',
-                'collection_slugs' => ['explore-essentials', 'sale'],
-                'product_line' => 'REGION',
-                'style_name' => 'Casual White Tee',
-                'short_description' => 'Clean graphic tee with lightweight everyday comfort.',
-                'description' => 'REGION TEE is made for off-track days without losing the performance catalog look. It pairs easily with riding gear, travel packs, and daily basics.',
-                'regular_price' => 450000,
-                'sale_price' => 350000,
-                'weight' => 280,
-                'length' => 28,
-                'width' => 22,
-                'height' => 4,
-                'is_featured' => false,
-                'is_new_arrival' => false,
-                'is_best_seller' => false,
-                'images' => [
-                    'https://www.100percent.com/cdn/shop/files/2000x2000-eComm_20PDP-Casual_Region_20Tee_0001_Layer_2030.jpg?v=1764633177&width=1200',
-                ],
-                'variants' => [
-                    ['code' => 'WHT-M', 'name' => 'White / M', 'color_name' => 'White', 'color_hex' => '#F7F7F7', 'size' => 'M', 'package_type' => 'T-Shirt', 'stock' => 22],
-                    ['code' => 'WHT-L', 'name' => 'White / L', 'color_name' => 'White', 'color_hex' => '#F7F7F7', 'size' => 'L', 'package_type' => 'T-Shirt', 'stock' => 19],
-                ],
-            ],
-            [
-                'name' => 'RACE LENS PRO',
-                'slug' => 'race-lens-pro',
-                'sku' => 'AXG-LEN-005',
-                'category_slug' => 'replacement-lenses',
-                'collection_slugs' => ['new-arrivals', 'sport-performance'],
-                'product_line' => 'RACE LENS',
-                'style_name' => 'Clear Tear-Off Compatible Lens',
-                'short_description' => 'Replacement clear shield for race days and changing visibility.',
-                'description' => 'RACE LENS PRO keeps your eyewear race-ready with a clean replacement shield. The clear finish is built for low-light riding, dusty trails, and backup kit preparation.',
-                'regular_price' => 290000,
-                'sale_price' => null,
-                'weight' => 120,
-                'length' => 18,
-                'width' => 8,
-                'height' => 3,
-                'is_featured' => true,
-                'is_new_arrival' => true,
-                'is_best_seller' => false,
-                'images' => [
-                    'https://www.100percent.com/cdn/shop/files/FA25_LS_OS_TEE_REGION__2020142-10002_F-002.jpg?v=1764633155&width=1100',
-                ],
-                'variants' => [
-                    ['code' => 'CLR-OS', 'name' => 'Clear / One Size', 'color_name' => 'Clear', 'color_hex' => '#F8F8F8', 'size' => 'One Size', 'package_type' => 'Lens Kit', 'stock' => 47],
+            'name' => $name,
+            'slug' => Str::slug($name),
+            'sku' => $sku,
+            'category_slug' => $categorySlug,
+            'collection_slugs' => array_unique($collectionSlugs),
+            'product_line' => $productLine,
+            'style_name' => trim(Str::after(self::asciiName($name), $productLine)),
+            'regular_price' => $beforeDiscount,
+            'sale_price' => $salePrice < $beforeDiscount ? $salePrice : null,
+            'short_description' => Str::limit($description, 150),
+            'description' => $description,
+            'stock_status' => $isOutOfStock ? 'out_of_stock' : 'in_stock',
+            'weight' => $categorySlug === 'apparel-accessories' ? 200 : 250,
+            'length' => $categorySlug === 'apparel-accessories' ? 25 : 18,
+            'width' => $categorySlug === 'apparel-accessories' ? 20 : 9,
+            'height' => $categorySlug === 'apparel-accessories' ? 5 : 8,
+            'is_featured' => $index % 5 === 0,
+            'is_new_arrival' => $index < 10,
+            'is_best_seller' => $index % 3 === 0,
+            'images' => $images,
+            'variants' => [
+                [
+                    'code' => 'DEFAULT',
+                    'name' => $variantName,
+                    'color_name' => $lensColor,
+                    'color_hex' => self::lensHex($lensColor),
+                    'size' => $categorySlug === 'apparel-accessories' ? 'M' : 'One Size',
+                    'package_type' => $categorySlug === 'apparel-accessories' ? 'Apparel' : ($categorySlug === 'goggles' ? 'Goggles' : 'Sunglasses'),
+                    'stock' => $isOutOfStock ? 0 : 24,
                 ],
             ],
         ];
+    }
+
+    private static function field(string $body, string $field): string
+    {
+        preg_match('/^- \*\*'.preg_quote($field, '/').':\*\*\s*(.+)$/m', $body, $match);
+
+        return trim($match[1] ?? '');
+    }
+
+    private static function images(string $body): array
+    {
+        preg_match_all('/^\s*(?:-\s*URL:\s*|\d+\.\s+)(https?:\/\/\S+(?:\.jpg|\.png|\.gif|\.webp)[^\s\)]*)/m', $body, $matches);
+        $images = array_values(array_unique($matches[1] ?? []));
+        
+        if (empty($images)) {
+            preg_match_all('/!\[.*?\]\((https?:\/\/\S+)\)/m', $body, $matches);
+            $images = array_values(array_unique($matches[1] ?? []));
+        }
+
+        return $images;
+    }
+
+    private static function productLine(string $name): string
+    {
+        $cleanName = self::asciiName($name);
+
+        if (str_starts_with($cleanName, 'SPEEDCRAFT XS')) {
+            return 'SPEEDCRAFT XS';
+        }
+
+        if (str_starts_with($cleanName, 'SPEEDCRAFT SL')) {
+            return 'SPEEDCRAFT SL';
+        }
+
+        return Str::before($cleanName, ' ');
+    }
+
+    private static function asciiName(string $name): string
+    {
+        return preg_replace('/[^\x20-\x7E]/', '', $name) ?? $name;
+    }
+
+    private static function toRupiah(string $usd): int
+    {
+        $cents = (int) round(((float) str_replace(['$', ','], '', $usd)) * 100);
+
+        return (int) round($cents * 16000 / 100);
+    }
+
+    private static function lensHex(string $lensColor): string
+    {
+        return match (true) {
+            str_contains($lensColor, 'Gold') => '#C7A24B',
+            str_contains($lensColor, 'Purple') => '#6B3FA0',
+            str_contains($lensColor, 'Blue') => '#1E5AA8',
+            str_contains($lensColor, 'Lavender') => '#B497C9',
+            str_contains($lensColor, 'Smoke') => '#4A4A4A',
+            default => '#111111',
+        };
     }
 }
