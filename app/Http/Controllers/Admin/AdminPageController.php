@@ -19,7 +19,7 @@ class AdminPageController extends Controller
             'group' => 'Catalog Management',
             'table' => 'products',
             'description' => 'Manage catalog products, prices, publication status, labels, and SEO metadata.',
-            'columns' => ['name', 'sku', 'category', 'collection', 'base_price', 'sale_price', 'stock', 'status', 'created_at'],
+            'columns' => ['name', 'sku', 'category', 'collection', 'regular_price', 'sale_price', 'stock', 'status', 'created_at'],
         ],
         'product-variants' => [
             'title' => 'Product Variants',
@@ -260,12 +260,13 @@ class AdminPageController extends Controller
     {
         $query = DB::table('products')
             ->leftJoin('categories', 'categories.id', '=', 'products.category_id')
-            ->leftJoin('collections', 'collections.id', '=', 'products.collection_id')
+            ->leftJoin('product_collections', 'product_collections.product_id', '=', 'products.id')
+            ->leftJoin('collections', 'collections.id', '=', 'product_collections.collection_id')
             ->select([
                 'products.id',
                 'products.name',
                 'products.sku',
-                'products.base_price',
+                'products.regular_price',
                 'products.sale_price',
                 'products.status',
                 'products.is_featured',
@@ -273,10 +274,11 @@ class AdminPageController extends Controller
                 'products.is_best_seller',
                 'products.created_at',
                 DB::raw('categories.name as category'),
-                DB::raw('collections.name as collection'),
+                DB::raw('max(collections.name) as collection'),
                 DB::raw('(select coalesce(sum(stock), 0) from product_variants where product_variants.product_id = products.id and product_variants.deleted_at is null) as stock'),
             ])
             ->whereNull('products.deleted_at')
+            ->groupBy('products.id', 'products.name', 'products.sku', 'products.regular_price', 'products.sale_price', 'products.status', 'products.is_featured', 'products.is_new_arrival', 'products.is_best_seller', 'products.created_at', 'categories.name')
             ->latest('products.created_at');
 
         return $this->search($query, $request, $this->definition('products'), ['products.name', 'products.sku'])->limit(50)->get();
@@ -330,7 +332,7 @@ class AdminPageController extends Controller
                 'collections.is_featured',
                 'collections.is_active',
                 'collections.created_at',
-                DB::raw('(select count(*) from products where products.collection_id = collections.id and products.deleted_at is null) as products_count'),
+                DB::raw('(select count(*) from product_collections join products on products.id = product_collections.product_id where product_collections.collection_id = collections.id and products.deleted_at is null) as products_count'),
             ])
             ->whereNull('collections.deleted_at')
             ->latest('collections.created_at');

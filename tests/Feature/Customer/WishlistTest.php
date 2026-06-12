@@ -87,7 +87,7 @@ function createWishlistProduct(array $overrides = []): Product
         ...[
             'name' => $name,
             'slug' => Str::slug($name).'-'.Str::lower(Str::random(6)),
-            'base_price' => 100000,
+            'regular_price' => 100000,
             'status' => 'published',
         ],
         ...$overrides,

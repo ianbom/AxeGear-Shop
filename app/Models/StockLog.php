@@ -10,6 +10,9 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 #[Fillable([
     'product_variant_id',
     'user_id',
+    'source',
+    'desty_sync_job_id',
+    'desty_event_id',
     'type',
     'quantity',
     'stock_before',
@@ -17,9 +20,15 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
     'reference_type',
     'reference_id',
     'note',
+    'raw_payload',
 ])]
 class StockLog extends Model
 {
+    public function destySyncJob(): BelongsTo
+    {
+        return $this->belongsTo(DestySyncJob::class);
+    }
+
     public function reference(): MorphTo
     {
         return $this->morphTo();
@@ -39,6 +48,7 @@ class StockLog extends Model
     {
         return [
             'quantity' => 'integer',
+            'raw_payload' => 'array',
             'stock_after' => 'integer',
             'stock_before' => 'integer',
         ];

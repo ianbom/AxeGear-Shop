@@ -12,14 +12,16 @@ return new class extends Migration
             $table->id();
             $table->string('title', 180);
             $table->string('slug', 180)->unique();
-            $table->text('content');
+            $table->longText('content');
             $table->string('type', 100);
             $table->string('meta_title')->nullable();
             $table->text('meta_description')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 
-            $table->index(['type', 'is_active']);
+            $table->index('slug');
+            $table->index('type');
+            $table->index('is_active');
         });
     }
 

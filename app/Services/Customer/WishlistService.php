@@ -14,7 +14,7 @@ class WishlistService
     {
         $wishlistItems = Wishlist::query()
             ->with([
-                'product:id,category_id,collection_id,name,slug,sku,base_price,sale_price,status,is_new_arrival,is_best_seller,is_featured',
+                'product:id,category_id,name,slug,sku,regular_price,sale_price,status,is_new_arrival,is_best_seller,is_featured',
                 'product.category:id,name,slug',
                 'product.primaryImage:id,product_id,image_url,alt_text',
                 'product.images:id,product_id,image_url,alt_text,sort_order',
@@ -82,7 +82,7 @@ class WishlistService
             'slug' => $product->slug,
             'title' => $product->name,
             'category' => $product->category?->name,
-            'price' => (float) $product->base_price,
+            'price' => (float) $product->regular_price,
             'sale_price' => $product->sale_price !== null ? (float) $product->sale_price : null,
             'image' => $image,
             'badge' => $this->badge($product),

@@ -47,13 +47,10 @@ it('creates a product with images, variants, and stock logs from the admin form 
 
     expect($product)
         ->category_id->toBe($category->id)
-        ->collection_id->toBe($collection->id)
         ->name->toBe('Gamis Syar\'i Pita')
         ->sku->toBe('GMS-001')
         ->short_description->toBe('Gamis premium untuk daily wear.')
         ->description->toBe('Gamis premium dengan detail pita dan bahan nyaman.')
-        ->material->toBe('Premium voile')
-        ->care_instruction->toBe('Hand wash cold, do not bleach.')
         ->status->toBe('published')
         ->is_featured->toBeTrue()
         ->is_new_arrival->toBeTrue()
@@ -61,7 +58,7 @@ it('creates a product with images, variants, and stock logs from the admin form 
         ->meta_title->toBe('Gamis Syar\'i Pita Premium')
         ->meta_description->toBe('Gamis premium nyaman untuk aktivitas harian.');
 
-    expect((float) $product->base_price)->toBe(350000.00)
+    expect((float) $product->regular_price)->toBe(350000.00)
         ->and((float) $product->sale_price)->toBe(299000.00)
         ->and($product->weight)->toBe(500)
         ->and($product->length)->toBe(30)
@@ -71,16 +68,20 @@ it('creates a product with images, variants, and stock logs from the admin form 
     $this->assertDatabaseHas('products', [
         'id' => $product->id,
         'category_id' => $category->id,
-        'collection_id' => $collection->id,
         'name' => 'Gamis Syar\'i Pita',
         'slug' => 'gamis-syari-pita',
         'sku' => 'GMS-001',
-        'base_price' => 350000,
+        'regular_price' => 350000,
         'sale_price' => 299000,
         'status' => 'published',
         'is_featured' => true,
         'is_new_arrival' => true,
         'is_best_seller' => false,
+    ]);
+
+    $this->assertDatabaseHas('product_collections', [
+        'product_id' => $product->id,
+        'collection_id' => $collection->id,
     ]);
 
     $this->assertDatabaseHas('product_images', [
@@ -107,7 +108,7 @@ it('creates a product with images, variants, and stock logs from the admin form 
         ->reserved_stock->toBe(2)
         ->is_active->toBeTrue();
 
-    expect((float) $variant->additional_price)->toBe(15000.00);
+    expect((float) $variant->regular_price)->toBe(15000.00);
     expect($variant->image_url)->toStartWith('/storage/product/gamis-syari-pita/variants/');
     Storage::disk('public')->assertExists(Str::after($variant->image_url, '/storage/'));
 
@@ -118,7 +119,7 @@ it('creates a product with images, variants, and stock logs from the admin form 
         'color_name' => 'Black',
         'color_hex' => '#000000',
         'size' => 'M',
-        'additional_price' => 15000,
+        'regular_price' => 15000,
         'stock' => 12,
         'reserved_stock' => 2,
         'is_active' => true,
@@ -149,9 +150,7 @@ function productPayload(Category $category, Collection $collection): array
         'sku' => 'GMS-001',
         'short_description' => 'Gamis premium untuk daily wear.',
         'description' => 'Gamis premium dengan detail pita dan bahan nyaman.',
-        'material' => 'Premium voile',
-        'care_instruction' => 'Hand wash cold, do not bleach.',
-        'base_price' => 350000,
+        'regular_price' => 350000,
         'sale_price' => 299000,
         'weight' => 500,
         'length' => 30,
@@ -178,7 +177,7 @@ function productPayload(Category $category, Collection $collection): array
                 'color_name' => 'Black',
                 'color_hex' => '#000000',
                 'size' => 'M',
-                'additional_price' => 15000,
+                'regular_price' => 15000,
                 'stock' => 12,
                 'reserved_stock' => 2,
                 'image_url' => null,

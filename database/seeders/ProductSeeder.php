@@ -35,12 +35,10 @@ class ProductSeeder extends Seeder
                     'sku' => 'SHP-' . str_pad($rowIndex, 3, '0', STR_PAD_LEFT),
                     'category_slug' => 'baju-setelan',
                     'collection_slug' => 'shopee-collection',
-                    'brand' => 'Anemi Official',
+                    'brand_name' => 'Anemi Official',
                     'short_description' => $name . ' koleksi terbaru yang modis dan nyaman dipakai.',
                     'description' => $name . ' hadir dengan desain kekinian yang cocok untuk berbagai aktivitas Anda. Dibuat dengan material berkualitas.',
-                    'material' => 'Bahan berkualitas',
-                    'care_instruction' => 'Cuci lembut, pisahkan warna, hindari pemutih, jemur teduh, setrika suhu rendah bila diperlukan.',
-                    'base_price' => $price ?: 100000,
+                    'regular_price' => $price ?: 100000,
                     'sale_price' => null,
                     'weight' => 500,
                     'length' => 30,
@@ -81,12 +79,10 @@ class ProductSeeder extends Seeder
                             'sku' => $sheet->getCell("D{$row}")->getValue(),
                             'category_slug' => $sheet->getCell("E{$row}")->getValue(),
                             'collection_slug' => $sheet->getCell("G{$row}")->getValue(),
-                            'brand' => $sheet->getCell("H{$row}")->getValue() ?? 'Anemi Official',
+                            'brand_name' => $sheet->getCell("H{$row}")->getValue() ?? 'Anemi Official',
                             'short_description' => $sheet->getCell("I{$row}")->getValue() ?? '',
                             'description' => $sheet->getCell("J{$row}")->getValue() ?? '',
-                            'material' => 'Material sesuai deskripsi',
-                            'care_instruction' => 'Cuci lembut, pisahkan warna, hindari pemutih, jemur teduh, setrika suhu rendah bila diperlukan.',
-                            'base_price' => (float) $sheet->getCell("K{$row}")->getValue(),
+                            'regular_price' => (float) $sheet->getCell("K{$row}")->getValue(),
                             'sale_price' => $sheet->getCell("L{$row}")->getValue() ? (float) $sheet->getCell("L{$row}")->getValue() : null,
                             'weight' => (int) ($sheet->getCell("N{$row}")->getValue() ?: 850),
                             'length' => (int) ($sheet->getCell("O{$row}")->getValue() ?: 36),
@@ -113,14 +109,17 @@ class ProductSeeder extends Seeder
         $currentSlugs = collect($products)->pluck('slug');
 
         foreach ($products as $product) {
+            $collectionId = random_int(1, 5);
             $record = Product::query()->withTrashed()->updateOrCreate(['slug' => $product['slug']], [
-                'category_id' => random_int(1, 4), 'collection_id' => random_int(1, 5), 'name' => $product['name'], 'sku' => $product['sku'],
-                'short_description' => $product['short_description'], 'description' => $product['description'], 'material' => $product['material'],
-                'care_instruction' => $product['care_instruction'], 'base_price' => $product['base_price'], 'sale_price' => $product['sale_price'],
+                'category_id' => random_int(1, 4), 'name' => $product['name'], 'sku' => $product['sku'],
+                'brand_name' => $product['brand_name'] ?? 'Axegear',
+                'short_description' => $product['short_description'], 'description' => $product['description'],
+                'regular_price' => $product['regular_price'], 'sale_price' => $product['sale_price'],
                 'weight' => $product['weight'], 'length' => $product['length'], 'width' => $product['width'], 'height' => $product['height'],
                 'status' => $product['status'], 'is_featured' => $product['is_featured'], 'is_new_arrival' => $product['is_new_arrival'],
                 'is_best_seller' => $product['is_best_seller'], 'meta_title' => $product['meta_title'], 'meta_description' => $product['meta_description'],
             ]);
+            $record->collections()->sync([$collectionId]);
             if ($record->trashed()) { $record->restore(); }
         }
         Product::query()->where('sku', 'like', 'SHP-%')->whereNotIn('slug', $currentSlugs)->delete();

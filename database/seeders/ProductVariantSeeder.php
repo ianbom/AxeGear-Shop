@@ -35,7 +35,7 @@ class ProductVariantSeeder extends Seeder
                     'color_name' => 'Default Color',
                     'color_hex' => '#000000',
                     'size' => 'All Size',
-                    'additional_price' => 0.0,
+                    'regular_price' => 0.0,
                     'stock' => rand(20, 100), // Stock tidak boleh 0
                     'reserved_stock' => 0,
                     'image_url' => $data['image'] ?? '',
@@ -90,7 +90,7 @@ class ProductVariantSeeder extends Seeder
                         'color_name' => $sheet->getCell("C{$row}")->getValue() ?? 'Default',
                         'color_hex' => substr($sheet->getCell("D{$row}")->getValue() ?? '#000000', 0, 7),
                         'size' => $sheet->getCell("E{$row}")->getValue() ?? 'All Size',
-                        'additional_price' => (float) ($sheet->getCell("F{$row}")->getValue() ?: 0),
+                        'regular_price' => (float) ($sheet->getCell("F{$row}")->getValue() ?: 0),
                         'stock' => (int) ($sheet->getCell("G{$row}")->getValue() ?: rand(10, 100)),
                         'reserved_stock' => 0,
                         'image_url' => $sheet->getCell("H{$row}")->getValue() ?? '',
@@ -119,7 +119,7 @@ class ProductVariantSeeder extends Seeder
             if (! $productId) { throw new RuntimeException("Product slug [{$variant['product_slug']}] tidak ditemukan."); }
             $record = ProductVariant::query()->withTrashed()->updateOrCreate(['sku' => $variant['sku']], [
                 'product_id' => $productId, 'color_name' => $variant['color_name'], 'color_hex' => $variant['color_hex'], 'size' => $variant['size'],
-                'additional_price' => $variant['additional_price'], 'stock' => $variant['stock'], 'reserved_stock' => $variant['reserved_stock'],
+                'regular_price' => $variant['regular_price'], 'stock' => $variant['stock'], 'reserved_stock' => $variant['reserved_stock'],
                 'image_url' => $variant['image_url'], 'is_active' => $variant['is_active'],
             ]);
             if ($record->trashed()) { $record->restore(); }

@@ -5,22 +5,24 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
     'category_id',
-    'collection_id',
     'name',
     'slug',
     'sku',
+    'brand_name',
+    'product_line',
+    'style_name',
+    'regular_price',
+    'sale_price',
     'short_description',
     'description',
-    'material',
-    'care_instruction',
-    'base_price',
-    'sale_price',
+    'stock_status',
     'weight',
     'length',
     'width',
@@ -46,9 +48,14 @@ class Product extends Model
         return $this->belongsTo(Category::class);
     }
 
-    public function collection(): BelongsTo
+    public function collections(): BelongsToMany
     {
-        return $this->belongsTo(Collection::class);
+        return $this->belongsToMany(Collection::class, 'product_collections')->withPivot('sort_order')->withTimestamps();
+    }
+
+    public function destyMappings(): HasMany
+    {
+        return $this->hasMany(DestyProductMapping::class);
     }
 
     public function images(): HasMany
@@ -61,6 +68,11 @@ class Product extends Model
         return $this->hasMany(OrderItem::class);
     }
 
+    public function marketplaceLinks(): HasMany
+    {
+        return $this->hasMany(ProductMarketplaceLink::class);
+    }
+
     public function primaryImage(): HasOne
     {
         return $this->hasOne(ProductImage::class)->where('is_primary', true);
@@ -71,6 +83,11 @@ class Product extends Model
         return $this->hasMany(ProductVariant::class);
     }
 
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class);
+    }
+
     public function wishlists(): HasMany
     {
         return $this->hasMany(Wishlist::class);
@@ -79,12 +96,12 @@ class Product extends Model
     protected function casts(): array
     {
         return [
-            'base_price' => 'decimal:2',
             'height' => 'integer',
             'is_best_seller' => 'boolean',
             'is_featured' => 'boolean',
             'is_new_arrival' => 'boolean',
             'length' => 'integer',
+            'regular_price' => 'decimal:2',
             'sale_price' => 'decimal:2',
             'weight' => 'integer',
             'width' => 'integer',

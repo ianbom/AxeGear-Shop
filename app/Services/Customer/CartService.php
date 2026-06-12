@@ -67,7 +67,7 @@ class CartService
                 ]);
             }
 
-            $priceSnapshot = ($product->sale_price ?? $product->base_price) + $variant->additional_price;
+            $priceSnapshot = $variant->sale_price ?? $variant->regular_price ?? $product->sale_price ?? $product->regular_price;
 
             return CartItem::query()->updateOrCreate(
                 [
@@ -111,7 +111,7 @@ class CartService
             $item->forceFill([
                 'product_id' => $product->id,
                 'quantity' => $quantity,
-                'price_snapshot' => ($product->sale_price ?? $product->base_price) + $variant->additional_price,
+                'price_snapshot' => $variant->sale_price ?? $variant->regular_price ?? $product->sale_price ?? $product->regular_price,
             ])->save();
 
             return $item->refresh();
@@ -129,9 +129,9 @@ class CartService
             ->with([
                 'items' => fn ($query) => $query
                     ->with([
-                        'product:id,name,slug,status,sale_price,base_price',
+                        'product:id,name,slug,status,sale_price,regular_price',
                         'product.primaryImage:id,product_id,image_url,alt_text',
-                        'variant:id,product_id,sku,color_name,color_hex,size,stock,reserved_stock,additional_price,image_url,is_active',
+                        'variant:id,product_id,sku,color_name,color_hex,size,stock,reserved_stock,regular_price,sale_price,image_url,is_active',
                     ])
                     ->latest('id'),
             ])
@@ -206,7 +206,7 @@ class CartService
                 'id' => $product->id,
                 'slug' => $product->slug,
                 'title' => $product->name,
-                'price' => (float) ($product->sale_price ?? $product->base_price),
+                'price' => (float) ($product->sale_price ?? $product->regular_price),
                 'image' => $product->primaryImage?->image_url,
                 'available_stock' => $product->variants->sum(
                     fn (ProductVariant $variant) => max(0, $variant->stock - $variant->reserved_stock),

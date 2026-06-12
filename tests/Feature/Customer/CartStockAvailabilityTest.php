@@ -97,7 +97,7 @@ function createCartStockProduct(int $stock, int $reservedStock): array
     $product = Product::query()->create([
         'name' => $name,
         'slug' => Str::slug($name).'-'.Str::lower(Str::random(6)),
-        'base_price' => 100000,
+        'regular_price' => 100000,
         'weight' => 500,
         'status' => 'published',
     ]);

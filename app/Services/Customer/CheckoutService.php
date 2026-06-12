@@ -515,7 +515,7 @@ class CheckoutService
 
     private function currentUnitPrice(ProductVariant $variant): float
     {
-        return (float) (($variant->product?->sale_price ?? $variant->product?->base_price ?? 0) + $variant->additional_price);
+        return (float) ($variant->sale_price ?? $variant->regular_price ?? $variant->product?->sale_price ?? $variant->product?->regular_price ?? 0);
     }
 
     private function forgetExpiredCheckoutSession(): void

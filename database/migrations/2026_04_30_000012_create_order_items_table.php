@@ -13,11 +13,13 @@ return new class extends Migration
             $table->foreignId('order_id')->constrained()->cascadeOnDelete();
             $table->foreignId('product_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('product_variant_id')->nullable()->constrained()->nullOnDelete();
-            $table->string('product_name', 180);
+            $table->string('product_name', 200);
             $table->string('product_sku', 100)->nullable();
             $table->string('variant_sku', 100)->nullable();
+            $table->string('variant_name', 180)->nullable();
             $table->string('color_name', 100)->nullable();
-            $table->string('size', 50)->nullable();
+            $table->string('size', 100)->nullable();
+            $table->string('package_type', 150)->nullable();
             $table->decimal('price', 15, 2);
             $table->integer('quantity');
             $table->decimal('subtotal', 15, 2);
@@ -29,6 +31,9 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index('order_id');
+            $table->index('product_id');
+            $table->index('product_variant_id');
+            $table->index('variant_sku');
         });
     }
 

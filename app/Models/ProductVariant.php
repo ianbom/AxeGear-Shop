@@ -11,12 +11,26 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[Fillable([
     'product_id',
     'sku',
+    'barcode',
+    'variant_name',
     'color_name',
     'color_hex',
     'size',
-    'additional_price',
+    'package_type',
+    'regular_price',
+    'sale_price',
     'stock',
     'reserved_stock',
+    'desty_available_stock',
+    'desty_on_hand_stock',
+    'desty_reserved_stock',
+    'desty_last_synced_at',
+    'stock_source',
+    'allow_manual_stock_edit',
+    'weight',
+    'length',
+    'width',
+    'height',
     'image_url',
     'is_active',
 ])]
@@ -39,6 +53,16 @@ class ProductVariant extends Model
         return $this->belongsTo(Product::class);
     }
 
+    public function destyMappings(): HasMany
+    {
+        return $this->hasMany(DestyVariantMapping::class);
+    }
+
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(InventoryReservation::class);
+    }
+
     public function stockLogs(): HasMany
     {
         return $this->hasMany(StockLog::class);
@@ -47,10 +71,20 @@ class ProductVariant extends Model
     protected function casts(): array
     {
         return [
-            'additional_price' => 'decimal:2',
+            'allow_manual_stock_edit' => 'boolean',
+            'desty_available_stock' => 'integer',
+            'desty_last_synced_at' => 'datetime',
+            'desty_on_hand_stock' => 'integer',
+            'desty_reserved_stock' => 'integer',
+            'height' => 'integer',
             'is_active' => 'boolean',
+            'length' => 'integer',
+            'regular_price' => 'decimal:2',
             'reserved_stock' => 'integer',
+            'sale_price' => 'decimal:2',
             'stock' => 'integer',
+            'weight' => 'integer',
+            'width' => 'integer',
         ];
     }
 }

@@ -10,32 +10,44 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('orders', function (Blueprint $table): void {
-            $table->timestamp('stock_reserved_at')->nullable()->after('completed_at');
-            $table->timestamp('stock_released_at')->nullable()->after('stock_reserved_at');
-            $table->timestamp('stock_finalized_at')->nullable()->after('stock_released_at');
+            if (! Schema::hasColumn('orders', 'stock_reserved_at')) {
+                $table->timestamp('stock_reserved_at')->nullable()->after('completed_at');
+                $table->timestamp('stock_released_at')->nullable()->after('stock_reserved_at');
+                $table->timestamp('stock_finalized_at')->nullable()->after('stock_released_at');
+            }
         });
 
         Schema::table('payments', function (Blueprint $table): void {
-            $table->unique('order_id');
-            $table->index('midtrans_transaction_id');
-            $table->timestamp('last_synced_at')->nullable()->after('expired_at');
-            $table->text('failure_reason')->nullable()->after('last_synced_at');
+            if (! Schema::hasColumn('payments', 'last_synced_at')) {
+                $table->unique('order_id');
+                $table->index('midtrans_transaction_id');
+                $table->timestamp('last_synced_at')->nullable()->after('expired_at');
+                $table->text('failure_reason')->nullable()->after('last_synced_at');
+            }
         });
 
         Schema::table('shipments', function (Blueprint $table): void {
-            $table->unique('order_id');
-            $table->unique('biteship_order_id');
-            $table->timestamp('creating_at')->nullable()->after('cancelled_at');
-            $table->timestamp('last_synced_at')->nullable()->after('creating_at');
-            $table->text('failed_reason')->nullable()->after('last_synced_at');
+            if (! Schema::hasColumn('shipments', 'creating_at')) {
+                $table->unique('order_id');
+                $table->unique('biteship_order_id');
+                $table->timestamp('creating_at')->nullable()->after('cancelled_at');
+                $table->timestamp('last_synced_at')->nullable()->after('creating_at');
+                $table->text('failed_reason')->nullable()->after('last_synced_at');
+            }
         });
 
         Schema::table('biteship_webhook_logs', function (Blueprint $table): void {
-            $table->string('payload_hash', 64)->nullable()->after('waybill_id')->unique();
+            if (! Schema::hasColumn('biteship_webhook_logs', 'payload_hash')) {
+                $table->string('payload_hash', 64)->nullable()->after('waybill_id')->unique();
+            }
         });
 
         if (Schema::hasTable('payment_logs')) {
             Schema::table('payment_logs', function (Blueprint $table): void {
+                if (Schema::hasColumn('payment_logs', 'payload_hash')) {
+                    return;
+                }
+
                 $table->string('payload_hash', 64)->nullable()->after('transaction_status')->index();
             });
         }

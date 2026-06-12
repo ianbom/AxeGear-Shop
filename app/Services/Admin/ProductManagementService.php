@@ -44,14 +44,14 @@ class ProductManagementService
 
         return [
             'products' => Product::query()
-                ->with(['category:id,name', 'collection:id,name', 'primaryImage:id,product_id,image_url,alt_text'])
+                ->with(['category:id,name', 'collections:id,name', 'primaryImage:id,product_id,image_url,alt_text'])
                 ->withSum('variants as total_stock', 'stock')
                 ->withCount('variants')
                 ->when($filters['search'] !== '', fn ($query) => $query->where(fn ($query) => $query
                     ->where('name', 'like', "%{$filters['search']}%")
                     ->orWhere('sku', 'like', "%{$filters['search']}%")))
                 ->when($filters['category_id'] !== '', fn ($query) => $query->where('category_id', $filters['category_id']))
-                ->when($filters['collection_id'] !== '', fn ($query) => $query->where('collection_id', $filters['collection_id']))
+                ->when($filters['collection_id'] !== '', fn ($query) => $query->whereHas('collections', fn ($query) => $query->whereKey($filters['collection_id'])))
                 ->when($filters['status'] !== '', fn ($query) => $query->where('status', $filters['status']))
                 ->when($filters['is_featured'] !== '', fn ($query) => $query->where('is_featured', $filters['is_featured'] === '1'))
                 ->when($filters['is_new_arrival'] !== '', fn ($query) => $query->where('is_new_arrival', $filters['is_new_arrival'] === '1'))
@@ -60,7 +60,7 @@ class ProductManagementService
                 ->when($filters['stock_status'] === 'low_stock', fn ($query) => $query->whereHas('variants', fn ($query) => $query->whereBetween('stock', [1, 5])))
                 ->when($filters['stock_status'] === 'sold_out', fn ($query) => $query->whereDoesntHave('variants', fn ($query) => $query->where('stock', '>', 0)))
                 ->when($sort === 'product', fn ($query) => $query->orderBy('name', $direction))
-                ->when($sort === 'price', fn ($query) => $query->orderByRaw('COALESCE(sale_price, base_price) '.$direction))
+                ->when($sort === 'price', fn ($query) => $query->orderByRaw('COALESCE(sale_price, regular_price) '.$direction))
                 ->when($sort === 'created', fn ($query) => $query->orderBy('created_at', $direction))
                 ->orderByDesc('id')
                 ->paginate($this->perPage($request))
@@ -86,6 +86,7 @@ class ProductManagementService
 
         return DB::transaction(function () use ($request, $validated): Product {
             $product = Product::query()->create($this->payload($request, $validated));
+            $this->syncCollections($product, $validated['collection_id'] ?? null);
             $this->images->sync($request, $product, $validated['images'] ?? []);
             $this->syncVariants($request, $product, $validated['variants'] ?? [], $request->user()->id);
 
@@ -100,6 +101,7 @@ class ProductManagementService
 
         DB::transaction(function () use ($request, $product, $validated): void {
             $product->update($this->payload($request, $validated));
+            $this->syncCollections($product, $validated['collection_id'] ?? null);
             $this->images->sync($request, $product, $validated['images'] ?? []);
             $this->syncVariants($request, $product, $validated['variants'] ?? [], $request->user()->id);
         });
@@ -110,7 +112,7 @@ class ProductManagementService
         $product->loadCount(['images as primary_images_count' => fn ($query) => $query->where('is_primary', true)]);
         $hasActiveVariant = $product->variants()->where('is_active', true)->where('stock', '>', 0)->exists();
 
-        if ($product->primary_images_count < 1 || ! $hasActiveVariant || $product->weight < 1 || $product->base_price < 0) {
+        if ($product->primary_images_count < 1 || ! $hasActiveVariant || $product->weight < 1 || $product->regular_price < 0) {
             throw ValidationException::withMessages([
                 'product' => 'Produk published membutuhkan gambar utama, varian aktif dengan stok, berat, dan harga valid.',
             ]);
@@ -172,7 +174,7 @@ class ProductManagementService
     {
         $product->load([
             'category:id,name',
-            'collection:id,name',
+            'collections:id,name',
             'images',
             'variants' => fn ($query) => $query->withCount('orderItems')->latest(),
             'variants.stockLogs' => fn ($query) => $query->latest()->limit(10),
@@ -184,16 +186,17 @@ class ProductManagementService
 
     public function formData(Product $product): array
     {
-        $product->loadMissing(['images', 'variants']);
+        $product->loadMissing(['collections', 'images', 'variants']);
 
         return [
             ...$product->only([
-                'id', 'category_id', 'collection_id', 'name', 'slug', 'sku', 'short_description', 'description',
-                'material', 'care_instruction', 'base_price', 'sale_price', 'weight', 'length', 'width', 'height',
+                'id', 'category_id', 'name', 'slug', 'sku', 'brand_name', 'product_line', 'style_name', 'regular_price', 'sale_price', 'short_description', 'description',
+                'stock_status', 'weight', 'length', 'width', 'height',
                 'status', 'is_featured', 'is_new_arrival', 'is_best_seller', 'meta_title', 'meta_description',
             ]),
+            'collection_id' => $product->collections->first()?->id,
             'images' => $product->images->map->only(['id', 'image_url', 'alt_text', 'sort_order', 'is_primary'])->values(),
-            'variants' => $product->variants->map->only(['id', 'sku', 'color_name', 'color_hex', 'size', 'additional_price', 'stock', 'reserved_stock', 'image_url', 'is_active'])->values(),
+            'variants' => $product->variants->map->only(['id', 'sku', 'barcode', 'variant_name', 'color_name', 'color_hex', 'size', 'package_type', 'regular_price', 'sale_price', 'stock', 'reserved_stock', 'image_url', 'is_active'])->values(),
         ];
     }
 
@@ -209,7 +212,9 @@ class ProductManagementService
     private function payload(Request $request, array $validated): array
     {
         return [
-            ...collect($validated)->except(['images', 'variants'])->all(),
+            ...collect($validated)->except(['images', 'variants', 'collection_id'])->all(),
+            'brand_name' => $validated['brand_name'] ?? 'Axegear',
+            'stock_status' => $validated['stock_status'] ?? 'in_stock',
             'is_featured' => $request->boolean('is_featured'),
             'is_new_arrival' => $request->boolean('is_new_arrival'),
             'is_best_seller' => $request->boolean('is_best_seller'),
@@ -236,7 +241,11 @@ class ProductManagementService
                 'color_name' => $variant['color_name'] ?? null,
                 'color_hex' => $variant['color_hex'] ?? null,
                 'size' => $variant['size'] ?? null,
-                'additional_price' => $variant['additional_price'] ?? 0,
+                'barcode' => $variant['barcode'] ?? null,
+                'variant_name' => $variant['variant_name'] ?? 'Default Title',
+                'package_type' => $variant['package_type'] ?? null,
+                'regular_price' => $variant['regular_price'] ?? null,
+                'sale_price' => $variant['sale_price'] ?? null,
                 'stock' => $variant['stock'] ?? 0,
                 'reserved_stock' => $variant['reserved_stock'] ?? 0,
                 'image_url' => $uploadedImage
@@ -275,6 +284,11 @@ class ProductManagementService
             $this->images->deleteStoredImage($variant->image_url);
             $variant->delete();
         });
+    }
+
+    private function syncCollections(Product $product, mixed $collectionId): void
+    {
+        $product->collections()->sync(filled($collectionId) ? [(int) $collectionId] : []);
     }
 
     private function makeVariantFilename(string $sku, int $index, string $extension): string
@@ -350,9 +364,9 @@ class ProductManagementService
             'name' => $product->name,
             'sku' => $product->sku,
             'category' => $product->category?->name,
-            'collection' => $product->collection?->name,
+            'collection' => $product->collections->first()?->name,
             'thumbnail' => $product->primaryImage?->image_url,
-            'base_price' => $product->base_price,
+            'regular_price' => $product->regular_price,
             'sale_price' => $product->sale_price,
             'total_stock' => (int) ($product->total_stock ?? 0),
             'variants_count' => $product->variants_count,
@@ -369,7 +383,7 @@ class ProductManagementService
         return [
             ...$this->formData($product),
             'category' => $product->category?->name,
-            'collection' => $product->collection?->name,
+            'collection' => $product->collections->first()?->name,
             'orders' => $product->orderItems->map(fn ($item): array => [
                 'id' => $item->id,
                 'order_id' => $item->order_id,

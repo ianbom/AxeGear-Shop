@@ -57,17 +57,17 @@ class ProductBrowsingService
                 });
             })
             ->when($filters['category'] !== '', fn ($query) => $query->whereHas('category', fn ($query) => $query->where('slug', $filters['category'])))
-            ->when($filters['collection'] !== '', fn ($query) => $query->whereHas('collection', fn ($query) => $query->where('slug', $filters['collection'])))
+            ->when($filters['collection'] !== '', fn ($query) => $query->whereHas('collections', fn ($query) => $query->where('slug', $filters['collection'])))
             ->when($filters['type'] === 'featured', fn ($query) => $query->where('is_featured', true))
             ->when($filters['type'] === 'new_arrival', fn ($query) => $query->where('is_new_arrival', true))
             ->when($filters['type'] === 'best_seller', fn ($query) => $query->where('is_best_seller', true))
             ->when($filters['type'] === 'discount', fn ($query) => $query->whereNotNull('sale_price'))
             ->when($filters['availability'] === 'in_stock', fn ($query) => $query->whereHas('variants', fn ($query) => $query->where('is_active', true)->whereColumn('stock', '>', 'reserved_stock')))
             ->when($filters['availability'] === 'out_of_stock', fn ($query) => $query->whereDoesntHave('variants', fn ($query) => $query->where('is_active', true)->whereColumn('stock', '>', 'reserved_stock')))
-            ->when($filters['price'] === 'under_410', fn ($query) => $query->whereRaw('coalesce(sale_price, base_price) < ?', [410000]))
-            ->when($filters['price'] === '410_830', fn ($query) => $query->whereRaw('coalesce(sale_price, base_price) between ? and ?', [410000, 830000]))
-            ->when($filters['price'] === '830_1200', fn ($query) => $query->whereRaw('coalesce(sale_price, base_price) between ? and ?', [830000, 1200000]))
-            ->when($filters['price'] === 'above_1200', fn ($query) => $query->whereRaw('coalesce(sale_price, base_price) > ?', [1200000]))
+            ->when($filters['price'] === 'under_410', fn ($query) => $query->whereRaw('coalesce(sale_price, regular_price) < ?', [410000]))
+            ->when($filters['price'] === '410_830', fn ($query) => $query->whereRaw('coalesce(sale_price, regular_price) between ? and ?', [410000, 830000]))
+            ->when($filters['price'] === '830_1200', fn ($query) => $query->whereRaw('coalesce(sale_price, regular_price) between ? and ?', [830000, 1200000]))
+            ->when($filters['price'] === 'above_1200', fn ($query) => $query->whereRaw('coalesce(sale_price, regular_price) > ?', [1200000]))
             ->when($filters['color'] !== '', fn ($query) => $query->whereHas('variants', fn ($query) => $query->where('is_active', true)->where('color_hex', $filters['color'])))
             ->when($filters['size'] !== '', fn ($query) => $query->whereHas('variants', fn ($query) => $query->where('is_active', true)->where('size', $filters['size'])));
 
@@ -118,7 +118,7 @@ class ProductBrowsingService
             'hajj' => $query
                 ->where(function ($query) {
                     $query
-                        ->whereHas('collection', fn ($query) => $query->where('slug', 'like', '%hajj%')->orWhere('name', 'like', '%hajj%'))
+                        ->whereHas('collections', fn ($query) => $query->where('slug', 'like', '%hajj%')->orWhere('name', 'like', '%hajj%'))
                         ->orWhereHas('category', fn ($query) => $query->where('slug', 'like', '%hajj%')->orWhere('name', 'like', '%hajj%'))
                         ->orWhere('is_featured', true);
                 })
@@ -178,11 +178,11 @@ class ProductBrowsingService
     {
         return [
             'category:id,name,slug',
-            'collection:id,name,slug',
+            'collections:id,name,slug',
             'primaryImage:id,product_id,image_url,alt_text',
             'images:id,product_id,image_url,alt_text,sort_order',
             'variants' => fn ($query) => $query
-                ->select('id', 'product_id', 'sku', 'color_name', 'color_hex', 'size', 'stock', 'reserved_stock', 'additional_price', 'image_url', 'is_active')
+                ->select('id', 'product_id', 'sku', 'color_name', 'color_hex', 'size', 'package_type', 'stock', 'reserved_stock', 'regular_price', 'sale_price', 'image_url', 'is_active')
                 ->where('is_active', true)
                 ->orderByRaw('(stock - reserved_stock) > 0 desc')
                 ->orderBy('color_name')
@@ -194,7 +194,7 @@ class ProductBrowsingService
     {
         $variants = $product->variants;
         $salePrice = $product->sale_price !== null ? (float) $product->sale_price : null;
-        $basePrice = (float) $product->base_price;
+        $basePrice = (float) $product->regular_price;
         $image = $product->primaryImage?->image_url
             ?? $product->images->first()?->image_url
             ?? $variants->firstWhere('image_url', '!=', null)?->image_url;
@@ -215,8 +215,8 @@ class ProductBrowsingService
             'label' => $this->label($product),
             'category' => $product->category?->name,
             'category_slug' => $product->category?->slug,
-            'collection' => $product->collection?->name,
-            'collection_slug' => $product->collection?->slug,
+            'collection' => $product->collections->first()?->name,
+            'collection_slug' => $product->collections->first()?->slug,
             'colors' => $variants
                 ->filter(fn ($variant) => filled($variant->color_hex))
                 ->unique('color_hex')
@@ -254,8 +254,6 @@ class ProductBrowsingService
             ...$this->productCard($product),
             'short_description' => $product->short_description,
             'description' => $product->description,
-            'material' => $product->material,
-            'care_instruction' => $product->care_instruction,
             'weight' => $product->weight,
             'dimensions' => [
                 'length' => $product->length,
@@ -270,7 +268,9 @@ class ProductBrowsingService
                     'color_name' => $variant->color_name,
                     'color_hex' => $variant->color_hex,
                     'size' => $variant->size,
-                    'additional_price' => (float) $variant->additional_price,
+                    'regular_price' => $variant->regular_price !== null ? (float) $variant->regular_price : null,
+                    'sale_price' => $variant->sale_price !== null ? (float) $variant->sale_price : null,
+                    'package_type' => $variant->package_type,
                     'stock' => $variant->stock,
                     'reserved_stock' => $variant->reserved_stock,
                     'available_stock' => max(0, $variant->stock - $variant->reserved_stock),
@@ -323,7 +323,7 @@ class ProductBrowsingService
         match ($sort) {
             'latest' => $query->orderBy('created_at', $order),
             'name' => $query->orderBy('name', $order),
-            'price' => $query->orderByRaw("coalesce(sale_price, base_price) {$order}"),
+            'price' => $query->orderByRaw("coalesce(sale_price, regular_price) {$order}"),
             'best_seller' => $query->orderByDesc('is_best_seller')->orderByDesc('created_at'),
             default => $query->orderByDesc('is_featured')->orderByDesc('is_new_arrival')->orderByDesc('created_at'),
         };
@@ -441,8 +441,8 @@ class ProductBrowsingService
 
     private function label(Product $product): ?string
     {
-        if ($product->sale_price !== null && (float) $product->base_price > 0) {
-            $discount = round((1 - ((float) $product->sale_price / (float) $product->base_price)) * 100);
+        if ($product->sale_price !== null && (float) $product->regular_price > 0) {
+            $discount = round((1 - ((float) $product->sale_price / (float) $product->regular_price)) * 100);
 
             return $discount > 0 ? "{$discount}%" : 'SALE';
         }

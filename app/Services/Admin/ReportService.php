@@ -127,10 +127,11 @@ class ReportService
         $items = DB::table('order_items')
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
             ->leftJoin('products', 'products.id', '=', 'order_items.product_id')
+            ->leftJoin('product_collections', 'product_collections.product_id', '=', 'products.id')
             ->where('orders.payment_status', 'paid')
             ->whereBetween('orders.paid_at', [$start, $end])
             ->when($request->string('category_id')->toString() !== '', fn ($query) => $query->where('products.category_id', $request->string('category_id')->toString()))
-            ->when($request->string('collection_id')->toString() !== '', fn ($query) => $query->where('products.collection_id', $request->string('collection_id')->toString()));
+            ->when($request->string('collection_id')->toString() !== '', fn ($query) => $query->where('product_collections.collection_id', $request->string('collection_id')->toString()));
 
         $products = (clone $items)
             ->selectRaw('order_items.product_name, coalesce(order_items.product_sku, "-") as product_sku, sum(order_items.quantity) as quantity, sum(order_items.subtotal) as revenue')
