@@ -1,0 +1,179 @@
+@import 'tailwindcss';
+
+@import 'tw-animate-css';
+
+@source '../views';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+    --font-sans:
+        Jost, 'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
+        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+        'Noto Color Emoji';
+    --font-serif:
+        Fraunces, ui-serif, Georgia, Cambria, 'Times New Roman', serif;
+
+    --radius-lg: var(--radius);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-sm: calc(var(--radius) - 4px);
+
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+    --background: #ffffff;
+    --foreground: #272727;
+    --card: #ffffff;
+    --card-foreground: #272727;
+    --popover: #ffffff;
+    --popover-foreground: #272727;
+    --primary: #B98B63;
+    --primary-foreground: #ffffff;
+    --secondary: #f7f7f7;
+    --secondary-foreground: #171717;
+    --muted: #f7f7f7;
+    --muted-foreground: #6f6f6f;
+    --accent: #a55353;
+    --accent-foreground: #ffffff;
+    --destructive: #d83f3f;
+    --destructive-foreground: #ffffff;
+    --border: #e7e2de;
+    --input: #ded8d3;
+    --ring: #B98B63;
+    --chart-1: #B98B63;
+    --chart-2: #272727;
+    --chart-3: #3d3d3d;
+    --chart-4: #a55353;
+    --chart-5: #e7e2de;
+    --radius: 0rem;
+    --sidebar: #ffffff;
+    --sidebar-foreground: #272727;
+    --sidebar-primary: #B98B63;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #f7f7f7;
+    --sidebar-accent-foreground: #171717;
+    --sidebar-border: #e7e2de;
+    --sidebar-ring: #B98B63;
+}
+
+.dark {
+    --background: #151515;
+    --foreground: #ffffff;
+    --card: #171717;
+    --card-foreground: #ffffff;
+    --popover: #171717;
+    --popover-foreground: #ffffff;
+    --primary: #B98B63;
+    --primary-foreground: #ffffff;
+    --secondary: #272727;
+    --secondary-foreground: #ffffff;
+    --muted: #272727;
+    --muted-foreground: #e7e2de;
+    --accent: #a55353;
+    --accent-foreground: #ffffff;
+    --destructive: #d83f3f;
+    --destructive-foreground: #ffffff;
+    --border: #3d3d3d;
+    --input: #3d3d3d;
+    --ring: #B98B63;
+    --chart-1: #B98B63;
+    --chart-2: #e7e2de;
+    --chart-3: #a55353;
+    --chart-4: #d83f3f;
+    --chart-5: #6f6f6f;
+    --sidebar: #151515;
+    --sidebar-foreground: #ffffff;
+    --sidebar-primary: #B98B63;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #272727;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: #3d3d3d;
+    --sidebar-ring: #B98B63;
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+        font-variant-numeric: tabular-nums;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        @apply font-serif font-light text-[#171717];
+    }
+
+    a,
+    button {
+        @apply transition-colors duration-200;
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+        width: 0px;
+        height: 0px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--muted-foreground);
+    }
+}

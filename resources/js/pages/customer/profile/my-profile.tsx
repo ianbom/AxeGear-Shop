@@ -1,0 +1,656 @@
+import { Link, useForm, usePage } from '@inertiajs/react';
+import {
+    User,
+    MapPin,
+    Eye,
+    EyeOff,
+    Loader2,
+    LogOut,
+} from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
+import SecurityController from '@/actions/App/Http/Controllers/Settings/SecurityController';
+import ProfileLayout from '@/layouts/profile-layout';
+import { logout } from '@/routes';
+import { dashboard as adminDashboard } from '@/routes/admin';
+
+type UserProp = {
+    id: number;
+    name: string;
+    email: string;
+    phone: string | null;
+    avatar_url: string | null;
+    role: string;
+    member_since: string | null;
+};
+
+type AddressProp = {
+    id: number;
+    label: string | null;
+    recipient_name: string;
+    recipient_phone: string;
+    province: string;
+    city: string;
+    district: string;
+    subdistrict: string | null;
+    postal_code: string;
+    full_address: string;
+    note: string | null;
+    is_default: boolean;
+};
+
+type PageProps = {
+    defaultAddress: AddressProp | null;
+    user: UserProp;
+};
+
+export default function MyProfile() {
+    const { defaultAddress, user } = usePage<PageProps>().props;
+    const avatarInputRef = useRef<HTMLInputElement>(null);
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+    const [profileClientErrors, setProfileClientErrors] = useState<{
+        name?: string;
+        phone?: string;
+    }>({});
+    const isAdmin = user.role.toLowerCase() === 'admin';
+
+    // --- Personal Info Form ---
+    const profileForm = useForm<{
+        name: string;
+        email: string;
+        phone: string;
+        avatar_url: File | null;
+    }>({
+        name: user.name ?? '',
+        email: user.email ?? '',
+        phone: user.phone ?? '',
+        avatar_url: null,
+    });
+
+    const submitProfile = (e: React.FormEvent) => {
+        e.preventDefault();
+
+        const nextErrors: { name?: string; phone?: string } = {};
+
+        if (profileForm.data.name.trim() === '') {
+            nextErrors.name = 'Nama lengkap wajib diisi.';
+        }
+
+        if (
+            profileForm.data.phone.trim() !== '' &&
+            !/^[0-9]+$/.test(profileForm.data.phone)
+        ) {
+            nextErrors.phone = 'Nomor telepon hanya boleh berisi angka.';
+        }
+
+        setProfileClientErrors(nextErrors);
+
+        if (Object.keys(nextErrors).length > 0) {
+            return;
+        }
+
+        profileForm.transform((data) => ({
+            ...data,
+            _method: 'patch',
+        }));
+        profileForm.post(ProfileController.update['/my-profile'].url(), {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                selectAvatar(null);
+
+                if (avatarInputRef.current) {
+                    avatarInputRef.current.value = '';
+                }
+            },
+        });
+    };
+
+    const selectAvatar = (file: File | null) => {
+        profileForm.setData('avatar_url', file);
+
+        if (avatarPreview) {
+            URL.revokeObjectURL(avatarPreview);
+        }
+
+        setAvatarPreview(file ? URL.createObjectURL(file) : null);
+    };
+
+    // --- Password UI ---
+    const [showPassword1, setShowPassword1] = useState(false);
+    const [showPassword2, setShowPassword2] = useState(false);
+    const [showPassword3, setShowPassword3] = useState(false);
+    const [passwordClientErrors, setPasswordClientErrors] = useState<{
+        current_password?: string;
+        password?: string;
+        password_confirmation?: string;
+    }>({});
+    const passwordForm = useForm({
+        current_password: '',
+        password: '',
+        password_confirmation: '',
+    });
+
+    const submitPassword = (e: React.FormEvent) => {
+        e.preventDefault();
+
+        const nextErrors: {
+            current_password?: string;
+            password?: string;
+            password_confirmation?: string;
+        } = {};
+
+        if (passwordForm.data.current_password.trim() === '') {
+            nextErrors.current_password = 'Kata sandi saat ini wajib diisi.';
+        }
+
+        if (passwordForm.data.password.trim() === '') {
+            nextErrors.password = 'Kata sandi baru wajib diisi.';
+        }
+
+        if (passwordForm.data.password_confirmation.trim() === '') {
+            nextErrors.password_confirmation =
+                'Konfirmasi kata sandi wajib diisi.';
+        }
+
+        setPasswordClientErrors(nextErrors);
+
+        if (Object.keys(nextErrors).length > 0) {
+            return;
+        }
+
+        passwordForm.put(SecurityController.update.url(), {
+            preserveScroll: true,
+            onSuccess: () => passwordForm.reset(),
+            onError: () =>
+                passwordForm.reset('password', 'password_confirmation'),
+        });
+    };
+
+    useEffect(() => {
+        return () => {
+            if (avatarPreview) {
+                URL.revokeObjectURL(avatarPreview);
+            }
+        };
+    }, [avatarPreview]);
+
+    const avatarSrc = avatarPreview || user.avatar_url;
+    const nameError = profileClientErrors.name ?? profileForm.errors.name;
+    const phoneError = profileClientErrors.phone ?? profileForm.errors.phone;
+
+    return (
+        <ProfileLayout
+            title="Pengaturan Profil"
+            pageTitle="Pengaturan Profil"
+            subtitle="Kelola informasi pribadi dan preferensi akunmu."
+            activePath="my-profile"
+            breadcrumbs={[
+                { label: 'Beranda', href: '/' },
+                { label: 'Akun Saya', href: '/my-profile' },
+                { label: 'Pengaturan Profil' },
+            ]}
+        >
+            {/* Profile Header */}
+            <div className="animate-fade-in-up flex flex-col items-start justify-between border-b border-[#e7e2de] pb-8 md:flex-row md:items-center">
+                <div className="mb-6 flex items-center space-x-6 md:mb-0">
+                    <div
+                        className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-[#e7e2de] bg-white text-[#6f6f6f] md:h-24 md:w-24"
+                    >
+                        {avatarSrc ? (
+                            <img
+                                src={avatarSrc}
+                                alt={user.name}
+                                className="h-full w-full object-cover"
+                            />
+                        ) : (
+                            <User
+                                size={36}
+                                strokeWidth={1.6}
+                                aria-hidden="true"
+                            />
+                        )}
+                    </div>
+                    <div>
+                        <h2 className="mb-1 font-serif text-xl text-[#151515] md:text-2xl">
+                            {user.name}
+                        </h2>
+                        <p className="mb-1 text-[12px] text-[#6f6f6f] md:text-[13px]">
+                            {user.email}
+                        </p>
+                        {user.member_since && (
+                            <p className="mb-3 text-[11px] text-[#6f6f6f]">
+                                Member sejak {user.member_since}
+                            </p>
+                        )}
+                    </div>
+                </div>
+
+                {isAdmin && (
+                    <div className="text-left md:text-right">
+                        <p className="mb-1 text-[10px] font-bold tracking-[0.2em] text-[#e7e2de] uppercase">
+                            Peran akun
+                        </p>
+                        <p className="font-serif text-lg text-[#151515] capitalize">
+                            {user.role}
+                        </p>
+                        <Link
+                            href={adminDashboard()}
+                            className="mt-3 inline-flex items-center justify-center rounded-md bg-[#151515] px-4 py-2 text-[11px] font-bold tracking-wider text-white transition-colors hover:bg-[#272727]"
+                        >
+                            Dashboard
+                        </Link>
+                    </div>
+                )}
+            </div>
+
+            <div className="grid grid-cols-1 items-start gap-10 md:grid-cols-2 md:gap-12">
+                <form
+                    onSubmit={submitProfile}
+                    className="animate-fade-in-up border-b border-[#e7e2de] pb-10 md:border-b-0"
+                    style={{ animationDelay: '150ms' }}
+                >
+                    <div className="mb-6 flex items-center border-b border-[#e7e2de] pb-4">
+                        <User size={18} className="mr-2 text-[#151515]" />
+                        <h3 className="font-serif text-lg text-[#151515]">
+                            Informasi Pribadi
+                        </h3>
+                    </div>
+
+                    <div className="space-y-4">
+                        {/* Full Name */}
+                        <div>
+                            <label className="mb-1.5 block text-[11px] font-semibold text-[#6f6f6f]">
+                                Nama Lengkap
+                            </label>
+                            <input
+                                type="text"
+                                value={profileForm.data.name}
+                                onChange={(e) => {
+                                    profileForm.setData('name', e.target.value);
+                                    setProfileClientErrors((current) => ({
+                                        ...current,
+                                        name: undefined,
+                                    }));
+                                }}
+                                className={`w-full border-b bg-transparent px-1 py-2.5 text-[13px] text-[#272727] transition-colors focus:outline-none ${
+                                    nameError
+                                        ? 'border-red-400 focus:border-red-400'
+                                        : 'border-[#e7e2de] focus:border-[#151515]'
+                                }`}
+                            />
+                            {nameError && (
+                                <p className="mt-1 text-[10px] text-red-500">
+                                    {nameError}
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Email */}
+                        <div>
+                            <label className="mb-1.5 block text-[11px] font-semibold text-[#6f6f6f]">
+                                Alamat Email
+                            </label>
+                            <input
+                                type="email"
+                                value={profileForm.data.email}
+                                onChange={(e) =>
+                                    profileForm.setData('email', e.target.value)
+                                }
+                                className={`w-full border-b bg-transparent px-1 py-2.5 text-[13px] text-[#272727] transition-colors focus:outline-none ${
+                                    profileForm.errors.email
+                                        ? 'border-red-400 focus:border-red-400'
+                                        : 'border-[#e7e2de] focus:border-[#151515]'
+                                }`}
+                            />
+                            {profileForm.errors.email && (
+                                <p className="mt-1 text-[10px] text-red-500">
+                                    {profileForm.errors.email}
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Phone */}
+                        <div>
+                            <label className="mb-1.5 block text-[11px] font-semibold text-[#6f6f6f]">
+                                Nomor Telepon
+                            </label>
+                            <input
+                                type="tel"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                value={profileForm.data.phone}
+                                onChange={(e) => {
+                                    profileForm.setData(
+                                        'phone',
+                                        e.target.value.replace(/\D/g, ''),
+                                    );
+                                    setProfileClientErrors((current) => ({
+                                        ...current,
+                                        phone: undefined,
+                                    }));
+                                }}
+                                placeholder="contoh 08123456789"
+                                className={`w-full border-b bg-transparent px-1 py-2.5 text-[13px] text-[#272727] transition-colors focus:outline-none ${
+                                    phoneError
+                                        ? 'border-red-400 focus:border-red-400'
+                                        : 'border-[#e7e2de] focus:border-[#151515]'
+                                }`}
+                            />
+                            {phoneError && (
+                                <p className="mt-1 text-[10px] text-red-500">
+                                    {phoneError}
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Avatar Upload */}
+                        <div>
+                            <label className="mb-1.5 block text-[11px] font-semibold text-[#6f6f6f]">
+                                Foto Avatar{' '}
+                                <span className="font-normal text-[#6f6f6f]">
+                                    (opsional)
+                                </span>
+                            </label>
+                            <input
+                                ref={avatarInputRef}
+                                type="file"
+                                accept="image/png,image/jpeg,image/webp"
+                                onChange={(e) =>
+                                    selectAvatar(e.target.files?.[0] ?? null)
+                                }
+                                className={`w-full border-b bg-transparent px-1 py-2.5 text-[13px] text-[#272727] transition-colors file:mr-4 file:border-0 file:bg-[#E8D6C1] file:px-3 file:py-1.5 file:text-[11px] file:font-bold file:text-[#151515] focus:outline-none ${
+                                    profileForm.errors.avatar_url
+                                        ? 'border-red-400 focus:border-red-400'
+                                        : 'border-[#e7e2de] focus:border-[#151515]'
+                                }`}
+                            />
+                            {profileForm.errors.avatar_url && (
+                                <p className="mt-1 text-[10px] text-red-500">
+                                    {profileForm.errors.avatar_url}
+                                </p>
+                            )}
+                            <p className="mt-1.5 text-[10px] text-[#6f6f6f]">
+                                JPG, PNG, atau WEBP. Maks 2MB.
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col gap-3 pt-4 sm:flex-row">
+                            <button
+                                type="submit"
+                                disabled={profileForm.processing}
+                                className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-[#B98B63] px-6 py-2.5 text-[12px] font-bold tracking-wider text-white transition-colors hover:bg-[#9A6B45] disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {profileForm.processing && (
+                                    <Loader2
+                                        size={14}
+                                        className="animate-spin"
+                                    />
+                                )}
+                                Simpan Perubahan
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => profileForm.reset()}
+                                className="rounded-md border border-[#e7e2de] bg-transparent px-6 py-2.5 text-[12px] font-bold tracking-wider text-[#6f6f6f] transition-colors hover:bg-white"
+                            >
+                                Batal
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <div className="space-y-10">
+                    {/* Change Password */}
+                    <form
+                        onSubmit={submitPassword}
+                        className="animate-fade-in-up border-b border-[#e7e2de] pb-10"
+                        style={{ animationDelay: '200ms' }}
+                    >
+                        <div className="mb-6 flex items-center border-b border-[#e7e2de] pb-4">
+                            <LockIcon
+                                size={18}
+                                className="mr-2 text-[#151515]"
+                            />
+                            <h3 className="font-serif text-lg text-[#151515]">
+                                Ubah Kata Sandi
+                            </h3>
+                        </div>
+                        <div className="space-y-4">
+                            <PasswordField
+                                label="Kata Sandi Saat Ini"
+                                show={showPassword1}
+                                onToggle={() =>
+                                    setShowPassword1(!showPassword1)
+                                }
+                                value={passwordForm.data.current_password}
+                                onChange={(value) => {
+                                    passwordForm.setData(
+                                        'current_password',
+                                        value,
+                                    );
+                                    setPasswordClientErrors((current) => ({
+                                        ...current,
+                                        current_password: undefined,
+                                    }));
+                                }}
+                                error={
+                                    passwordClientErrors.current_password ??
+                                    passwordForm.errors.current_password
+                                }
+                                autoComplete="current-password"
+                            />
+                            <PasswordField
+                                label="Kata Sandi Baru"
+                                show={showPassword2}
+                                onToggle={() =>
+                                    setShowPassword2(!showPassword2)
+                                }
+                                value={passwordForm.data.password}
+                                onChange={(value) => {
+                                    passwordForm.setData('password', value);
+                                    setPasswordClientErrors((current) => ({
+                                        ...current,
+                                        password: undefined,
+                                    }));
+                                }}
+                                error={
+                                    passwordClientErrors.password ??
+                                    passwordForm.errors.password
+                                }
+                                autoComplete="new-password"
+                            />
+                            <PasswordField
+                                label="Konfirmasi Kata Sandi Baru"
+                                show={showPassword3}
+                                onToggle={() =>
+                                    setShowPassword3(!showPassword3)
+                                }
+                                value={passwordForm.data.password_confirmation}
+                                onChange={(value) => {
+                                    passwordForm.setData(
+                                        'password_confirmation',
+                                        value,
+                                    );
+                                    setPasswordClientErrors((current) => ({
+                                        ...current,
+                                        password_confirmation: undefined,
+                                    }));
+                                }}
+                                error={
+                                    passwordClientErrors.password_confirmation ??
+                                    passwordForm.errors.password_confirmation
+                                }
+                                autoComplete="new-password"
+                            />
+                            <div className="pt-2">
+                                <button
+                                    type="submit"
+                                    disabled={passwordForm.processing}
+                                    className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#B98B63] px-6 py-2.5 text-[12px] font-bold tracking-wider text-white transition-colors hover:bg-[#9A6B45] disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {passwordForm.processing && (
+                                        <Loader2
+                                            size={14}
+                                            className="animate-spin"
+                                        />
+                                    )}
+                                    Perbarui Kata Sandi
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    {/* Default Address */}
+                    <div
+                        className="animate-fade-in-up"
+                        style={{ animationDelay: '250ms' }}
+                    >
+                        <div className="mb-4 flex items-center justify-between border-b border-[#e7e2de] pb-4">
+                            <div className="flex items-center">
+                                <MapPin
+                                    size={18}
+                                    className="mr-2 text-[#151515]"
+                                />
+                                <h3 className="font-serif text-lg text-[#151515]">
+                                    Alamat Utama
+                                </h3>
+                            </div>
+                        </div>
+                        {defaultAddress ? (
+                            <div className="mb-6 space-y-3 text-[12px]">
+                                <div className="flex items-center justify-between gap-3">
+                                    <p className="font-semibold text-[#272727]">
+                                        {defaultAddress.recipient_name}
+                                    </p>
+                                    <span className="text-[10px] font-bold text-[#151515]">
+                                        {defaultAddress.label ?? 'Utama'}
+                                    </span>
+                                </div>
+                                <p className="text-[#6f6f6f]">
+                                    {defaultAddress.recipient_phone}
+                                </p>
+                                <p className="leading-relaxed text-[#6f6f6f]">
+                                    {defaultAddress.full_address}
+                                </p>
+                                <p className="text-[#6f6f6f]">
+                                    {[
+                                        defaultAddress.district,
+                                        defaultAddress.city,
+                                        defaultAddress.province,
+                                        defaultAddress.postal_code,
+                                    ]
+                                        .filter(Boolean)
+                                        .join(', ')}
+                                </p>
+                                {defaultAddress.note && (
+                                    <p className="border-l border-[#e7e2de] pl-3 text-[#6f6f6f]">
+                                        {defaultAddress.note}
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            <p className="mb-6 text-[12px] leading-relaxed text-[#6f6f6f]">
+                                Belum ada alamat utama. Tambahkan alamat untuk
+                                checkout lebih cepat.
+                            </p>
+                        )}
+                        <Link
+                            href="/address"
+                            className="block w-full rounded-md border border-[#e7e2de] bg-white px-4 py-2 text-center text-[12px] font-bold tracking-wider text-[#151515] transition-colors hover:bg-[#ffffff]"
+                        >
+                            Kelola Alamat
+                        </Link>
+                        <Link
+                            href={logout()}
+                            method="post"
+                            as="button"
+                            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md border border-red-200 bg-white px-4 py-2 text-[12px] font-bold tracking-wider text-red-600 transition-colors hover:bg-red-50 lg:hidden"
+                        >
+                            <LogOut size={15} strokeWidth={1.8} />
+                            Keluar
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        </ProfileLayout>
+    );
+}
+
+// --- Sub-components ---
+
+function PasswordField({
+    label,
+    show,
+    onToggle,
+    value,
+    onChange,
+    error,
+    autoComplete,
+    hint,
+    hintColor = 'text-[#6f6f6f]',
+}: {
+    label: string;
+    show: boolean;
+    onToggle: () => void;
+    value: string;
+    onChange: (value: string) => void;
+    error?: string;
+    autoComplete: string;
+    hint?: string;
+    hintColor?: string;
+}) {
+    return (
+        <div>
+            <label className="mb-1.5 block text-[11px] font-semibold text-[#6f6f6f]">
+                {label}
+            </label>
+            <div className="relative">
+                <input
+                    type={show ? 'text' : 'password'}
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    autoComplete={autoComplete}
+                    className={`w-full border-b bg-transparent px-1 py-2.5 pr-10 text-[13px] text-[#272727] transition-colors focus:outline-none ${
+                        error
+                            ? 'border-red-400 focus:border-red-400'
+                            : 'border-[#e7e2de] focus:border-[#151515]'
+                    }`}
+                />
+                <button
+                    type="button"
+                    onClick={onToggle}
+                    className="absolute top-1/2 right-3 -translate-y-1/2 text-[#e7e2de] hover:text-[#272727]"
+                >
+                    {show ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+            </div>
+            {error && <p className="mt-1 text-[10px] text-red-500">{error}</p>}
+            {hint && (
+                <p className={`mt-1.5 text-[10px] ${hintColor}`}>{hint}</p>
+            )}
+        </div>
+    );
+}
+
+function LockIcon(props: React.SVGProps<SVGSVGElement> & { size?: number }) {
+    const { size = 24, ...svgProps } = props;
+
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width={size}
+            height={size}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...svgProps}
+        >
+            <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+    );
+}
