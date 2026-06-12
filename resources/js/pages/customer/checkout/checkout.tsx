@@ -1,19 +1,9 @@
 import { Head, Link } from '@inertiajs/react';
 import type { Icon, LatLngBoundsExpression, Map as LeafletMap } from 'leaflet';
-import {
-    Check,
-    CircleHelp,
-    Lock,
-    MapPinned,
-    ShieldCheck,
-    Ticket,
-    Truck,
-    User,
-} from 'lucide-react';
+import { Lock, MapPinned, ShieldCheck, Ticket, Truck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type * as ReactLeaflet from 'react-leaflet';
 import { toast } from 'sonner';
-import { Toaster } from '@/components/ui/sonner';
 import { CheckoutProvider, useCheckout } from '@/contexts/checkout-context';
 import type {
     CheckoutAddress,
@@ -23,6 +13,7 @@ import type {
     ShippingRate,
     Voucher,
 } from '@/contexts/checkout-context';
+import ShopLayout from '@/layouts/shop-layout';
 
 type Props = {
     addresses: CheckoutAddress[];
@@ -79,87 +70,6 @@ const formatDistance = (meters: number) =>
           }).format(meters)} m`;
 
 const checkoutStockAlertKey = 'checkout.stock_alert';
-
-function CheckoutHeader() {
-    return (
-        <header className="border-b-2 border-[#1A1A1A] bg-white">
-            <div className="mx-auto flex h-[72px] max-w-[1320px] min-w-0 items-center justify-between gap-4 px-4 md:h-20 md:px-6 lg:px-8">
-                <Link
-                    href="/"
-                    className="min-w-0 shrink truncate text-xl leading-none font-black tracking-[-0.02em] text-[#1A1A1A] uppercase md:text-3xl"
-                >
-                    AxeGear Shop
-                </Link>
-                <nav className="flex shrink-0 items-center gap-3 text-[10px] font-black tracking-[0.05em] text-[#1A1A1A] uppercase sm:gap-5 md:text-[12px]">
-                    <span className="hidden items-center gap-2 sm:flex">
-                        <ShieldCheck size={16} className="text-[#F58220]" />
-                        Aman
-                    </span>
-                    <Link
-                        href="/shipping-policy"
-                        className="flex items-center gap-2 hover:text-[#F58220]"
-                    >
-                        <CircleHelp size={16} />
-                        Bantuan
-                    </Link>
-                    <Link
-                        href="/my-profile"
-                        className="flex items-center gap-2 hover:text-[#F58220]"
-                    >
-                        <User size={16} />
-                        Akun
-                    </Link>
-                </nav>
-            </div>
-        </header>
-    );
-}
-
-function CheckoutFooter() {
-    return (
-        <footer className="bg-[#1A1A1A] text-white">
-            <div className="mx-auto grid max-w-[1320px] gap-8 px-4 py-10 md:grid-cols-[1.2fr_1fr_1fr] md:px-6 lg:px-8">
-                <div>
-                    <p className="text-2xl font-black tracking-[-0.02em] uppercase">
-                        AxeGear
-                    </p>
-                    <p className="mt-3 max-w-[360px] text-sm leading-6 font-medium text-white/75">
-                        Performance commerce checkout dengan pembayaran Midtrans
-                        dan pengiriman Biteship.
-                    </p>
-                </div>
-                <div className="border-white/25 md:border-l md:pl-8">
-                    <p className="text-sm font-black tracking-[0.08em] uppercase">
-                        Support
-                    </p>
-                    <div className="mt-4 grid gap-2 text-sm font-medium text-white/80">
-                        <Link
-                            href="/shipping-policy"
-                            className="hover:text-[#F58220]"
-                        >
-                            Shipping Policy
-                        </Link>
-                        <Link
-                            href="/notifications"
-                            className="hover:text-[#F58220]"
-                        >
-                            Help Center
-                        </Link>
-                    </div>
-                </div>
-                <div className="border-white/25 md:border-l md:pl-8">
-                    <p className="text-sm font-black tracking-[0.08em] uppercase">
-                        Payment
-                    </p>
-                    <p className="mt-4 text-sm leading-6 font-medium text-white/80">
-                        Secure payment powered by Midtrans. Shipping rates are
-                        calculated live by Biteship.
-                    </p>
-                </div>
-            </div>
-        </footer>
-    );
-}
 
 const stockIssueMessage = (item: CheckoutItem) => {
     if (item.available_stock <= 0) {
@@ -312,9 +222,8 @@ function CheckoutScreen() {
     };
 
     return (
-        <div className="min-h-screen overflow-x-hidden bg-white font-sans text-[#1A1A1A] selection:bg-[#F58220] selection:text-white">
+        <ShopLayout>
             <Head title="Checkout - AxeGear" />
-            <CheckoutHeader />
 
             <main className="mx-auto min-h-screen max-w-[1320px] px-4 py-7 md:px-6 lg:px-8 lg:py-10">
                 <div className="mb-8 flex items-center gap-2 text-[12px] font-semibold tracking-[0.02em] text-[#707070] uppercase md:text-[13px]">
@@ -346,29 +255,6 @@ function CheckoutScreen() {
                             Pilih alamat tersimpan, ongkir Biteship, voucher,
                             lalu bayar via Midtrans.
                         </p>
-                    </div>
-                    <div className="flex max-w-full flex-wrap items-center gap-y-2 md:max-w-[360px]">
-                        {['Keranjang', 'Checkout', 'Pembayaran'].map(
-                            (label, index) => (
-                                <div key={label} className="flex items-center">
-                                    <div
-                                        className={`flex h-8 w-8 items-center justify-center border text-[12px] font-black ${index === 1 ? 'border-[#F58220] bg-[#F58220] text-white' : index === 0 ? 'border-[#1A1A1A] bg-[#1A1A1A] text-white' : 'border-[#CFCFCF] bg-white text-[#9A9A9A]'}`}
-                                    >
-                                        {index === 0 ? (
-                                            <Check size={14} />
-                                        ) : (
-                                            index + 1
-                                        )}
-                                    </div>
-                                    <span className="mx-1.5 hidden text-[11px] font-extrabold tracking-[0.03em] text-[#1A1A1A] uppercase sm:inline">
-                                        {label}
-                                    </span>
-                                    {index < 2 && (
-                                        <div className="mx-1.5 h-px w-6 bg-[#CFCFCF] md:w-8" />
-                                    )}
-                                </div>
-                            ),
-                        )}
                     </div>
                 </div>
 
@@ -740,9 +626,7 @@ function CheckoutScreen() {
                     </div>
                 )}
             </main>
-            <CheckoutFooter />
-            <Toaster />
-        </div>
+        </ShopLayout>
     );
 }
 

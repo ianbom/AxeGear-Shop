@@ -211,16 +211,6 @@ export default function MyCart({
                                         Continue Shopping
                                     </Link>
                                 </div>
-                                <p className="text-sm font-medium lg:text-center">
-                                    Have an account?{' '}
-                                    <Link
-                                        href="/login"
-                                        className="font-extrabold text-[#F58220] hover:underline"
-                                    >
-                                        Log in
-                                    </Link>{' '}
-                                    to check out faster.
-                                </p>
                             </div>
 
                             {(errorMessage || hasStockIssues) && (
@@ -413,8 +403,6 @@ export default function MyCart({
                                             );
                                         })}
                                     </div>
-
-                                    <CartActionBar />
                                 </section>
 
                                 <OrderSummary
@@ -479,36 +467,6 @@ function QuantityControl({
     );
 }
 
-function CartActionBar() {
-    return (
-        <div className="mt-2 grid gap-2 border border-[#CFCFCF] bg-white p-3 text-sm font-bold lg:grid-cols-[190px_210px_1fr_420px_170px] lg:items-center">
-            <button className="flex h-10 items-center gap-3 px-3 text-left hover:text-[#F58220]">
-                <FileText size={20} strokeWidth={1.7} />
-                Add Order Note
-            </button>
-            <button className="flex h-10 items-center gap-3 px-3 text-left hover:text-[#F58220]">
-                <Truck size={22} strokeWidth={1.7} />
-                Estimate Shipping
-            </button>
-            <label htmlFor="promo-code" className="text-left lg:text-right">
-                Have a Promo Code?
-            </label>
-            <div className="grid grid-cols-[1fr_92px]">
-                <input
-                    id="promo-code"
-                    placeholder="Enter promo code"
-                    className="h-10 border border-[#CFCFCF] px-4 text-sm font-medium outline-none focus:border-[#1A1A1A]"
-                />
-                <button className="h-10 border border-[#F58220] text-xs font-black tracking-[0.04em] text-[#F58220] uppercase hover:bg-[#F58220] hover:text-white">
-                    Apply
-                </button>
-            </div>
-            <button className="h-10 border border-[#1A1A1A] text-xs font-black tracking-[0.04em] uppercase hover:bg-[#1A1A1A] hover:text-white">
-                Update Cart
-            </button>
-        </div>
-    );
-}
 
 function OrderSummary({
     summary,
@@ -557,9 +515,6 @@ function OrderSummary({
                 className="h-12 w-full bg-[#F58220] text-sm font-black tracking-[0.06em] text-white uppercase transition-colors hover:bg-[#E67312] disabled:bg-[#CFCFCF] disabled:text-[#707070]"
             >
                 Proceed to Checkout
-            </button>
-            <button className="mt-4 h-11 w-full border border-[#1A1A1A] text-sm font-black tracking-[0.04em] uppercase hover:bg-[#1A1A1A] hover:text-white">
-                Express Checkout
             </button>
             <div className="mt-8 grid grid-cols-3 gap-3 text-center text-xs font-medium">
                 <TrustItem icon={ShieldCheck} label="Secure Checkout" />

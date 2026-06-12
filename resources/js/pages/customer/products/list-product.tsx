@@ -1,10 +1,8 @@
 import { Head, InfiniteScroll, Link, router, usePage } from '@inertiajs/react';
 import {
     ChevronDown,
-    Gem,
     Grid3X3,
     List as ListIcon,
-    MessageCircle,
     Search,
 } from 'lucide-react';
 import type { FormEvent, MouseEvent, ReactNode } from 'react';
@@ -341,16 +339,6 @@ export default function ListProduct({ products, filters, options }: Props) {
                                 ))}
                             </select>
                         </label>
-                        <span className="hidden h-6 w-px bg-hairline-strong sm:block" />
-                        <div className="flex items-center gap-4 text-[17px] text-ink">
-                            <span>View:</span>
-                            <Grid3X3
-                                size={22}
-                                strokeWidth={2.5}
-                                className="fill-primary text-primary"
-                            />
-                            <ListIcon size={23} strokeWidth={2.5} />
-                        </div>
                     </div>
                 </div>
 
@@ -401,23 +389,6 @@ export default function ListProduct({ products, filters, options }: Props) {
                     </div>
                 </div>
             </section>
-
-            <div className="fixed right-7 bottom-32 z-40 hidden flex-col gap-3 lg:flex">
-                <button
-                    type="button"
-                    aria-label="Rewards"
-                    className="flex size-[72px] items-center justify-center rounded-full bg-primary text-white shadow-dropdown hover:bg-[#E67312]"
-                >
-                    <Gem size={38} strokeWidth={1.8} />
-                </button>
-                <button
-                    type="button"
-                    aria-label="Chat support"
-                    className="flex size-[58px] items-center justify-center self-center rounded-full bg-ink text-white shadow-dropdown hover:bg-primary"
-                >
-                    <MessageCircle size={30} strokeWidth={2} />
-                </button>
-            </div>
         </ShopLayout>
     );
 }
