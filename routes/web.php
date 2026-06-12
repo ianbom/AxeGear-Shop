@@ -39,6 +39,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [CustomerHomeController::class, 'index'])->name('home');
+Route::inertia('/about', 'about/index')->name('about');
 
 Route::middleware('guest')->group(function () {
     Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])->name('auth.google.redirect');

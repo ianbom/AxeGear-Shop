@@ -18,7 +18,7 @@ const columns = [
     {
         title: 'COMPANY',
         links: [
-            { label: 'About AxeGear', href: '/' },
+            { label: 'About AxeGear', href: '/about' },
             { label: 'Careers', href: '/' },
         ],
     },
