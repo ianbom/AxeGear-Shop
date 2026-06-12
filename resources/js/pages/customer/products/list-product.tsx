@@ -1,7 +1,14 @@
 import { Head, InfiniteScroll, Link, router, usePage } from '@inertiajs/react';
-import { ChevronDown, Heart, Search } from 'lucide-react';
+import {
+    ChevronDown,
+    Gem,
+    Grid3X3,
+    List as ListIcon,
+    MessageCircle,
+    Search,
+} from 'lucide-react';
 import type { FormEvent, MouseEvent, ReactNode } from 'react';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
     destroyProduct as removeWishlistProduct,
     store as addWishlistItem,
@@ -105,17 +112,17 @@ const defaultFilters: FilterState = {
 };
 
 const typeOptions = [
-    { value: 'all', label: 'Semua Produk' },
-    { value: 'featured', label: 'Produk Unggulan' },
-    { value: 'new_arrival', label: 'Koleksi Baru' },
-    { value: 'best_seller', label: 'Terlaris' },
-    { value: 'discount', label: 'Diskon' },
+    { value: 'all', label: 'All' },
+    { value: 'featured', label: 'Featured' },
+    { value: 'new_arrival', label: 'New' },
+    { value: 'best_seller', label: 'Best Seller' },
+    { value: 'discount', label: 'Sale' },
 ];
 
 const availabilityOptions = [
-    { value: 'all', label: 'Semua' },
-    { value: 'in_stock', label: 'Tersedia' },
-    { value: 'out_of_stock', label: 'Habis' },
+    { value: 'all', label: 'All' },
+    { value: 'in_stock', label: 'In Stock' },
+    { value: 'out_of_stock', label: 'Out of Stock' },
 ];
 
 const fallbackImages = [
@@ -127,11 +134,11 @@ const fallbackImages = [
 ];
 
 const formatPrice = (value: number) =>
-    new Intl.NumberFormat('id-ID', {
+    new Intl.NumberFormat('en-US', {
         style: 'currency',
-        currency: 'IDR',
-        maximumFractionDigits: 0,
-    }).format(value);
+        currency: 'USD',
+        maximumFractionDigits: 2,
+    }).format(value / 10000);
 
 const cleanQuery = (filters: FilterState) =>
     Object.fromEntries(
@@ -174,7 +181,7 @@ export default function ListProduct({ products, filters, options }: Props) {
                 preserveState: true,
                 replace: true,
             });
-        }, 400);
+        }, 350);
 
         return () => window.clearTimeout(timeout);
     }, [filters.search, form]);
@@ -204,484 +211,459 @@ export default function ListProduct({ products, filters, options }: Props) {
         visit(form);
     };
 
-    const activeSummary = [
-        filters.category,
-        filters.collection,
-        filters.type !== 'all' ? filters.type : '',
-        filters.availability !== 'all' ? filters.availability : '',
-        filters.price !== 'all' ? filters.price : '',
-        filters.color,
-        filters.size,
-        filters.search,
-    ].filter(Boolean).length;
     const selectedCollection = options.collections.find(
         (collection) => collection.slug === filters.collection,
     );
-    const pageTitle = selectedCollection?.name ?? 'Semua Produk';
-    const pageDescription =
-        selectedCollection?.description?.trim() ||
-        'Temukan pilihan modest wear terbaru dengan filter cepat, tampilan bersih, dan katalog yang lebih lapang.';
+    const pageTitle = selectedCollection?.name ?? 'All Products';
 
     return (
         <ShopLayout>
-            <Head title={`${pageTitle} - Aurea Syari`} />
+            <Head title={`${pageTitle} - AxeGear`} />
 
-            <main className="mx-auto w-full max-w-[1560px] px-4 py-8 md:px-10 md:py-12">
+            <section className="mx-auto max-w-[1728px] px-6 pt-9 pb-9 sm:px-8 lg:px-9">
                 <button
                     type="button"
-                    aria-label="Tutup filter"
+                    aria-label="Close filter overlay"
                     onClick={closeFilter}
-                    className={`fixed inset-0 z-40 bg-black/30 transition-opacity duration-200 ease-out ${
+                    className={`fixed inset-0 z-[70] bg-black/50 transition-opacity lg:hidden ${
                         isFilterOpen
                             ? 'opacity-100'
                             : 'pointer-events-none opacity-0'
                     }`}
                 />
                 <aside
-                    className={`fixed top-0 right-0 bottom-0 z-50 flex w-full max-w-md transform-gpu flex-col overflow-y-auto border-l border-border bg-white px-5 pt-5 pb-6 shadow-[-24px_0_80px_rgba(0,0,0,0.14)] transition-transform duration-200 ease-out will-change-transform [contain:layout_paint] md:px-7 ${
-                        isFilterOpen
-                            ? 'translate-x-0'
-                            : 'pointer-events-none translate-x-full'
+                    aria-label="Mobile filters"
+                    className={`fixed top-0 bottom-0 left-0 z-[80] flex w-[min(88vw,360px)] flex-col overflow-hidden border-r border-ink bg-canvas p-5 transition-transform lg:hidden ${
+                        isFilterOpen ? 'translate-x-0' : '-translate-x-full'
                     }`}
                 >
-                    <div className="mb-6 flex items-center justify-between border-b border-border pb-5">
-                        <div>
-                            <p className="text-[12px] font-semibold tracking-[0.22em] text-foreground uppercase">
-                                Filter & Urutkan
-                            </p>
-                            <p className="mt-1 text-[11px] text-secondary-foreground">
-                                Search, filter, lalu urutkan produk.
-                            </p>
-                        </div>
+                    <div className="mb-5 flex items-center justify-between border-b border-hairline-strong pb-4">
+                        <h2 className="text-[22px] font-extrabold text-ink">
+                            Filter:
+                        </h2>
                         <button
                             type="button"
                             onClick={closeFilter}
-                            className="border border-border px-4 py-2 text-[10px] font-semibold tracking-wider uppercase transition-colors hover:border-foreground"
+                            className="h-10 border border-hairline-strong px-4 text-[12px] font-extrabold uppercase hover:border-ink"
                         >
-                            Tutup
+                            Close
                         </button>
                     </div>
-                    <form
-                        onSubmit={submitSearch}
-                        className="group relative mb-7"
-                    >
-                        <Search
-                            className="absolute top-1/2 left-0 -translate-y-1/2 text-muted-foreground transition-colors group-hover:text-foreground"
-                            size={14}
-                        />
-                        <input
-                            type="search"
-                            value={form.search}
-                            onChange={(event) =>
-                                setForm((current) => ({
-                                    ...current,
-                                    search: event.target.value,
-                                }))
-                            }
-                            placeholder="Cari produk"
-                            className="w-full border-0 border-b border-border bg-transparent py-3 pr-4 pl-7 text-[11px] tracking-wide transition-all placeholder:text-muted-foreground/70 focus:border-foreground focus:ring-0 focus:outline-none"
-                        />
-                    </form>
-
-                    <div className="mb-8 border-b border-border/70 pb-5 text-secondary-foreground">
-                        <div className="mb-4 flex items-end justify-between border-b border-foreground pb-3">
-                            <div>
-                                <p className="text-[11px] font-semibold tracking-[0.24em] text-foreground uppercase">
-                                    Urutkan
-                                </p>
-                                <p className="mt-1 text-[10px] tracking-wide text-muted-foreground">
-                                    Atur urutan katalog.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3 text-[11px]">
-                            <label className="grid gap-1.5">
-                                <span className="font-semibold tracking-wider text-foreground uppercase">
-                                    Urut
-                                </span>
-                                <select
-                                    value={form.sort}
-                                    onChange={(event) =>
-                                        setFilter('sort', event.target.value)
-                                    }
-                                    className="w-full border-0 border-b border-border bg-transparent px-0 py-2.5 text-[11px] font-medium tracking-wide text-secondary-foreground transition outline-none focus:border-foreground focus:ring-0"
-                                >
-                                    {options.sorts.map((sort) => (
-                                        <option
-                                            key={sort.value}
-                                            value={sort.value}
-                                        >
-                                            {sort.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-                            <label className="grid gap-1.5">
-                                <span className="font-semibold tracking-wider text-foreground uppercase">
-                                    Arah
-                                </span>
-                                <select
-                                    value={form.order}
-                                    onChange={(event) =>
-                                        setFilter('order', event.target.value)
-                                    }
-                                    className="w-full border-0 border-b border-border bg-transparent px-0 py-2.5 text-[11px] font-medium tracking-wide text-secondary-foreground transition outline-none focus:border-foreground focus:ring-0"
-                                >
-                                    <option value="desc">Desc</option>
-                                    <option value="asc">Asc</option>
-                                </select>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div className="text-secondary-foreground">
-                        <div className="mb-4 flex items-end justify-between border-b border-foreground pb-3">
-                            <div>
-                                <p className="text-[11px] font-semibold tracking-[0.24em] text-foreground uppercase">
-                                    Saring
-                                </p>
-                                <p className="mt-1 text-[10px] tracking-wide text-muted-foreground">
-                                    {activeSummary > 0
-                                        ? `${activeSummary} filter aktif`
-                                        : 'Pilih detail produk'}
-                                </p>
-                            </div>
-                            {activeSummary > 0 && (
-                                <button
-                                    type="button"
-                                    onClick={resetFilters}
-                                    className="text-[10px] font-semibold tracking-wider text-primary uppercase underline-offset-4 transition hover:text-primary/75 hover:underline"
-                                >
-                                    Atur Ulang
-                                </button>
-                            )}
-                        </div>
-
-                        <div className="divide-y divide-border/70">
-                            <FilterSection title="Kategori" defaultOpen>
-                                <div className="space-y-3.5 text-[11px] tracking-wide">
-                                    <FilterRadio
-                                        label="Semua Kategori"
-                                        active={form.category === ''}
-                                        onClick={() =>
-                                            setFilter('category', '')
-                                        }
-                                    />
-                                    {options.categories.map((category) => (
-                                        <FilterRadio
-                                            key={category.id ?? category.slug}
-                                            label={
-                                                category.name ??
-                                                'Kategori tanpa nama'
-                                            }
-                                            active={
-                                                form.category === category.slug
-                                            }
-                                            onClick={() =>
-                                                setFilter(
-                                                    'category',
-                                                    category.slug ?? '',
-                                                )
-                                            }
-                                        />
-                                    ))}
-                                </div>
-                            </FilterSection>
-
-                            <FilterSection title="Koleksi">
-                                <div className="space-y-3.5 text-[11px] tracking-wide">
-                                    <FilterRadio
-                                        label="Semua Koleksi"
-                                        active={form.collection === ''}
-                                        onClick={() =>
-                                            setFilter('collection', '')
-                                        }
-                                    />
-                                    {options.collections.map((collection) => (
-                                        <FilterRadio
-                                            key={
-                                                collection.id ?? collection.slug
-                                            }
-                                            label={
-                                                collection.name ??
-                                                'Koleksi tanpa nama'
-                                            }
-                                            active={
-                                                form.collection ===
-                                                collection.slug
-                                            }
-                                            onClick={() =>
-                                                setFilter(
-                                                    'collection',
-                                                    collection.slug ?? '',
-                                                )
-                                            }
-                                        />
-                                    ))}
-                                </div>
-                            </FilterSection>
-
-                            <FilterSection title="Tipe Produk">
-                                <div className="space-y-3.5 text-[11px] tracking-wide">
-                                    {typeOptions.map((type) => (
-                                        <FilterRadio
-                                            key={type.value}
-                                            label={type.label}
-                                            active={form.type === type.value}
-                                            onClick={() =>
-                                                setFilter('type', type.value)
-                                            }
-                                        />
-                                    ))}
-                                </div>
-                            </FilterSection>
-
-                            <FilterSection title="Ketersediaan">
-                                <div className="space-y-3.5 text-[11px] tracking-wide">
-                                    {availabilityOptions.map((availability) => (
-                                        <FilterRadio
-                                            key={availability.value}
-                                            label={availability.label}
-                                            active={
-                                                form.availability ===
-                                                availability.value
-                                            }
-                                            onClick={() =>
-                                                setFilter(
-                                                    'availability',
-                                                    availability.value,
-                                                )
-                                            }
-                                        />
-                                    ))}
-                                </div>
-                            </FilterSection>
-
-                            <FilterSection title="Harga">
-                                <div className="space-y-3.5 text-[11px] tracking-wide">
-                                    <FilterRadio
-                                        label="Semua Harga"
-                                        active={form.price === 'all'}
-                                        onClick={() =>
-                                            setFilter('price', 'all')
-                                        }
-                                    />
-                                    {options.priceRanges.map((price) => (
-                                        <FilterRadio
-                                            key={price.value}
-                                            label={price.label}
-                                            active={form.price === price.value}
-                                            onClick={() =>
-                                                setFilter('price', price.value)
-                                            }
-                                        />
-                                    ))}
-                                </div>
-                            </FilterSection>
-
-                            <FilterSection title="Warna" defaultOpen>
-                                <div className="flex flex-wrap gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => setFilter('color', '')}
-                                        className={`h-6 w-6 rounded-full border bg-white shadow-sm transition duration-300 hover:-translate-y-0.5 ${
-                                            form.color === ''
-                                                ? 'border-primary ring-4 ring-primary/15'
-                                                : 'border-gray-300 hover:border-foreground'
-                                        }`}
-                                        aria-label="Semua warna"
-                                    />
-                                    {options.colors.map((color) => (
-                                        <button
-                                            key={
-                                                color.hex ??
-                                                color.name ??
-                                                'color'
-                                            }
-                                            type="button"
-                                            onClick={() =>
-                                                setFilter(
-                                                    'color',
-                                                    color.hex ?? '',
-                                                )
-                                            }
-                                            className={`h-6 w-6 rounded-full border shadow-sm transition duration-300 hover:-translate-y-0.5 ${
-                                                form.color === color.hex
-                                                    ? 'border-primary ring-4 ring-primary/20'
-                                                    : 'border-white/80 hover:border-foreground'
-                                            }`}
-                                            style={{
-                                                backgroundColor: color.hex,
-                                            }}
-                                            aria-label={
-                                                color.name ??
-                                                color.hex ??
-                                                'Color'
-                                            }
-                                        />
-                                    ))}
-                                </div>
-                            </FilterSection>
-
-                            <FilterSection title="Ukuran" defaultOpen>
-                                <div className="flex flex-wrap gap-2 text-[10px] font-semibold text-muted-foreground">
-                                    <button
-                                        type="button"
-                                        onClick={() => setFilter('size', '')}
-                                        className={`flex h-8 min-w-10 items-center justify-center border px-3 transition-all duration-300 ${
-                                            form.size === ''
-                                                ? 'border-foreground bg-foreground text-background'
-                                                : 'border-input bg-transparent hover:border-foreground hover:text-foreground'
-                                        }`}
-                                    >
-                                        Semua
-                                    </button>
-                                    {options.sizes.map((size) => (
-                                        <button
-                                            key={size}
-                                            type="button"
-                                            onClick={() =>
-                                                setFilter('size', size)
-                                            }
-                                            className={`flex h-8 min-w-10 items-center justify-center border px-3 transition-all duration-300 ${
-                                                form.size === size
-                                                    ? 'border-foreground bg-foreground text-background'
-                                                    : 'border-input bg-transparent hover:border-foreground hover:text-foreground'
-                                            }`}
-                                        >
-                                            {size}
-                                        </button>
-                                    ))}
-                                </div>
-                            </FilterSection>
-                        </div>
-                    </div>
-                    <div className="sticky bottom-0 -mx-5 mt-auto grid grid-cols-2 gap-3 border-t border-border bg-white px-5 pt-4 md:-mx-7 md:px-7">
+                    <FilterPanel
+                        form={form}
+                        options={options}
+                        setFilter={setFilter}
+                        resetFilters={resetFilters}
+                        submitSearch={submitSearch}
+                        setSearch={(value) =>
+                            setForm((current) => ({
+                                ...current,
+                                search: value,
+                            }))
+                        }
+                        compact
+                    />
+                    <div className="grid grid-cols-2 gap-3 border-t border-hairline pt-4">
                         <button
                             type="button"
                             onClick={resetFilters}
-                            className="border border-border py-3 text-[11px] font-semibold tracking-wider uppercase transition-colors hover:border-foreground"
+                            className="h-12 border border-hairline-strong text-[12px] font-extrabold uppercase hover:border-ink"
                         >
-                            Atur Ulang
+                            Clear
                         </button>
                         <button
                             type="button"
                             onClick={closeFilter}
-                            className="bg-primary py-3 text-[11px] font-semibold tracking-wider text-primary-foreground uppercase transition-colors hover:bg-[#9A6B45]"
+                            className="h-12 bg-ink text-[12px] font-extrabold text-white uppercase hover:bg-primary"
                         >
-                            Lihat Produk
+                            Apply
                         </button>
                     </div>
                 </aside>
 
-                <div className="w-full">
-                    <section className="mb-8 border-b border-border pb-7 md:mb-10 md:pb-9">
-                        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-                            <div>
-                                <p className="mb-2 text-[10px] font-semibold tracking-[0.24em] text-muted-foreground uppercase">
-                                    Collection
+                <div className="mb-8 grid gap-5 md:grid-cols-[280px_minmax(0,1fr)] md:items-start lg:grid-cols-[300px_minmax(0,1fr)]">
+                    <nav
+                        aria-label="Breadcrumb"
+                        className="flex items-center gap-3 text-[17px] text-ink"
+                    >
+                        <Link
+                            href="/"
+                            className="font-normal hover:text-primary"
+                        >
+                            Shop
+                        </Link>
+                        <span className="text-muted-foreground">/</span>
+                        <span className="font-extrabold">{pageTitle}</span>
+                    </nav>
+
+                    <div className="flex flex-wrap items-center justify-between gap-4 md:justify-end">
+                        <button
+                            type="button"
+                            onClick={openFilter}
+                            className="h-11 border border-ink px-5 text-[13px] font-extrabold uppercase hover:bg-ink hover:text-white lg:hidden"
+                        >
+                            Filter
+                        </button>
+                        <form
+                            onSubmit={submitSearch}
+                            className="relative w-full sm:w-72 lg:w-80"
+                        >
+                            <Search
+                                className="absolute top-1/2 left-3 -translate-y-1/2 text-ink"
+                                size={18}
+                            />
+                            <input
+                                type="search"
+                                value={form.search}
+                                onChange={(event) =>
+                                    setForm((current) => ({
+                                        ...current,
+                                        search: event.target.value,
+                                    }))
+                                }
+                                placeholder="Search products"
+                                className="h-11 w-full border border-hairline-strong bg-canvas pr-4 pl-10 text-[14px] text-ink placeholder:text-muted-foreground focus:border-ink focus:ring-0 focus:outline-none"
+                            />
+                        </form>
+                        <label className="flex items-center gap-3 text-[17px] text-ink">
+                            <span>Sort by:</span>
+                            <select
+                                value={form.sort}
+                                onChange={(event) =>
+                                    setFilter('sort', event.target.value)
+                                }
+                                className="border-0 bg-transparent py-0 pr-8 pl-0 text-[17px] font-medium text-ink focus:ring-0"
+                            >
+                                {options.sorts.map((sort) => (
+                                    <option key={sort.value} value={sort.value}>
+                                        {sort.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                        <span className="hidden h-6 w-px bg-hairline-strong sm:block" />
+                        <div className="flex items-center gap-4 text-[17px] text-ink">
+                            <span>View:</span>
+                            <Grid3X3
+                                size={22}
+                                strokeWidth={2.5}
+                                className="fill-primary text-primary"
+                            />
+                            <ListIcon size={23} strokeWidth={2.5} />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="grid gap-9 lg:grid-cols-[300px_minmax(0,1fr)]">
+                    <aside className="hidden lg:block" aria-label="Filters">
+                        <h2 className="mb-7 text-[25px] leading-none font-extrabold text-ink">
+                            Filter:
+                        </h2>
+                        <FilterPanel
+                            form={form}
+                            options={options}
+                            setFilter={setFilter}
+                            resetFilters={resetFilters}
+                            submitSearch={submitSearch}
+                            setSearch={(value) =>
+                                setForm((current) => ({
+                                    ...current,
+                                    search: value,
+                                }))
+                            }
+                        />
+                    </aside>
+
+                    <div className="min-w-0">
+                        {products.data.length > 0 ? (
+                            <ProductGrid
+                                products={products.data}
+                                isAuthenticated={isAuthenticated}
+                            />
+                        ) : (
+                            <div className="flex min-h-[460px] flex-col items-center justify-center border border-hairline bg-surface-soft px-6 text-center">
+                                <p className="text-[18px] font-extrabold tracking-[0.02em] text-ink uppercase">
+                                    No products found
                                 </p>
-                                <h1 className="text-4xl leading-none font-light tracking-tight text-[#171717] md:text-6xl">
-                                    {pageTitle}
-                                </h1>
-                                <p className="mt-4 max-w-lg text-sm leading-6 text-muted-foreground">
-                                    {pageDescription}
+                                <p className="mt-3 max-w-sm text-[14px] leading-6 text-body">
+                                    Try a different keyword or clear active
+                                    filters to reload the catalog.
                                 </p>
-                            </div>
-                            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
                                 <button
                                     type="button"
-                                    onClick={openFilter}
-                                    className="group inline-flex min-w-48 items-center justify-between border border-[#B98B63] px-5 py-3 text-left transition-colors hover:bg-[#B98B63] hover:text-white"
+                                    onClick={resetFilters}
+                                    className="mt-6 h-12 bg-ink px-7 text-[13px] font-extrabold text-white uppercase hover:bg-primary"
                                 >
-                                    <span>
-                                        <span className="block text-[11px] font-semibold tracking-[0.22em] uppercase">
-                                            Filter & Sort
-                                        </span>
-                                    </span>
-                                    <ChevronDown
-                                        size={14}
-                                        className="transition-transform group-hover:translate-y-0.5"
-                                    />
+                                    Clear filters
                                 </button>
                             </div>
-                        </div>
-                    </section>
-
-                    {products.data.length > 0 ? (
-                        <ProductGrid
-                            products={products.data}
-                            isAuthenticated={isAuthenticated}
-                        />
-                    ) : (
-                        <div className="flex min-h-[420px] flex-col items-center justify-center rounded-md px-6 text-center">
-                            <p className="text-sm font-semibold text-foreground">
-                                Produk tidak ditemukan
-                            </p>
-                            <p className="mt-2 max-w-sm text-[12px] leading-6 text-secondary-foreground">
-                                Coba kata kunci lain, pilih filter berbeda, atau
-                                atur ulang tampilan koleksi.
-                            </p>
-                            <button
-                                type="button"
-                                onClick={resetFilters}
-                                className="mt-5 rounded-full bg-primary px-5 py-2 text-[11px] font-semibold tracking-wider text-primary-foreground transition hover:bg-primary/90"
-                            >
-                                Atur Ulang Filter
-                            </button>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
-            </main>
+            </section>
+
+            <div className="fixed right-7 bottom-32 z-40 hidden flex-col gap-3 lg:flex">
+                <button
+                    type="button"
+                    aria-label="Rewards"
+                    className="flex size-[72px] items-center justify-center rounded-full bg-primary text-white shadow-dropdown hover:bg-[#E67312]"
+                >
+                    <Gem size={38} strokeWidth={1.8} />
+                </button>
+                <button
+                    type="button"
+                    aria-label="Chat support"
+                    className="flex size-[58px] items-center justify-center self-center rounded-full bg-ink text-white shadow-dropdown hover:bg-primary"
+                >
+                    <MessageCircle size={30} strokeWidth={2} />
+                </button>
+            </div>
         </ShopLayout>
     );
 }
 
-function FadeInOnScroll({
-    children,
-    delay = 0,
+function FilterPanel({
+    form,
+    options,
+    setFilter,
+    submitSearch,
+    setSearch,
+    compact = false,
 }: {
-    children: ReactNode;
-    delay?: number;
+    form: FilterState;
+    options: Props['options'];
+    setFilter: (key: keyof FilterState, value: string) => void;
+    resetFilters: () => void;
+    submitSearch: (event: FormEvent<HTMLFormElement>) => void;
+    setSearch: (value: string) => void;
+    compact?: boolean;
 }) {
-    const ref = useRef<HTMLDivElement>(null);
-    const [visible, setVisible] = useState(false);
+    return (
+        <div className={compact ? 'min-h-0 flex-1 overflow-y-auto' : ''}>
+            {compact && (
+                <form onSubmit={submitSearch} className="relative mb-5">
+                    <Search
+                        className="absolute top-1/2 left-3 -translate-y-1/2 text-ink"
+                        size={18}
+                    />
+                    <input
+                        type="search"
+                        value={form.search}
+                        onChange={(event) => setSearch(event.target.value)}
+                        placeholder="Search products"
+                        className="h-12 w-full border border-hairline-strong bg-canvas pr-4 pl-10 text-[14px] focus:border-ink focus:ring-0 focus:outline-none"
+                    />
+                </form>
+            )}
 
-    useEffect(() => {
-        const element = ref.current;
+            <FilterSection title="Category">
+                <FilterRadio
+                    label="All Categories"
+                    active={form.category === ''}
+                    onClick={() => setFilter('category', '')}
+                />
+                {options.categories.map((category) => (
+                    <FilterRadio
+                        key={category.id ?? category.slug}
+                        label={category.name ?? 'Untitled'}
+                        active={form.category === category.slug}
+                        onClick={() =>
+                            setFilter('category', category.slug ?? '')
+                        }
+                    />
+                ))}
+            </FilterSection>
 
-        if (!element) {
-            return;
-        }
+            <FilterSection title="Style">
+                <FilterRadio
+                    label="All Collections"
+                    active={form.collection === ''}
+                    onClick={() => setFilter('collection', '')}
+                />
+                {options.collections.map((collection) => (
+                    <FilterRadio
+                        key={collection.id ?? collection.slug}
+                        label={collection.name ?? 'Untitled'}
+                        active={form.collection === collection.slug}
+                        onClick={() =>
+                            setFilter('collection', collection.slug ?? '')
+                        }
+                    />
+                ))}
+            </FilterSection>
 
-        const observer = new IntersectionObserver(
-            ([entry]) => {
-                if (entry.isIntersecting) {
-                    setVisible(true);
-                    observer.unobserve(entry.target);
-                }
-            },
-            { rootMargin: '0px 0px -12% 0px', threshold: 0.16 },
-        );
+            <FilterSection title="Type">
+                {typeOptions.map((type) => (
+                    <FilterRadio
+                        key={type.value}
+                        label={type.label}
+                        active={form.type === type.value}
+                        onClick={() => setFilter('type', type.value)}
+                    />
+                ))}
+            </FilterSection>
 
-        observer.observe(element);
+            <FilterSection title="Sport">
+                {options.priceRanges.map((price) => (
+                    <FilterRadio
+                        key={price.value}
+                        label={price.label}
+                        active={form.price === price.value}
+                        onClick={() => setFilter('price', price.value)}
+                    />
+                ))}
+            </FilterSection>
 
-        return () => observer.disconnect();
-    }, []);
+            <FilterSection title="Colors">
+                <div className="flex flex-wrap gap-2.5 py-1">
+                    <button
+                        type="button"
+                        onClick={() => setFilter('color', '')}
+                        aria-label="All colors"
+                        className={`size-7 border bg-white ${
+                            form.color === ''
+                                ? 'border-primary ring-2 ring-primary'
+                                : 'border-ink'
+                        }`}
+                    />
+                    {options.colors.map((color, index) => (
+                        <button
+                            key={`${color.hex ?? color.name ?? 'color'}-${index}`}
+                            type="button"
+                            onClick={() => setFilter('color', color.hex ?? '')}
+                            aria-label={color.name ?? color.hex ?? 'Color'}
+                            className={`size-7 border ${
+                                form.color === color.hex
+                                    ? 'border-primary ring-2 ring-primary'
+                                    : 'border-hairline-strong'
+                            }`}
+                            style={{ backgroundColor: color.hex }}
+                        />
+                    ))}
+                </div>
+            </FilterSection>
+
+            <FilterSection title="Size">
+                <div className="flex flex-wrap gap-2 py-1 text-[12px] font-extrabold uppercase">
+                    <button
+                        type="button"
+                        onClick={() => setFilter('size', '')}
+                        className={`h-9 min-w-11 border px-3 ${
+                            form.size === ''
+                                ? 'border-ink bg-ink text-white'
+                                : 'border-hairline-strong hover:border-ink'
+                        }`}
+                    >
+                        All
+                    </button>
+                    {options.sizes.map((size) => (
+                        <button
+                            key={size}
+                            type="button"
+                            onClick={() => setFilter('size', size)}
+                            className={`h-9 min-w-11 border px-3 ${
+                                form.size === size
+                                    ? 'border-ink bg-ink text-white'
+                                    : 'border-hairline-strong hover:border-ink'
+                            }`}
+                        >
+                            {size}
+                        </button>
+                    ))}
+                </div>
+            </FilterSection>
+
+            <FilterSection title="Availability">
+                {availabilityOptions.map((availability) => (
+                    <FilterRadio
+                        key={availability.value}
+                        label={availability.label}
+                        active={form.availability === availability.value}
+                        onClick={() =>
+                            setFilter('availability', availability.value)
+                        }
+                    />
+                ))}
+            </FilterSection>
+
+            <FilterSection title="Lens Type">
+                <FilterRadio
+                    label="All Lens Types"
+                    active={form.price === 'all'}
+                    onClick={() => setFilter('price', 'all')}
+                />
+                <FilterRadio
+                    label="Sale Pricing"
+                    active={form.type === 'discount'}
+                    onClick={() => setFilter('type', 'discount')}
+                />
+            </FilterSection>
+        </div>
+    );
+}
+
+function FilterSection({
+    title,
+    children,
+}: {
+    title: string;
+    children: ReactNode;
+}) {
+    const [isOpen, setIsOpen] = useState(false);
 
     return (
-        <div
-            ref={ref}
-            className={`h-full transition-all duration-700 ease-out motion-reduce:translate-y-0 motion-reduce:opacity-100 ${
-                visible
-                    ? 'translate-y-0 opacity-100'
-                    : 'translate-y-6 opacity-0'
-            }`}
-            style={{ transitionDelay: `${delay}ms` }}
-        >
-            {children}
+        <div className="border-b border-hairline-strong py-[18px] first:pt-0">
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className="flex w-full items-center justify-between text-[17px] font-extrabold text-ink hover:text-primary"
+            >
+                <span>{title}</span>
+                <ChevronDown
+                    size={25}
+                    strokeWidth={2.4}
+                    className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                />
+            </button>
+            <div
+                className={`grid transition-[grid-template-rows,opacity,padding] duration-200 ${
+                    isOpen
+                        ? 'grid-rows-[1fr] pt-4 opacity-100'
+                        : 'grid-rows-[0fr] opacity-0'
+                }`}
+            >
+                <div className="grid gap-2 overflow-hidden">{children}</div>
+            </div>
         </div>
+    );
+}
+
+function FilterRadio({
+    label,
+    active,
+    onClick,
+}: {
+    label: string;
+    active: boolean;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className="group flex min-h-8 items-center gap-3 text-left text-[14px] text-body hover:text-ink"
+        >
+            <span
+                className={`size-3 border ${
+                    active
+                        ? 'border-primary bg-primary'
+                        : 'border-hairline-strong'
+                }`}
+            />
+            <span className={active ? 'font-extrabold text-ink' : ''}>
+                {label}
+            </span>
+        </button>
     );
 }
 
@@ -696,7 +678,7 @@ const ProductGrid = memo(function ProductGrid({
         <InfiniteScroll data="products" buffer={400}>
             {({ loading }) => (
                 <>
-                    <div className="grid grid-cols-2 gap-x-3 gap-y-8 sm:grid-cols-3 md:gap-x-5 md:gap-y-12 lg:grid-cols-4 xl:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 lg:gap-4">
                         {products.map((product, index) => (
                             <ProductTile
                                 key={product.id}
@@ -706,18 +688,26 @@ const ProductGrid = memo(function ProductGrid({
                             />
                         ))}
                     </div>
-                    {loading && (
-                        <div className="mt-10 flex justify-center">
-                            <span className="rounded-full border border-border px-5 py-2 text-[11px] font-semibold tracking-wider text-secondary-foreground uppercase">
-                                Memuat produk...
-                            </span>
-                        </div>
-                    )}
+                    {loading && <ProductGridSkeleton />}
                 </>
             )}
         </InfiniteScroll>
     );
 });
+
+function ProductGridSkeleton() {
+    return (
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 lg:gap-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="border border-hairline p-4">
+                    <div className="aspect-square animate-pulse bg-surface-muted" />
+                    <div className="mt-4 h-4 w-4/5 animate-pulse bg-surface-muted" />
+                    <div className="mt-2 h-4 w-1/2 animate-pulse bg-surface-muted" />
+                </div>
+            ))}
+        </div>
+    );
+}
 
 const ProductTile = memo(function ProductTile({
     product,
@@ -728,9 +718,16 @@ const ProductTile = memo(function ProductTile({
     index: number;
     isAuthenticated: boolean;
 }) {
-    const [isWishlisted, setIsWishlisted] = useState(product.is_wishlisted);
     const [isWishlistProcessing, setIsWishlistProcessing] = useState(false);
+    const [isWishlisted, setIsWishlisted] = useState(product.is_wishlisted);
     const isSoldOut = product.available_stock <= 0;
+    const productHref = detail.url({ query: { product: product.slug } });
+    const subtitle = product.collection ?? product.category ?? product.sku;
+    const colorLine = product.colors
+        .slice(0, 2)
+        .map((color) => color.name)
+        .filter(Boolean)
+        .join(' / ');
 
     const toggleWishlist = async (event: MouseEvent<HTMLButtonElement>) => {
         event.preventDefault();
@@ -779,12 +776,9 @@ const ProductTile = memo(function ProductTile({
     };
 
     return (
-        <FadeInOnScroll delay={(index % 15) * 45}>
-            <Link
-                href={detail.url({ query: { product: product.slug } })}
-                className="group flex h-full cursor-pointer flex-col"
-            >
-                <div className="relative mb-4 aspect-[3/4] overflow-hidden bg-[#f7f7f7]">
+        <article className="group relative border border-hairline bg-canvas transition-colors hover:border-hairline-strong">
+            <Link href={productHref} className="block">
+                <div className="relative aspect-square overflow-hidden bg-white p-5 sm:p-6">
                     <img
                         src={
                             product.image ??
@@ -793,196 +787,68 @@ const ProductTile = memo(function ProductTile({
                         alt={product.title}
                         loading="lazy"
                         decoding="async"
-                        className={`h-full w-full object-cover transition-all duration-700 ease-in-out ${
-                            isSoldOut
-                                ? 'opacity-45 grayscale'
-                                : product.hover_image
-                                  ? 'group-hover:opacity-0'
-                                  : 'group-hover:scale-[1.03]'
+                        className={`h-full w-full object-contain transition duration-300 group-hover:scale-[1.035] ${
+                            isSoldOut ? 'opacity-45 grayscale' : ''
                         }`}
                     />
-                    {product.hover_image && !isSoldOut && (
-                        <img
-                            src={product.hover_image}
-                            alt={product.title}
-                            loading="lazy"
-                            decoding="async"
-                            className="absolute inset-0 h-full w-full scale-[1.03] object-cover opacity-0 transition-all duration-700 ease-in-out group-hover:scale-100 group-hover:opacity-100"
-                        />
+                    {!isSoldOut && product.badge && (
+                        <span className="absolute top-3 right-3 bg-primary px-2.5 py-1 text-[12px] font-extrabold text-white uppercase">
+                            {product.badge === 'DISCOUNT'
+                                ? 'SALE'
+                                : product.badge}
+                        </span>
                     )}
-                    <div className="pointer-events-none absolute inset-0 bg-black/0 transition-colors duration-500 group-hover:bg-black/5" />
-
-                    {isSoldOut ? (
-                        <div className="absolute top-2 left-2 bg-[#d83f3f] px-2 py-1 text-[8px] font-semibold tracking-widest text-white uppercase shadow-sm">
-                            Habis
-                        </div>
-                    ) : product.badge ? (
-                        <div className="absolute top-2 left-2 bg-[#d83f3f] px-2 py-1 text-[8px] font-medium tracking-widest text-white uppercase shadow-sm">
-                            {product.badge}
-                        </div>
-                    ) : null}
-                    <button
-                        type="button"
-                        aria-label={
-                            isWishlisted
-                                ? 'Hapus produk dari wishlist'
-                                : 'Tambah produk ke wishlist'
-                        }
-                        onClick={toggleWishlist}
-                        disabled={isWishlistProcessing}
-                        className="absolute top-2 right-2 text-white drop-shadow-md transition-colors hover:text-white/80 disabled:cursor-default"
-                    >
-                        <Heart
-                            size={18}
-                            fill={isWishlisted ? 'currentColor' : 'none'}
-                            strokeWidth={1.5}
-                        />
-                    </button>
-                </div>
-
-                <div
-                    className={`mb-2 flex min-h-3 items-center justify-between gap-3 ${
-                        isSoldOut ? 'opacity-55' : ''
-                    }`}
-                >
-                    {product.colors.length > 0 ? (
-                        <div className="flex space-x-1.5">
-                            {product.colors.slice(0, 5).map((color) => (
-                                <div
-                                    key={color.hex}
-                                    className="h-[10px] w-[10px] rounded-full border border-[#e7e2de]"
-                                    style={{ backgroundColor: color.hex }}
-                                    title={color.name ?? color.hex}
-                                />
-                            ))}
-                        </div>
-                    ) : (
-                        <span />
-                    )}
-                    {product.collection && (
-                        <span className="truncate text-[9px] font-medium tracking-[0.14em] text-muted-foreground uppercase">
-                            {product.collection}
+                    {isSoldOut && (
+                        <span className="absolute top-3 right-3 bg-ink px-2.5 py-1 text-[11px] font-extrabold text-white uppercase">
+                            Sold Out
                         </span>
                     )}
                 </div>
+            </Link>
 
-                <h3
-                    className={`mb-2 line-clamp-2 min-h-[2.75em] text-[12px] leading-snug font-medium text-[#272727] transition-colors group-hover:text-[#a55353] ${
-                        isSoldOut ? 'opacity-55' : ''
-                    }`}
-                >
+            <button
+                type="button"
+                aria-label={
+                    isWishlisted
+                        ? 'Remove product from wishlist'
+                        : 'Add product to wishlist'
+                }
+                onClick={toggleWishlist}
+                disabled={isWishlistProcessing}
+                className={`absolute top-3 left-3 hidden h-9 border border-hairline bg-white px-2 text-[11px] font-extrabold uppercase shadow-subtle group-hover:block hover:border-ink ${
+                    isWishlisted ? 'border-primary text-primary' : 'text-ink'
+                }`}
+            >
+                Wish
+            </button>
+
+            <Link href={productHref} className="block px-4 pt-1 pb-4 sm:px-5">
+                <h3 className="line-clamp-1 text-[16px] leading-5 font-extrabold text-ink uppercase">
                     {product.title}
                 </h3>
-
-                <div
-                    className={`mt-auto flex flex-wrap items-center gap-2 text-[12px] font-medium text-[#3d3d3d] ${
-                        isSoldOut ? 'opacity-55' : ''
-                    }`}
-                >
-                    <span>
-                        {formatPrice(product.sale_price ?? product.price)}
-                    </span>
+                <p className="mt-1 line-clamp-1 text-[15px] leading-5 text-body">
+                    {subtitle ?? 'Performance Gear'}
+                </p>
+                <p className="line-clamp-1 min-h-5 text-[15px] leading-5 text-body">
+                    {colorLine || product.sku || 'AxeGear Edition'}
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-4 text-[18px] leading-none font-extrabold">
                     {product.sale_price !== null && (
-                        <span className="text-[#8b827c] line-through">
+                        <span className="text-ink line-through decoration-1">
                             {formatPrice(product.price)}
                         </span>
                     )}
+                    <span
+                        className={
+                            product.sale_price !== null
+                                ? 'text-primary'
+                                : 'text-ink'
+                        }
+                    >
+                        {formatPrice(product.sale_price ?? product.price)}
+                    </span>
                 </div>
-
-                {/* <span className="mt-4 w-full border border-[#151515] py-2.5 text-center text-[10px] font-semibold tracking-[0.16em] text-[#151515] uppercase transition-all duration-300 group-hover:bg-[#151515] group-hover:text-white active:scale-[0.98]">
-                    {product.available_stock > 0
-                        ? 'Choose options'
-                        : 'Sold out'}
-                </span> */}
             </Link>
-        </FadeInOnScroll>
+        </article>
     );
 });
-
-function FilterSection({
-    title,
-    children,
-    defaultOpen = false,
-}: {
-    title: string;
-    children: ReactNode;
-    defaultOpen?: boolean;
-}) {
-    const [isOpen, setIsOpen] = useState(defaultOpen);
-
-    return (
-        <div className="py-5">
-            <button
-                type="button"
-                onClick={() => setIsOpen(!isOpen)}
-                className="group flex w-full cursor-pointer items-center justify-between text-[11px] font-semibold tracking-wide transition-colors outline-none hover:text-foreground"
-            >
-                <span>{title}</span>
-                <div
-                    className={`transform transition-transform duration-300 ease-[cubic-bezier(0.87,_0,_0.13,_1)] ${
-                        isOpen ? 'rotate-180' : 'rotate-0'
-                    }`}
-                >
-                    <ChevronDown
-                        size={14}
-                        className="text-muted-foreground transition-colors group-hover:text-foreground"
-                    />
-                </div>
-            </button>
-            <div
-                className={`grid transition-[grid-template-rows,opacity,padding] duration-500 ease-[cubic-bezier(0.87,_0,_0.13,_1)] ${
-                    isOpen
-                        ? 'grid-rows-[1fr] pt-4 opacity-100'
-                        : 'pointer-events-none grid-rows-[0fr] pt-0 opacity-0'
-                }`}
-            >
-                <div className="overflow-hidden">{children}</div>
-            </div>
-        </div>
-    );
-}
-
-function FilterRadio({
-    label,
-    active,
-    onClick,
-}: {
-    label: string;
-    active: boolean;
-    onClick: () => void;
-}) {
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            className="group flex w-full items-center justify-between gap-3 text-left outline-none"
-        >
-            <span className="flex items-center gap-3">
-                <span
-                    className={`flex h-[14px] w-[14px] shrink-0 items-center justify-center rounded-full border transition-all duration-300 ${
-                        active
-                            ? 'border-primary ring-4 ring-primary/10'
-                            : 'border-input group-hover:border-primary/50'
-                    }`}
-                >
-                    <span
-                        className={`h-[6px] w-[6px] rounded-full bg-primary transition-all duration-300 ${
-                            active
-                                ? 'scale-100 opacity-100'
-                                : 'scale-0 opacity-0'
-                        }`}
-                    />
-                </span>
-                <span
-                    className={`text-[11px] tracking-wide transition-colors duration-300 ${
-                        active
-                            ? 'font-medium text-foreground'
-                            : 'text-secondary-foreground group-hover:text-foreground'
-                    }`}
-                >
-                    {label}
-                </span>
-            </span>
-        </button>
-    );
-}

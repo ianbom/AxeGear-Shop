@@ -9,37 +9,50 @@ class CategorySeeder extends Seeder
 {
     public function run(): void
     {
-        // Data kategori dikurasi dari katalog https://zaskiamecca.com/.
         $categories = [
-        [
-            'name' => 'Hijab & Scarf',
-            'slug' => 'hijab-scarf',
-            'description' => 'Koleksi scarf dan hijab segi empat ZM Zaskia Mecca dari Voal Alaska Premium.',
-            'image_url' => 'https://cdn.shopify.com/s/files/1/0083/3241/0942/files/26fd858db89a4f018c0536c484e68ea6_tplv-aphluv4xwc-origin-jpeg.jpg?v=1777517735',
-            'is_active' => true,
-        ],
-        [
-            'name' => 'Women\'s Tunics',
-            'slug' => 'womens-tunics',
-            'description' => 'Tunik wanita ZM Zaskia Mecca untuk tampilan modest, feminin, dan nyaman.',
-            'image_url' => 'https://cdn.shopify.com/s/files/1/0083/3241/0942/files/sg-11134201-825zr-ml31rmqs52io5f.webp?v=1771996057',
-            'is_active' => true,
-        ],
-        [
-            'name' => 'Men\'s Shirts',
-            'slug' => 'mens-shirts',
-            'description' => 'Kemeja pria ZM Zaskia Mecca dengan desain rapi untuk momen harian hingga raya.',
-            'image_url' => 'https://cdn.shopify.com/s/files/1/0083/3241/0942/files/f38eec2ded12437ebbe163d5390917b8_tplv-aphluv4xwc-origin-jpeg.webp?v=1774415487',
-            'is_active' => true,
-        ],
-        [
-            'name' => 'Outerwear',
-            'slug' => 'outerwear',
-            'description' => 'Outerwear dan vest daily ZM Zaskia Mecca untuk layering kasual.',
-            'image_url' => 'https://cdn.shopify.com/s/files/1/0083/3241/0942/files/a80a91f2c2984cec9533ecea991a3aa6_tplv-o3syd03w52-origin-jpeg.webp?v=1774414928',
-            'is_active' => true,
-        ]
+            [
+                'name' => 'Sunglasses',
+                'slug' => 'sunglasses',
+                'description' => 'Performance sunglasses for riding, racing, running, and outdoor training.',
+                'image_url' => 'https://www.100percent.com/cdn/shop/files/59057-00001-P_1.jpg?v=1764788225&width=1100',
+                'sort_order' => 10,
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Goggles',
+                'slug' => 'goggles',
+                'description' => 'Motocross and trail goggles with clear lens visibility and secure straps.',
+                'image_url' => 'https://www.100percent.com/cdn/shop/files/SP26_SPEEDCRAFT_SL_60008-00025_3Q.jpg?v=1772487312&width=500',
+                'sort_order' => 20,
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Apparel & Accessories',
+                'slug' => 'apparel-accessories',
+                'description' => 'Casual apparel, arm sleeves, and technical accessories for daily use.',
+                'image_url' => 'https://www.100percent.com/cdn/shop/files/2000x2000-eComm_20PDP-Casual_Staple_20Tee_0010_Layer_2015.jpg?v=1764633157&width=1200',
+                'sort_order' => 30,
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Replacement Lenses',
+                'slug' => 'replacement-lenses',
+                'description' => 'Replacement shields and lens kits for changing light and terrain conditions.',
+                'image_url' => 'https://www.100percent.com/cdn/shop/files/FA25_LS_OS_TEE_REGION__2020142-10002_F-002.jpg?v=1764633155&width=1100',
+                'sort_order' => 40,
+                'is_active' => true,
+            ],
         ];
-        foreach ($categories as $category) { Category::query()->updateOrCreate(['slug' => $category['slug']], $category); }
+
+        foreach ($categories as $category) {
+            $record = Category::query()->withTrashed()->updateOrCreate(
+                ['slug' => $category['slug']],
+                $category,
+            );
+
+            if ($record->trashed()) {
+                $record->restore();
+            }
+        }
     }
 }

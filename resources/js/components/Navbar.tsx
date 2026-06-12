@@ -1,6 +1,6 @@
 import { Link } from '@inertiajs/react';
-import { Heart, LogIn, ShoppingBag, User } from 'lucide-react';
-import AppLogo from './app-logo';
+import { Menu, Search, ShoppingCart, User, X } from 'lucide-react';
+import { useState } from 'react';
 import { login } from '@/routes';
 
 type NavbarCollection = {
@@ -16,132 +16,150 @@ type NavbarProps = {
     isAuthenticated?: boolean;
 };
 
+const navItems = [
+    { label: 'NEW', href: '/list?type=new_arrival' },
+    { label: 'SPORT', href: '/list' },
+    { label: 'SUNGLASSES', href: '/list?search=sunglasses' },
+    { label: 'GOOGLES', href: '/list?search=goggles' },
+    { label: 'GLOVES', href: '/list?search=gloves' },
+    { label: 'APPAREL & ACCESSORIES', href: '/list' },
+    { label: 'SALE', href: '/list?type=discount', accent: true },
+    { label: 'EXPLORE', href: '/list' },
+];
+
+function AxeGearWordmark() {
+    return (
+        <span className="text-[28px] leading-none font-black tracking-[-0.08em] text-ink uppercase sm:text-[34px] lg:text-[42px]">
+            AxeGear
+        </span>
+    );
+}
+
 export default function Navbar({
     cartCount = 0,
-    collections = [],
     currentUrl = '/',
     isAuthenticated = false,
 }: NavbarProps) {
+    const [isOpen, setIsOpen] = useState(false);
     const cartBadge = cartCount > 99 ? '99+' : String(cartCount);
-    const [pathname, queryString = ''] = currentUrl.split('?');
-    const params = new URLSearchParams(queryString);
-    const activeCollection = params.get('collection');
-    const isProductList = pathname === '/list';
-    const isAllProductActive = isProductList && !activeCollection;
-    const menuClass = (active: boolean) =>
-        [
-            'border-b pb-1 transition-colors',
-            active
-                ? 'border-[#151515]'
-                : 'border-transparent hover:border-[#151515]',
-        ].join(' ');
+    const accountHref = isAuthenticated ? '/my-profile' : login.url();
+
+    const isActive = (href: string) =>
+        href.includes('?') && currentUrl === href;
 
     return (
-        <nav className="sticky top-0 z-50 border-b border-[#e7e2de] bg-white">
-            {/* Mobile View */}
-            <div className="flex h-16 w-full items-center justify-between px-4 md:hidden">
+        <header className="sticky top-0 z-50 border-b-2 border-ink bg-canvas">
+            <div className="flex h-[72px] items-center justify-between px-5 sm:px-8 lg:h-[78px] lg:px-9">
                 <Link
                     href="/"
-                    className="flex h-10 items-center overflow-visible"
+                    aria-label="AxeGear home"
+                    className="shrink-0 transition-opacity hover:opacity-80"
                 >
-                    <AppLogo className="h-10 brightness-100 invert-0" />
+                    <AxeGearWordmark />
                 </Link>
-                <div className="flex items-center gap-4 text-[#151515]">
-                    {isAuthenticated ? (
-                        <Link href={'/wishlist'}>
-                            <Heart
-                                strokeWidth={1.5}
-                                size={22}
-                                className="cursor-pointer"
-                            />
-                        </Link>
-                    ) : (
+
+                <nav className="hidden items-center gap-8 text-[15px] leading-none font-extrabold tracking-[0.03em] text-ink uppercase xl:flex">
+                    {navItems.map((item) => (
                         <Link
-                            href={login.url()}
-                            className="group inline-flex h-9 items-center gap-2 border border-[#B98B63]/70 bg-[#fff8f2] px-3 text-[10px] font-semibold tracking-[0.14em] text-[#9A6B45] uppercase shadow-[0_8px_18px_rgba(185,139,99,0.14)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#B98B63] hover:text-white hover:shadow-[0_12px_24px_rgba(185,139,99,0.24)]"
+                            key={item.label}
+                            href={item.href}
+                            className={`py-7 transition-colors hover:text-primary ${
+                                item.accent || isActive(item.href)
+                                    ? 'text-primary'
+                                    : 'text-ink'
+                            }`}
                         >
-                            <span className="flex h-5 w-5 items-center justify-center bg-[#B98B63]/12 text-[#B98B63] transition-colors duration-300 group-hover:bg-white/18 group-hover:text-white">
-                                <LogIn size={13} strokeWidth={1.8} />
-                            </span>
-                            <span>Login</span>
+                            {item.label}
                         </Link>
-                    )}
-                </div>
-            </div>
+                    ))}
+                </nav>
 
-            {/* Desktop View (Keeping existing structure but restyled) */}
-            <div className="hidden h-[76px] w-full items-center justify-between px-10 md:flex">
-                <Link
-                    href="/"
-                    className="flex h-14 cursor-pointer items-center justify-center overflow-visible transition-opacity duration-300 hover:opacity-75"
-                >
-                    <AppLogo className="h-10 brightness-100 invert-0" />
-                </Link>
-
-                <div className="flex items-center gap-9 text-[12px] font-medium tracking-[0.12em] text-[#151515] uppercase">
-                    <Link
-                        href="/list"
-                        className={menuClass(isAllProductActive)}
+                <div className="flex items-center gap-3 text-ink sm:gap-5">
+                    <button
+                        type="button"
+                        aria-label="Search products"
+                        className="flex size-11 items-center justify-center hover:text-primary"
                     >
-                        ALL PRODUCT
+                        <Search size={31} strokeWidth={2.2} />
+                    </button>
+                    <Link
+                        href={accountHref}
+                        aria-label={
+                            isAuthenticated ? 'Open account' : 'Login account'
+                        }
+                        className="hidden size-11 items-center justify-center hover:text-primary sm:flex"
+                    >
+                        <User size={31} strokeWidth={2.1} />
                     </Link>
-                    {collections.map((collection) => {
-                        const isActive =
-                            isProductList &&
-                            activeCollection === collection.slug;
-
-                        return (
-                            <Link
-                                key={collection.id}
-                                href={`/list?collection=${encodeURIComponent(collection.slug)}`}
-                                className={menuClass(isActive)}
-                            >
-                                {collection.name.toUpperCase()}
-                            </Link>
-                        );
-                    })}
-                </div>
-
-                <div className="flex items-center gap-6 text-[#151515]">
-                    {isAuthenticated ? (
-                        <>
-                            <Link href="/my-profile" aria-label="Buka profil">
-                                <User
-                                    strokeWidth={1.4}
-                                    size={20}
-                                    className="cursor-pointer transition-opacity hover:opacity-60"
-                                />
-                            </Link>
-                            <div className="relative">
-                                <Link href="/my-cart" aria-label="Buka keranjang">
-                                    <ShoppingBag
-                                        strokeWidth={1.4}
-                                        size={20}
-                                        className="cursor-pointer transition-opacity hover:opacity-60"
-                                    />
-                                </Link>
-                                {cartCount > 0 && (
-                                    <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center bg-[#B98B63] px-1 text-[9px] font-bold text-white">
-                                        {cartBadge}
-                                    </span>
-                                )}
-                            </div>
-                        </>
-                    ) : (
-                        <Link
-                            href={login.url()}
-                            className="group relative inline-flex h-10 items-center gap-2 overflow-hidden bg-[#B98B63] px-4 text-[11px] font-semibold tracking-[0.16em] text-white uppercase shadow-[0_10px_24px_rgba(185,139,99,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#9A6B45] hover:shadow-[0_14px_30px_rgba(154,107,69,0.28)]"
-                        >
-                            <span className="absolute inset-y-0 left-0 w-1 bg-white/30 transition-all duration-300 group-hover:w-full" />
-                            <span className="relative flex h-5 w-5 items-center justify-center bg-white/12 transition-colors duration-300 group-hover:bg-white/18">
-                                <LogIn size={13} strokeWidth={1.8} />
-                            </span>
-                            <span className="relative">Login</span>
-                            <span className="relative h-px w-5 bg-white/70 transition-all duration-300 group-hover:w-7 group-hover:bg-white" />
-                        </Link>
-                    )}
+                    <Link
+                        href="/my-cart"
+                        aria-label="Open cart"
+                        className="relative flex size-11 items-center justify-center hover:text-primary"
+                    >
+                        <ShoppingCart size={34} strokeWidth={2.2} />
+                        <span className="absolute top-0 right-0 flex h-5 min-w-5 items-center justify-center rounded-full bg-ink px-1 text-[11px] leading-none font-extrabold text-white">
+                            {cartBadge}
+                        </span>
+                    </Link>
+                    <button
+                        type="button"
+                        aria-label="Open menu"
+                        onClick={() => setIsOpen(true)}
+                        className="flex size-11 items-center justify-center hover:text-primary xl:hidden"
+                    >
+                        <Menu size={31} strokeWidth={2.2} />
+                    </button>
                 </div>
             </div>
-        </nav>
+
+            <button
+                type="button"
+                aria-label="Close menu overlay"
+                onClick={() => setIsOpen(false)}
+                className={`fixed inset-0 z-[70] bg-black/50 transition-opacity xl:hidden ${
+                    isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+                }`}
+            />
+            <aside
+                className={`fixed top-0 right-0 bottom-0 z-[80] w-[min(86vw,360px)] border-l border-ink bg-canvas p-5 transition-transform xl:hidden ${
+                    isOpen ? 'translate-x-0' : 'translate-x-full'
+                }`}
+            >
+                <div className="mb-8 flex items-center justify-between border-b border-ink pb-5">
+                    <AxeGearWordmark />
+                    <button
+                        type="button"
+                        aria-label="Close menu"
+                        onClick={() => setIsOpen(false)}
+                        className="flex size-10 items-center justify-center border border-hairline hover:border-ink hover:text-primary"
+                    >
+                        <X size={24} />
+                    </button>
+                </div>
+                <nav className="grid divide-y divide-hairline text-[15px] font-extrabold tracking-[0.03em] uppercase">
+                    {navItems.map((item) => (
+                        <Link
+                            key={item.label}
+                            href={item.href}
+                            onClick={() => setIsOpen(false)}
+                            className={`py-4 hover:text-primary ${
+                                item.accent || isActive(item.href)
+                                    ? 'text-primary'
+                                    : 'text-ink'
+                            }`}
+                        >
+                            {item.label}
+                        </Link>
+                    ))}
+                    <Link
+                        href={accountHref}
+                        onClick={() => setIsOpen(false)}
+                        className="py-4 hover:text-primary"
+                    >
+                        {isAuthenticated ? 'ACCOUNT' : 'LOGIN'}
+                    </Link>
+                </nav>
+            </aside>
+        </header>
     );
 }
