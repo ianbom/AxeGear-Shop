@@ -84,13 +84,13 @@ const productImages = [
 ];
 
 const campaignImages = {
-    hero: 'https://images.unsplash.com/photo-1541625602330-2277a4c46182?q=80&w=1800&auto=format&fit=crop',
-    goggle: 'https://images.unsplash.com/photo-1607706189992-eae578626c86?q=80&w=1000&auto=format&fit=crop',
+    hero: 'https://images.unsplash.com/photo-1629223476921-49a9ba5c26e4?q=80&w=764&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    goggle: 'https://plus.unsplash.com/premium_photo-1661963005592-182d602c6a3f?q=80&w=1171&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     moto: 'https://images.unsplash.com/photo-1558980664-10e7170b5df9?q=80&w=1100&auto=format&fit=crop',
     cycling:
-        'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=1100&auto=format&fit=crop',
-    trail: 'https://images.unsplash.com/photo-1593764592116-bfb2a97c642a?q=80&w=1100&auto=format&fit=crop',
-    race: 'https://images.unsplash.com/photo-1525105124529-8d368a72d47c?q=80&w=1100&auto=format&fit=crop',
+        'https://plus.unsplash.com/premium_photo-1661963826911-f369fa24c1a6?q=80&w=1306&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    trail: 'https://plus.unsplash.com/premium_photo-1661962729688-ee99b8528b78?q=80&w=1306&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    race: 'https://plus.unsplash.com/premium_photo-1661963253228-5058700024ea?q=80&w=1243&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     weather:
         'https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=1100&auto=format&fit=crop',
 };
@@ -299,7 +299,6 @@ export default function Home({ recentAdditions }: Props) {
             <NewArrivals products={newArrivals} />
             <FeaturedCollections />
             <BenefitStrip />
-            <CommunityBand />
         </ShopLayout>
     );
 }
@@ -584,60 +583,6 @@ function BenefitStrip() {
                         </div>
                     );
                 })}
-            </div>
-        </section>
-    );
-}
-
-function CommunityBand() {
-    return (
-        <section className="bg-[#1A1A1A] px-4 py-12 text-white md:px-8 md:py-16">
-            <div className="mx-auto grid max-w-[1600px] gap-8 md:grid-cols-[1fr_0.9fr] md:items-center">
-                <FadeInOnScroll>
-                    <p className="mb-4 text-4xl font-black tracking-[0.12em] text-[#F58220]">
-                        ///
-                    </p>
-                    <h2 className="max-w-[780px] text-[42px] leading-[0.95] font-black tracking-normal uppercase md:text-[64px]">
-                        Join the AxeGear community
-                    </h2>
-                    <p className="mt-5 max-w-[600px] text-base leading-7 font-medium text-white/72">
-                        Get first access to product drops, race-week promos, and
-                        athlete-tested gear notes.
-                    </p>
-                </FadeInOnScroll>
-                <FadeInOnScroll delay={80}>
-                    <form className="flex flex-col gap-3 sm:flex-row">
-                        <label className="sr-only" htmlFor="community-email">
-                            Email address
-                        </label>
-                        <input
-                            id="community-email"
-                            type="email"
-                            placeholder="EMAIL ADDRESS"
-                            className="h-12 flex-1 border border-white/45 bg-transparent px-4 text-sm font-bold tracking-[0.08em] text-white uppercase outline-none placeholder:text-white/55 focus:border-[#F58220]"
-                        />
-                        <button
-                            type="submit"
-                            className="inline-flex h-12 items-center justify-center bg-[#F58220] px-8 text-sm font-extrabold tracking-[0.08em] text-white uppercase hover:bg-[#E67312]"
-                        >
-                            Join Now
-                        </button>
-                    </form>
-                    <div className="mt-6 flex items-center gap-3">
-                        {[Instagram, Facebook, Youtube, Mail].map(
-                            (Icon, index) => (
-                                <Link
-                                    key={index}
-                                    href="#"
-                                    className="flex h-11 w-11 items-center justify-center border border-white/30 text-white transition-colors hover:border-[#F58220] hover:text-[#F58220]"
-                                    aria-label="AxeGear social link"
-                                >
-                                    <Icon size={18} strokeWidth={1.8} />
-                                </Link>
-                            ),
-                        )}
-                    </div>
-                </FadeInOnScroll>
             </div>
         </section>
     );

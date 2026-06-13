@@ -132,11 +132,14 @@ const fallbackImages = [
 ];
 
 const formatPrice = (value: number) =>
-    new Intl.NumberFormat('en-US', {
+    new Intl.NumberFormat('id-ID', {
         style: 'currency',
-        currency: 'USD',
-        maximumFractionDigits: 2,
-    }).format(value / 10000);
+        currency: 'IDR',
+        maximumFractionDigits: 0,
+    })
+        .format(value)
+        .replace('IDR', 'Rp')
+        .trim();
 
 const cleanQuery = (filters: FilterState) =>
     Object.fromEntries(
@@ -823,3 +826,4 @@ const ProductTile = memo(function ProductTile({
         </article>
     );
 });
+

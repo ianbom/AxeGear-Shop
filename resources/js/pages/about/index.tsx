@@ -46,9 +46,9 @@ type CollectionCard = {
 };
 
 const heroImage =
-    'https://images.unsplash.com/photo-1541625602330-2277a4c46182?q=80&w=1800&auto=format&fit=crop';
+    'https://plus.unsplash.com/premium_photo-1661962327591-1b7072da3242?q=80&w=1306&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
 const storyImage =
-    'https://images.unsplash.com/photo-1511499767150-a48a237f0083?q=80&w=1400&auto=format&fit=crop';
+    'https://images.unsplash.com/photo-1626130569162-f90681b6982a?q=80&w=1332&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
 
 const values: ValueCard[] = [
     {
@@ -84,7 +84,7 @@ const disciplines: DisciplineCard[] = [
     },
     {
         title: 'Cycling',
-        image: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=1100&auto=format&fit=crop',
+        image: 'https://images.unsplash.com/photo-1716331710125-b0b849479686?q=80&w=1074&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     },
     {
         title: 'Running',
@@ -132,27 +132,27 @@ const features: FeatureCard[] = [
     {
         title: 'HD Clarity Lenses',
         body: 'High-definition optics for unmatched clarity and contrast in any condition.',
-        image: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?q=80&w=1100&auto=format&fit=crop',
+        image: 'https://images.unsplash.com/photo-1611004061856-ccc3cbe944b2?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     },
     {
         title: 'Impact Protection',
         body: 'Durable, shatter-resistant lenses built to handle extreme impact.',
-        image: 'https://images.unsplash.com/photo-1527838832700-5059252407fa?q=80&w=1100&auto=format&fit=crop',
+        image: 'https://images.unsplash.com/photo-1707985034123-dbbed1830205?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     },
     {
         title: 'Secure Fit',
         body: 'Ergonomic design with non-slip grip for all-day comfort and stability.',
-        image: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?q=80&w=1100&auto=format&fit=crop',
+        image: 'https://plus.unsplash.com/premium_photo-1694016219825-62a6a5697027?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     },
     {
         title: 'Vented Design',
         body: 'Advanced airflow reduces fog and keeps you cool when it matters most.',
-        image: 'https://images.unsplash.com/photo-1518459031867-a89b944bffe4?q=80&w=1100&auto=format&fit=crop',
+        image: 'https://plus.unsplash.com/premium_photo-1661870277562-53f9b176fc75?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     },
     {
         title: 'Premium Materials',
         body: 'Lightweight, flexible, and built to last through every adventure.',
-        image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=1100&auto=format&fit=crop',
+        image: 'https://images.unsplash.com/photo-1550085822-fe856d19136d?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     },
 ];
 
@@ -160,7 +160,7 @@ const athletes: AthleteCard[] = [
     {
         title: 'Built on Feedback',
         body: 'We listen to athletes across the world to create gear that solves real needs.',
-        image: 'https://images.unsplash.com/photo-1508609349937-5ec4ae374ebf?q=80&w=1200&auto=format&fit=crop',
+        image: 'https://images.unsplash.com/photo-1592247034198-9dd62e0b7a9e?q=80&w=1172&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
         cta: 'Learn More',
         href: '/about',
     },
@@ -228,7 +228,7 @@ export default function AboutPage() {
                 <FeaturesSection />
                 <AthletesSection />
                 <CollectionsSection />
-                <CommunitySection />
+               
             </div>
         </ShopLayout>
     );
@@ -529,48 +529,6 @@ function CollectionsSection() {
     );
 }
 
-function CommunitySection() {
-    return (
-        <section className="relative overflow-hidden bg-[#111111] px-6 py-10 text-white md:px-10 lg:px-12 lg:py-14">
-            <div
-                className="absolute inset-0 bg-cover bg-center opacity-18"
-                style={{
-                    backgroundImage:
-                        "url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1800&auto=format&fit=crop')",
-                }}
-            />
-            <div className="relative mx-auto grid max-w-[1600px] gap-8 lg:grid-cols-[1fr_0.9fr] lg:items-center">
-                <div>
-                    <h2 className="text-[48px] leading-[0.9] font-black text-white uppercase italic md:text-[68px]">
-                        Join the AxeGear community
-                    </h2>
-                    <p className="mt-4 max-w-[560px] text-[17px] leading-8 font-medium text-white/82">
-                        Be first to know about new releases, exclusive offers,
-                        and athlete stories.
-                    </p>
-                </div>
-
-                <form
-                    className="grid gap-3 sm:grid-cols-[1fr_auto]"
-                    onSubmit={(event) => event.preventDefault()}
-                >
-                    <input
-                        type="email"
-                        placeholder="Enter your email"
-                        aria-label="Enter your email"
-                        className="h-13 border border-white/35 bg-white px-5 text-[15px] font-medium text-[#1A1A1A] placeholder:text-[#707070] focus:border-[#F58220] focus:outline-none"
-                    />
-                    <button
-                        type="submit"
-                        className="inline-flex h-13 items-center justify-center bg-[#F58220] px-10 text-[14px] font-black tracking-[0.06em] text-white uppercase hover:bg-[#E67312]"
-                    >
-                        Join Us
-                    </button>
-                </form>
-            </div>
-        </section>
-    );
-}
 
 function SectionTag({ children }: { children: string }) {
     return (
