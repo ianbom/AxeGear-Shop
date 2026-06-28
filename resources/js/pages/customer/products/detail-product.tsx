@@ -350,14 +350,24 @@ function DetailProductContent({
                     <Breadcrumb product={product} />
 
                     <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr] lg:gap-12 xl:grid-cols-[940px_1fr]">
-                        <FadeInOnScroll>
-                            <ProductGallery
-                                gallery={gallery}
-                                mainImage={mainImage}
-                                productTitle={product.title}
-                                onSelectImage={setMainImage}
-                            />
-                        </FadeInOnScroll>
+                        <div className="space-y-6">
+                            <FadeInOnScroll>
+                                <ProductGallery
+                                    gallery={gallery}
+                                    mainImage={mainImage}
+                                    productTitle={product.title}
+                                    onSelectImage={setMainImage}
+                                />
+                            </FadeInOnScroll>
+
+                            <FadeInOnScroll delay={40}>
+                                <ProductSpecs
+                                    product={product}
+                                    selectedVariant={selectedVariant}
+                                    productDescription={productDescription}
+                                />
+                            </FadeInOnScroll>
+                        </div>
 
                         <FadeInOnScroll delay={80}>
                             <section className="pt-1 lg:pt-6">
@@ -460,12 +470,6 @@ function DetailProductContent({
                                 </button>
 
                                 <ServiceStrip isAvailable={isAvailable} />
-
-                                <ProductSpecs
-                                    product={product}
-                                    selectedVariant={selectedVariant}
-                                    productDescription={productDescription}
-                                />
                             </section>
                         </FadeInOnScroll>
                     </div>

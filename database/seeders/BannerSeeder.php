@@ -15,8 +15,8 @@ class BannerSeeder extends Seeder
         [
             'title' => 'ZM Zaskia Mecca - Bunga Pertiwi',
             'subtitle' => 'Scarf Voal Alaska Premium edisi pahlawan perempuan Indonesia.',
-            'image_desktop_url' => 'https://cdn.shopify.com/s/files/1/0083/3241/0942/files/9028d5d5ac48461ea36182c1b41855d2_tplv-aphluv4xwc-origin-jpeg.jpg?v=1777517636',
-            'image_mobile_url' => 'https://cdn.shopify.com/s/files/1/0083/3241/0942/files/9028d5d5ac48461ea36182c1b41855d2_tplv-aphluv4xwc-origin-jpeg.jpg?v=1777517636',
+            'image_desktop_url' => 'https://orcapowergear.com/_next/image?url=%2Fasset%2Fbanner%2Fpaydeals_WEB_.png&w=3840&q=75',
+            'image_mobile_url' => 'https://orcapowergear.com/_next/image?url=%2Fasset%2Fbanner%2Fpaydeals_WEB_.png&w=3840&q=75',
             'button_text' => 'Belanja Sekarang',
             'button_url' => '/list',
             'placement' => 'homepage',
@@ -26,8 +26,8 @@ class BannerSeeder extends Seeder
         [
             'title' => 'Primadona Series',
             'subtitle' => 'Koleksi Raya ZM Zaskia Mecca untuk tampilan modest elegan.',
-            'image_desktop_url' => 'https://cdn.shopify.com/s/files/1/0083/3241/0942/files/sg-11134201-825zr-ml31rmqs52io5f.webp?v=1771996057',
-            'image_mobile_url' => 'https://cdn.shopify.com/s/files/1/0083/3241/0942/files/sg-11134201-825zr-ml31rmqs52io5f.webp?v=1771996057',
+            'image_desktop_url' => 'https://orcapowergear.com/_next/image?url=%2Fasset%2Fbanner%2Forca_magnifica_bannerweb.jpeg&w=3840&q=75',
+            'image_mobile_url' => 'https://orcapowergear.com/_next/image?url=%2Fasset%2Fbanner%2Forca_magnifica_bannerweb.jpeg&w=3840&q=75',
             'button_text' => 'Lihat Koleksi',
             'button_url' => '/collections/primadona-series',
             'placement' => 'homepage',
@@ -37,8 +37,8 @@ class BannerSeeder extends Seeder
         [
             'title' => 'Jejak Teduh',
             'subtitle' => 'Motif Nusantara dalam scarf dan tunik ZM Zaskia Mecca.',
-            'image_desktop_url' => 'https://cdn.shopify.com/s/files/1/0083/3241/0942/files/sg-11134201-8262w-ml3ns60k2vie4a.webp?v=1771996087',
-            'image_mobile_url' => 'https://cdn.shopify.com/s/files/1/0083/3241/0942/files/sg-11134201-8262w-ml3ns60k2vie4a.webp?v=1771996087',
+            'image_desktop_url' => 'https://orcapowergear.com/_next/image?url=%2Fasset%2Fbanner%2Forca_magnifica_bannerweb.jpeg&w=3840&q=75',
+            'image_mobile_url' => 'https://orcapowergear.com/_next/image?url=%2Fasset%2Fbanner%2Forca_magnifica_bannerweb.jpeg&w=3840&q=75',
             'button_text' => 'Jelajahi',
             'button_url' => '/collections/jejak-teduh',
             'placement' => 'homepage',
@@ -48,8 +48,8 @@ class BannerSeeder extends Seeder
         [
                 'title'              => 'Koleksi Abaya Terbaru',
                 'subtitle'           => 'Abaya Premium dengan Material Berkualitas Tinggi',
-                'image_desktop_url'  => 'https://plus.unsplash.com/premium_photo-1676925875911-7f46961f8193?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-                'image_mobile_url'   => 'https://plus.unsplash.com/premium_photo-1676925875911-7f46961f8193?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+            'image_desktop_url' => 'https://orcapowergear.com/_next/image?url=%2Fasset%2Fbanner%2Forca_magnifica_bannerweb.jpeg&w=3840&q=75',
+            'image_mobile_url' => 'https://orcapowergear.com/_next/image?url=%2Fasset%2Fbanner%2Forca_magnifica_bannerweb.jpeg&w=3840&q=75',
                 'button_text'        => 'Shop Abaya',
                 'button_url'         => '/list',
                 'placement'          => 'collection',

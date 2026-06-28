@@ -127,7 +127,7 @@
     --chart-3: #16803c;
     --chart-4: #f59e0b;
     --chart-5: #707070;
-    --radius: 4px;
+    --radius: 8px;
     --sidebar: #ffffff;
     --sidebar-foreground: #1a1a1a;
     --sidebar-primary: #f58220;
@@ -226,6 +226,10 @@
     select,
     textarea {
         @apply transition duration-200;
+    }
+
+    button {
+        border-radius: var(--radius);
     }
 
     a:focus-visible,
