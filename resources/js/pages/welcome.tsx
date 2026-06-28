@@ -28,17 +28,28 @@ type BannerCard = {
     button_url: string | null;
 } | null;
 
-type CategoryCard = {
+type CollectionCard = {
+    id: number;
     name: string;
     slug: string;
+    description: string | null;
+    banner_desktop_url: string | null;
+    banner_mobile_url: string | null;
     image_url: string | null;
+    sort_order: number;
+    is_featured: boolean;
+    is_active: boolean;
+    starts_at: string | null;
+    ends_at: string | null;
+    created_at: string | null;
+    updated_at: string | null;
 };
 
 type Props = {
     heroBanners: BannerCard[];
     ctaBanner: BannerCard;
     collectionBanners: BannerCard[];
-    categories: CategoryCard[];
+    collections?: CollectionCard[];
     hajjSeries: ProductCard[];
     wePresent: ProductCard[];
     recentAdditions: ProductCard[];
@@ -47,19 +58,41 @@ type Props = {
 
 const fallbackImage = 'https://orcapowergear.com/_next/image?url=%2Fasset%2Fbanner%2Fwebbanner-orca.webp&w=3840&q=75';
 
-const fallbackCategories: CategoryCard[] = [
-    { name: 'Performance Sunglasses', slug: 'sunglasses', image_url: fallbackImage },
-    { name: 'Moto & MTB Goggles', slug: 'goggles', image_url: fallbackImage },
-    { name: 'Performance Gloves', slug: 'gloves', image_url: fallbackImage },
-];
+function SectionSeparator({ accent = 'red', label }: { accent?: 'red' | 'blue'; label?: string }) {
+    const accentLine = accent === 'red' ? 'bg-[#ff1a00]' : 'bg-[#1d9cff]';
+    const accentText = accent === 'red' ? 'text-[#ff1a00]' : 'text-[#69bcff]';
 
-export default function Welcome({ heroBanners, collectionBanners, categories }: Props) {
+    return (
+        <div className="border-y-2 border-[#101010] bg-[#050505] px-4 py-3 sm:px-6 lg:px-10">
+            <div className="flex items-center gap-3 text-white">
+                <div className={`h-px flex-1 ${accentLine}`} />
+                {label ? (
+                    <span
+                        className={`shrink-0 text-[11px] font-semibold uppercase tracking-[0.45em] ${accentText}`}
+                    >
+                        {label}
+                    </span>
+                ) : (
+                    <div className={`h-[22px] w-[2px] ${accentLine}`} />
+                )}
+                <div className={`h-px flex-1 ${accentLine}`} />
+            </div>
+            <div className="mt-2 flex items-center justify-center gap-3">
+                <div className={`h-[2px] w-12 ${accentLine}`} />
+                <div className="h-[10px] w-[2px] bg-white/70" />
+                <div className={`h-[2px] w-12 ${accentLine}`} />
+            </div>
+        </div>
+    );
+}
+
+export default function Welcome({ heroBanners = [], collectionBanners = [], collections = [] }: Props) {
     const heroSlides = useMemo(
         () => heroBanners.filter(Boolean).map((banner) => banner!.image_desktop_url),
         [heroBanners],
     );
     const performanceImage = collectionBanners.find(Boolean)?.image_desktop_url ?? fallbackImage;
-    const tiles = categories.length > 0 ? categories.slice(0, 3) : fallbackCategories;
+    const tiles = collections.slice(0, 3);
     const slides = heroSlides.length > 0 ? heroSlides : [fallbackImage];
     const [activeSlide, setActiveSlide] = useState(0);
 
@@ -84,7 +117,7 @@ export default function Welcome({ heroBanners, collectionBanners, categories }: 
             <Head title="AxeGear" />
 
             <main className="bg-white text-[#1A1A1A]">
-                <section className="relative h-[110svh] overflow-hidden border-b-2 border-[#1A1A1A] bg-black">
+                <section className="relative h-[100svh] overflow-hidden border-b-2 border-[#101010] bg-black sm:h-[105svh] lg:h-[110svh]">
                     <div
                         className="flex h-full transition-transform duration-700 ease-out"
                         style={{ transform: `translateX(-${activeSlide * 100}%)` }}
@@ -108,7 +141,7 @@ export default function Welcome({ heroBanners, collectionBanners, categories }: 
                                 type="button"
                                 aria-label="Previous slide"
                                 onClick={() => goToSlide(activeSlide - 1)}
-                                className="absolute left-4 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center border-2 border-white text-2xl font-semibold text-white transition-colors hover:bg-white hover:text-black"
+                                className="absolute left-3 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-[8px] border border-white/70 bg-black/55 text-xl font-semibold text-white transition-colors hover:bg-white hover:text-black sm:left-5"
                             >
                                 «
                             </button>
@@ -116,7 +149,7 @@ export default function Welcome({ heroBanners, collectionBanners, categories }: 
                                 type="button"
                                 aria-label="Next slide"
                                 onClick={() => goToSlide(activeSlide + 1)}
-                                className="absolute right-4 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center border-2 border-white text-2xl font-semibold text-white transition-colors hover:bg-white hover:text-black"
+                                className="absolute right-3 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-[8px] border border-white/70 bg-black/55 text-xl font-semibold text-white transition-colors hover:bg-white hover:text-black sm:right-5"
                             >
                                 »
                             </button>
@@ -124,7 +157,9 @@ export default function Welcome({ heroBanners, collectionBanners, categories }: 
                     )}
                 </section>
 
-                <section className="h-[110svh] overflow-hidden border-b-2 border-[#1A1A1A] bg-white">
+                <SectionSeparator accent="red" label="RACE READY PERFORMANCE" />
+
+                <section className="h-[100svh] overflow-hidden border-b-2 border-[#101010] bg-[#8fd6ff] sm:h-[105svh] lg:h-[110svh]">
                     <img
                         src={performanceImage}
                         alt="AxeGear performance campaign"
@@ -132,23 +167,25 @@ export default function Welcome({ heroBanners, collectionBanners, categories }: 
                     />
                 </section>
 
-                <section className="border-b-2 border-[#1A1A1A] bg-white">
-                    <div className="grid grid-cols-1 gap-0 lg:grid-cols-3 lg:gap-[10px]">
-                        {tiles.map((tile) => (
+                <SectionSeparator accent="blue" label="SHOP BY CATEGORY" />
+
+                <section className="border-b-2 border-[#1A1A1A] bg-white px-5 py-6 sm:px-8 lg:px-12 xl:px-16">
+                    <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-10 xl:gap-14">
+                        {tiles.length > 0 && tiles.map((tile) => (
                             <Link
                                 key={tile.slug}
-                                href={list.url({ query: { category: tile.slug } })}
+                                href={list.url({ query: { collection: tile.slug } })}
                                 aria-label={tile.name}
-                                className="group relative block h-[85svh] overflow-hidden bg-black lg:h-[110svh]"
+                                className="group relative block h-[78svh] overflow-hidden bg-white lg:h-[100svh]"
                             >
                                 <img
-                                    src={tile.image_url ?? fallbackImage}
+                                    src={tile.banner_mobile_url ?? fallbackImage}
                                     alt={tile.name}
                                     className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.02]"
                                     loading="lazy"
                                     decoding="async"
                                 />
-                                <div className="absolute right-6 top-5 z-10 text-right text-[28px] italic font-semibold leading-none tracking-[-0.02em] text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)] lg:right-7 lg:top-6 lg:text-[32px]">
+                                <div className="absolute right-6 top-5 z-10 text-right text-[28px] italic font-semibold leading-none tracking-[-0.02em] text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)] lg:right-7 lg:top-6 lg:text-[20px]">
                                     {tile.name}
                                 </div>
                             </Link>

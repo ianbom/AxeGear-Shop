@@ -79,6 +79,12 @@ type Props = {
     filters: Omit<FilterState, 'per_page'> & {
         per_page: number;
     };
+    collectionBanner: {
+        title: string;
+        banner_desktop_url: string | null;
+        banner_mobile_url: string | null;
+        is_default: boolean;
+    };
     options: {
         categories: FilterOption[];
         collections: FilterOption[];
@@ -156,7 +162,12 @@ const cleanQuery = (filters: FilterState) =>
         }),
     );
 
-export default function ListProduct({ products, filters, options }: Props) {
+export default function ListProduct({
+    products,
+    filters,
+    options,
+    collectionBanner,
+}: Props) {
     const { auth } = usePage<SharedProps>().props;
     const isAuthenticated = Boolean(auth.user);
     const initialFilters = useMemo<FilterState>(
@@ -221,7 +232,7 @@ export default function ListProduct({ products, filters, options }: Props) {
         <ShopLayout>
             <Head title={`${pageTitle} - AxeGear`} />
 
-            <section className="mx-auto max-w-[1728px] px-6 pt-9 pb-9 sm:px-8 lg:px-9">
+            <section className="pb-9">
                 <button
                     type="button"
                     aria-label="Close filter overlay"
@@ -282,7 +293,39 @@ export default function ListProduct({ products, filters, options }: Props) {
                     </div>
                 </aside>
 
-                <div className="mb-8 grid gap-5 md:grid-cols-[280px_minmax(0,1fr)] md:items-start lg:grid-cols-[300px_minmax(0,1fr)]">
+                <section className="mb-8 w-full overflow-hidden bg-[#F2F2F2]">
+                    <div className="relative aspect-[16/6] min-h-[180px] w-full sm:min-h-[220px] lg:aspect-[16/4.8] lg:min-h-[260px]">
+                        <picture>
+                            <source
+                                media="(max-width: 767px)"
+                                srcSet={
+                                    collectionBanner.banner_mobile_url ??
+                                    collectionBanner.banner_desktop_url ??
+                                    fallbackImages[1]
+                                }
+                            />
+                            <img
+                                src={
+                                    collectionBanner.banner_desktop_url ??
+                                    collectionBanner.banner_mobile_url ??
+                                    fallbackImages[0]
+                                }
+                                alt={collectionBanner.title}
+                                className="absolute inset-0 h-full w-full object-cover"
+                            />
+                        </picture>
+                        <div className="absolute inset-0 bg-black/15" />
+                        {!collectionBanner.is_default && (
+                            <div className="absolute inset-0 flex items-center justify-center px-6 text-center">
+                                <h1 className="text-[32px] leading-none font-extrabold tracking-[-0.03em] text-white sm:text-[40px] lg:text-[52px]">
+                                    {collectionBanner.title}
+                                </h1>
+                            </div>
+                        )}
+                    </div>
+                </section>
+
+                <div className="mx-auto mb-8 grid max-w-[1728px] gap-5 px-6 sm:px-8 md:grid-cols-[280px_minmax(0,1fr)] md:items-start lg:grid-cols-[300px_minmax(0,1fr)] lg:px-9">
                     <nav
                         aria-label="Breadcrumb"
                         className="flex items-center gap-3 text-[17px] text-ink"
@@ -345,7 +388,7 @@ export default function ListProduct({ products, filters, options }: Props) {
                     </div>
                 </div>
 
-                <div className="grid gap-9 lg:grid-cols-[300px_minmax(0,1fr)]">
+                <div className="mx-auto grid max-w-[1728px] gap-9 px-6 sm:px-8 lg:grid-cols-[300px_minmax(0,1fr)] lg:px-9">
                     <aside className="hidden lg:block" aria-label="Filters">
                         <h2 className="mb-7 text-[25px] leading-none font-extrabold text-ink">
                             Filter:
@@ -766,14 +809,14 @@ const ProductTile = memo(function ProductTile({
                         }`}
                     />
                     {!isSoldOut && product.badge && (
-                        <span className="absolute top-3 right-3 bg-primary px-2.5 py-1 text-[12px] font-extrabold text-white uppercase">
+                        <span className="absolute top-4 left-0 z-10 flex min-h-26 w-9 items-center justify-center bg-primary px-1 py-2 text-[11px] font-extrabold tracking-[0.08em] text-white uppercase [writing-mode:vertical-rl] [text-orientation:mixed] [transform:rotate(180deg)] sm:w-10 sm:text-[12px]">
                             {product.badge === 'DISCOUNT'
                                 ? 'SALE'
                                 : product.badge}
                         </span>
                     )}
                     {isSoldOut && (
-                        <span className="absolute top-3 right-3 bg-ink px-2.5 py-1 text-[11px] font-extrabold text-white uppercase">
+                        <span className="absolute top-4 left-0 z-10 flex min-h-26 w-9 items-center justify-center bg-ink px-1 py-2 text-[10px] font-extrabold tracking-[0.08em] text-white uppercase [writing-mode:vertical-rl] [text-orientation:mixed] [transform:rotate(180deg)] sm:w-10 sm:text-[11px]">
                             Sold Out
                         </span>
                     )}
@@ -789,7 +832,7 @@ const ProductTile = memo(function ProductTile({
                 }
                 onClick={toggleWishlist}
                 disabled={isWishlistProcessing}
-                className={`absolute top-3 left-3 hidden h-9 border border-hairline bg-white px-2 text-[11px] font-extrabold uppercase shadow-subtle group-hover:block hover:border-ink ${
+                className={`absolute top-3 right-3 z-10 hidden h-9 border border-hairline bg-white px-2 text-[11px] font-extrabold uppercase shadow-subtle group-hover:block hover:border-ink ${
                     isWishlisted ? 'border-primary text-primary' : 'text-ink'
                 }`}
             >

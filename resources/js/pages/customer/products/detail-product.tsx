@@ -3,7 +3,6 @@ import {
     Bell,
     ChevronDown,
     ChevronUp,
-    Cloud,
     Gem,
     Heart,
     Home,
@@ -11,10 +10,7 @@ import {
     Minus,
     Plus,
     Search,
-    Star,
     Store,
-    SunMedium,
-    Truck,
     X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -626,22 +622,6 @@ function ProductHeader({
                 />
             </button>
 
-            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm font-medium">
-                <span className="flex items-center gap-0.5 text-[#F58220]">
-                    {Array.from({ length: 5 }).map((_, index) => (
-                        <Star
-                            key={index}
-                            size={19}
-                            fill="currentColor"
-                            strokeWidth={0}
-                        />
-                    ))}
-                </span>
-                <span>4.8 (124 reviews)</span>
-                <span className="h-5 w-px bg-[#CFCFCF]" />
-                <button className="hover:text-[#F58220]">Write a review</button>
-            </div>
-
             <div className="mt-5 flex flex-wrap items-end gap-3">
                 <span className="text-[28px] leading-none font-black tabular-nums">
                     {formatPrice(price)}
@@ -652,13 +632,6 @@ function ProductHeader({
                     </span>
                 )}
             </div>
-            <p className="mt-2 text-sm font-black text-[#F58220]">
-                Earn 199 points with AxeGear Rewards
-            </p>
-            <p className="mt-3 flex items-center gap-2 text-sm font-medium">
-                <Truck size={22} strokeWidth={1.7} />
-                Free standard shipping on orders over $75
-            </p>
         </header>
     );
 }
@@ -883,35 +856,15 @@ function ServiceStrip({ isAvailable }: { isAvailable: boolean }) {
 
 function ProductSpecs({
     product,
-    selectedVariant,
     productDescription,
 }: {
     product: ProductDetail;
-    selectedVariant: Variant | undefined;
     productDescription: string | null;
 }) {
     return (
-        <section className="grid gap-6 py-6 md:grid-cols-[0.88fr_1.12fr]">
-            <div className="border-b border-[#CFCFCF] pb-6 md:border-r md:border-b-0 md:pr-6">
-                <h2 className="text-base font-black uppercase">
-                    {selectedVariant?.color_name ?? 'Performance Lens'}
-                </h2>
-                <SpecMeter label="Light Transmission" value="29%" active={2} />
-                <SpecMeter label="Light Filter" value="CAT 2" active={5} />
-                <div className="mt-7 flex flex-wrap gap-8 text-sm font-medium">
-                    <span className="flex items-center gap-2">
-                        <SunMedium size={28} strokeWidth={1.4} /> Medium Light
-                    </span>
-                    <span className="flex items-center gap-2">
-                        <Cloud size={30} strokeWidth={1.4} /> Partly Cloudy
-                    </span>
-                </div>
-            </div>
-
+        <section className="py-6">
             <div>
-                <h2 className="text-base font-black uppercase">
-                    Feel nothing. See everything.
-                </h2>
+                <h2 className="text-base font-black uppercase">Product Description</h2>
                 <HTMLRender
                     html={productDescription}
                     className="mt-4 text-sm leading-6 font-medium text-[#2E2E2E] [&_a]:text-[#F58220] [&_h1]:text-lg [&_h2]:text-base [&_strong]:font-black [&_strong]:text-[#1A1A1A] [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5"
@@ -958,34 +911,6 @@ function ProductSpecs({
                 </ul>
             </div>
         </section>
-    );
-}
-
-function SpecMeter({
-    label,
-    value,
-    active,
-}: {
-    label: string;
-    value: string;
-    active: number;
-}) {
-    return (
-        <div className="mt-5">
-            <p className="text-sm font-bold">
-                {label}: <span className="font-black">{value}</span>
-            </p>
-            <div className="mt-3 grid grid-cols-8 gap-2">
-                {Array.from({ length: 8 }).map((_, index) => (
-                    <span
-                        key={index}
-                        className={`h-1 ${
-                            index === active ? 'bg-[#F58220]' : 'bg-[#CFCFCF]'
-                        }`}
-                    />
-                ))}
-            </div>
-        </div>
     );
 }
 

@@ -29,7 +29,7 @@ class ProductBrowsingService
             'promoBanner' => $this->bannerCard($banners->skip(1)->first()),
             'ctaBanner' => $this->bannerCard($ctaBanner),
             'collectionBanners' => $collectionBanners->map(fn ($banner) => $this->bannerCard($banner))->toArray(),
-            'categories' => Category::query()->where('is_active', true)->orderBy('name')->get(['name', 'slug', 'image_url']),
+            'collections' => Collection::query()->where('is_active', true)->orderBy('sort_order')->get(['name', 'slug', 'banner_mobile_url']),
             'hajjSeries' => $this->productsForSection('hajj', 3),
             'wePresent' => $this->productsForSection('new_arrival', 5),
             'recentAdditions' => $this->productsForSection('new', 6),
@@ -41,6 +41,12 @@ class ProductBrowsingService
     public function productListData(Request $request): array
     {
         $filters = $this->validatedFilters($request);
+        $selectedCollection = $filters['collection'] !== ''
+            ? Collection::query()
+                ->where('is_active', true)
+                ->where('slug', $filters['collection'])
+                ->first()
+            : null;
 
         $products = Product::query()
             ->with($this->productRelations())
@@ -80,6 +86,7 @@ class ProductBrowsingService
                 ->through(fn (Product $product) => $this->productCard($product))),
             'filters' => $filters,
             'options' => $this->filterOptions(),
+            'collectionBanner' => $this->collectionBanner($selectedCollection),
         ];
     }
 
@@ -349,6 +356,27 @@ class ProductBrowsingService
                 ['value' => 'price', 'label' => 'Price'],
                 ['value' => 'best_seller', 'label' => 'Best Seller'],
             ],
+        ];
+    }
+
+    private function collectionBanner(?Collection $collection): array
+    {
+        $default = [
+            'title' => 'All Products',
+            'banner_desktop_url' => '/img/all-product.webp',
+            'banner_mobile_url' => '/img/all-product.webp',
+            'is_default' => true,
+        ];
+
+        if (! $collection) {
+            return $default;
+        }
+
+        return [
+            'title' => $collection->name,
+            'banner_desktop_url' => $collection->banner_desktop_url ?: $default['banner_desktop_url'],
+            'banner_mobile_url' => $collection->banner_mobile_url ?: $default['banner_mobile_url'],
+            'is_default' => false,
         ];
     }
 

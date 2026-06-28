@@ -16,17 +16,6 @@ type NavbarProps = {
     isAuthenticated?: boolean;
 };
 
-const navItems = [
-    { label: 'NEW', href: '/list?type=new_arrival' },
-    { label: 'SPORT', href: '/list' },
-    { label: 'SUNGLASSES', href: '/list?search=sunglasses' },
-    { label: 'GOOGLES', href: '/list?search=goggles' },
-    { label: 'GLOVES', href: '/list?search=gloves' },
-    { label: 'APPAREL & ACCESSORIES', href: '/list' },
-    { label: 'SALE', href: '/list?type=discount', accent: true },
-    { label: 'EXPLORE', href: '/list' },
-];
-
 function AxeGearWordmark() {
     return (
         <span className="text-[28px] leading-none font-black tracking-[-0.08em] text-ink uppercase sm:text-[34px] lg:text-[42px]">
@@ -37,12 +26,17 @@ function AxeGearWordmark() {
 
 export default function Navbar({
     cartCount = 0,
+    collections = [],
     currentUrl = '/',
     isAuthenticated = false,
 }: NavbarProps) {
     const [isOpen, setIsOpen] = useState(false);
     const cartBadge = cartCount > 99 ? '99+' : String(cartCount);
     const accountHref = isAuthenticated ? '/my-profile' : login.url();
+    const navItems = collections.map((collection) => ({
+        label: collection.name,
+        href: `/list?collection=${collection.slug}`,
+    }));
 
     const isActive = (href: string) =>
         href.includes('?') && currentUrl === href;
@@ -64,9 +58,7 @@ export default function Navbar({
                             key={item.label}
                             href={item.href}
                             className={`py-7 transition-colors hover:text-primary ${
-                                item.accent || isActive(item.href)
-                                    ? 'text-primary'
-                                    : 'text-ink'
+                                isActive(item.href) ? 'text-primary' : 'text-ink'
                             }`}
                         >
                             {item.label}
@@ -143,9 +135,7 @@ export default function Navbar({
                             href={item.href}
                             onClick={() => setIsOpen(false)}
                             className={`py-4 hover:text-primary ${
-                                item.accent || isActive(item.href)
-                                    ? 'text-primary'
-                                    : 'text-ink'
+                                isActive(item.href) ? 'text-primary' : 'text-ink'
                             }`}
                         >
                             {item.label}
