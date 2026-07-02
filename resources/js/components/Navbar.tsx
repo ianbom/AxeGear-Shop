@@ -67,13 +67,6 @@ export default function Navbar({
                 </nav>
 
                 <div className="flex items-center gap-3 text-ink sm:gap-5">
-                    <button
-                        type="button"
-                        aria-label="Search products"
-                        className="flex size-11 items-center justify-center hover:text-primary"
-                    >
-                        <Search size={31} strokeWidth={2.2} />
-                    </button>
                     <Link
                         href={accountHref}
                         aria-label={

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
 @import 'tailwindcss';
 @import 'tw-animate-css';
@@ -201,6 +201,7 @@
 
     body {
         @apply bg-background text-foreground antialiased;
+        font-weight: 400;
         font-variant-numeric: tabular-nums;
         text-rendering: optimizeLegibility;
     }
@@ -211,8 +212,22 @@
     h4,
     h5,
     h6 {
-        @apply font-sans font-extrabold text-foreground;
+        @apply font-sans font-semibold text-foreground;
         text-wrap: balance;
+    }
+
+    strong,
+    b {
+        font-weight: 600;
+    }
+
+    .font-bold {
+        font-weight: 600;
+    }
+
+    .font-extrabold,
+    .font-black {
+        font-weight: 700;
     }
 
     p,

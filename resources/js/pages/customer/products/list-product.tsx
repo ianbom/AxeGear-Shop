@@ -2,6 +2,7 @@ import { Head, InfiniteScroll, Link, router, usePage } from '@inertiajs/react';
 import {
     ChevronDown,
     Grid3X3,
+    Heart,
     List as ListIcon,
     Search,
 } from 'lucide-react';
@@ -740,11 +741,7 @@ const ProductTile = memo(function ProductTile({
     const isSoldOut = product.available_stock <= 0;
     const productHref = detail.url({ query: { product: product.slug } });
     const subtitle = product.collection ?? product.category ?? product.sku;
-    const colorLine = product.colors
-        .slice(0, 2)
-        .map((color) => color.name)
-        .filter(Boolean)
-        .join(' / ');
+    const visibleColors = product.colors.slice(0, 4);
 
     const toggleWishlist = async (event: MouseEvent<HTMLButtonElement>) => {
         event.preventDefault();
@@ -832,11 +829,15 @@ const ProductTile = memo(function ProductTile({
                 }
                 onClick={toggleWishlist}
                 disabled={isWishlistProcessing}
-                className={`absolute top-3 right-3 z-10 hidden h-9 border border-hairline bg-white px-2 text-[11px] font-extrabold uppercase shadow-subtle group-hover:block hover:border-ink ${
+                className={`absolute top-3 right-3 z-10 hidden size-10 items-center justify-center border border-hairline bg-white text-ink shadow-subtle group-hover:flex hover:border-ink hover:text-primary ${
                     isWishlisted ? 'border-primary text-primary' : 'text-ink'
                 }`}
             >
-                Wish
+                <Heart
+                    aria-hidden="true"
+                    className={`size-5 ${isWishlisted ? 'fill-current' : ''}`}
+                    strokeWidth={2.2}
+                />
             </button>
 
             <Link href={productHref} className="block px-4 pt-1 pb-4 sm:px-5">
@@ -846,9 +847,22 @@ const ProductTile = memo(function ProductTile({
                 <p className="mt-1 line-clamp-1 text-[15px] leading-5 text-body">
                     {subtitle ?? 'Performance Gear'}
                 </p>
-                <p className="line-clamp-1 min-h-5 text-[15px] leading-5 text-body">
-                    {colorLine || product.sku || 'AxeGear Edition'}
-                </p>
+                <div className="mt-1 flex min-h-5 flex-wrap items-center gap-1.5">
+                    {visibleColors.length > 0 ? (
+                        visibleColors.map((color, colorIndex) => (
+                            <span
+                                key={`${color.hex}-${color.name ?? colorIndex}`}
+                                aria-label={color.name ?? color.hex}
+                                className="size-4 border border-hairline-strong"
+                                style={{ backgroundColor: color.hex }}
+                            />
+                        ))
+                    ) : (
+                        <span className="line-clamp-1 text-[15px] leading-5 text-body">
+                            {product.sku || 'AxeGear Edition'}
+                        </span>
+                    )}
+                </div>
                 <div className="mt-2 flex flex-wrap items-center gap-4 text-[18px] leading-none font-extrabold">
                     {product.sale_price !== null && (
                         <span className="text-ink line-through decoration-1">

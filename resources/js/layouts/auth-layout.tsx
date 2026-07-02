@@ -31,7 +31,7 @@ export default function AuthLayout({
     return (
         <div className="min-h-svh bg-white text-[#1A1A1A]">
             <div className="grid min-h-svh bg-white lg:grid-cols-[minmax(0,1.16fr)_minmax(420px,0.84fr)]">
-                <div className="relative order-2 min-h-[320px] overflow-hidden bg-[#1A1A1A] lg:order-1 lg:min-h-full">
+                <div className="relative order-2 hidden min-h-[320px] overflow-hidden bg-[#1A1A1A] lg:order-1 lg:block lg:min-h-full">
                     <img
                         src={resolvedHeroImage.src}
                         alt={resolvedHeroImage.alt}

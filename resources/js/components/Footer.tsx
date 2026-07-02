@@ -107,12 +107,15 @@ export default function Footer() {
             <section className="border-b border-white/10 bg-[#0c0c0c]">
                 <div className="mx-auto grid max-w-[1728px] gap-10 px-6 py-9 sm:px-8 lg:grid-cols-[1.25fr_0.7fr_0.7fr_0.7fr_1.45fr] lg:gap-0 lg:px-[68px] lg:py-10">
                     <section className="pr-0 lg:pr-12">
-                        <Link href="/" className="inline-flex">
+                        <Link href="/" className="inline-flex items-center gap-3">
                             <img
-                                src="/logo-shay/axegear-logo.webp"
+                                src="/logo-shay/axegear-logo-transparant.webp"
                                 alt="AxeGear"
-                                className="h-12 w-auto object-contain brightness-100 invert-0"
+                                className="h-16 w-auto object-contain brightness-100 invert-0 sm:h-18"
                             />
+                            <span className="text-[28px] leading-none font-black tracking-[-0.08em] text-white uppercase sm:text-[34px] lg:text-[42px]">
+                                AxeGear
+                            </span>
                         </Link>
                         <p className="mt-5 max-w-[310px] text-[16px] leading-[1.45] font-medium text-white/76">
                             Performance eyewear and gear engineered for athletes who refuse to slow down.

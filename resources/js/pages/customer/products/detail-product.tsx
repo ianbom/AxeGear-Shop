@@ -472,8 +472,6 @@ function DetailProductContent({
 
                     <OtherStyles products={railProducts} />
                 </div>
-
-                <FloatingActions />
             </main>
 
             {isSizeGuideOpen && (
@@ -922,7 +920,7 @@ function OtherStyles({ products }: { products: ProductCard[] }) {
     return (
         <FadeInOnScroll className="mt-6">
             <h2 className="mb-2 text-2xl font-black tracking-normal uppercase">
-                Other Styles
+                Other Recommendations
             </h2>
             <div className="grid gap-5 md:grid-cols-3 xl:grid-cols-6">
                 {products.slice(0, 6).map((product, index) => (
@@ -962,26 +960,6 @@ function OtherStyles({ products }: { products: ProductCard[] }) {
     );
 }
 
-function FloatingActions() {
-    return (
-        <div className="fixed right-5 bottom-20 z-30 hidden flex-col gap-3 md:flex">
-            <button
-                type="button"
-                className="flex h-16 w-16 items-center justify-center rounded-full bg-[#F58220] text-white shadow-[0_8px_24px_rgba(26,26,26,0.22)] hover:bg-[#E67312]"
-                aria-label="AxeGear rewards"
-            >
-                <Gem size={34} strokeWidth={1.8} />
-            </button>
-            <button
-                type="button"
-                className="flex h-14 w-14 items-center justify-center rounded-full bg-[#1A1A1A] text-white shadow-[0_8px_24px_rgba(26,26,26,0.22)] hover:bg-[#F58220]"
-                aria-label="Message support"
-            >
-                <MessageCircle size={25} strokeWidth={1.8} />
-            </button>
-        </div>
-    );
-}
 
 function SizeGuideModal({ onClose }: { onClose: () => void }) {
     return (
