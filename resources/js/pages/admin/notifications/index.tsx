@@ -205,7 +205,7 @@ export default function NotificationsIndex({
                     </div>
                     <Button
                         asChild
-                        className="bg-[#B98B63] text-white hover:bg-[#9A6B45]"
+                        className="bg-primary text-white hover:bg-primary/90"
                     >
                         <Link href="/admin/notifications/create">
                             <Plus className="h-4 w-4" /> Send Notification
@@ -267,7 +267,7 @@ export default function NotificationsIndex({
                             <Button
                                 type="submit"
                                 size="sm"
-                                className="h-9 gap-1.5 bg-[#B98B63] text-white hover:bg-[#9A6B45]"
+                                className="h-9 gap-1.5 bg-primary text-white hover:bg-primary/90"
                                 disabled={processing}
                             >
                                 <Search className="h-3.5 w-3.5" /> Search
@@ -575,7 +575,7 @@ function PaginationFooter<T>({
                             className={[
                                 'h-8 min-w-8 rounded-lg px-2.5 text-xs font-medium transition-colors',
                                 link.active
-                                    ? 'bg-[#B98B63] text-white shadow-sm'
+                                    ? 'bg-primary text-white shadow-sm'
                                     : !link.url
                                       ? 'cursor-not-allowed text-zinc-300'
                                       : 'text-zinc-500 hover:bg-zinc-100',

@@ -81,7 +81,7 @@ export default function ReportIndex({
 
                     <Button
                         asChild
-                        className="h-9 rounded-lg bg-[#B98B63] px-4 text-white shadow-none hover:bg-[#9A6B45] active:scale-[0.98]"
+                        className="h-9 rounded-lg bg-primary px-4 text-white shadow-none hover:bg-primary/90 active:scale-[0.98]"
                     >
                         <a href={`/admin/reports/${type}/export?${query}`}>
                             <Download className="size-4" /> Export CSV
@@ -96,7 +96,7 @@ export default function ReportIndex({
                             href={`/admin/reports/${tab}`}
                             className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                                 tab === type
-                                    ? 'border-[#151515] bg-[#B98B63] text-white'
+                                    ? 'border-[#151515] bg-primary text-white'
                                     : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900'
                             }`}
                         >

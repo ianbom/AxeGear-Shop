@@ -203,7 +203,7 @@ export default function ProductVariantsIndex({
                         >
                             <Button
                                 size="sm"
-                                className="h-9 gap-1.5 bg-[#B98B63] text-white shadow-sm hover:bg-[#9A6B45]"
+                                className="h-9 gap-1.5 bg-primary text-white shadow-sm hover:bg-primary/90"
                             >
                                 <Plus className="h-3.5 w-3.5" /> Add Variant
                             </Button>
@@ -312,7 +312,7 @@ export default function ProductVariantsIndex({
                             <Button
                                 type="submit"
                                 size="sm"
-                                className="h-9 gap-1.5 bg-[#B98B63] text-white hover:bg-[#9A6B45]"
+                                className="h-9 gap-1.5 bg-primary text-white hover:bg-primary/90"
                             >
                                 <Search className="h-3.5 w-3.5" /> Search
                             </Button>
@@ -567,7 +567,7 @@ export default function ProductVariantsIndex({
                                         className={[
                                             'flex h-8 min-w-8 items-center justify-center rounded-lg px-2.5 text-xs font-medium transition-colors',
                                             link.active
-                                                ? 'bg-[#B98B63] text-white shadow-sm'
+                                                ? 'bg-primary text-white shadow-sm'
                                                 : !link.url
                                                   ? 'cursor-not-allowed text-zinc-300'
                                                   : 'text-zinc-500 hover:bg-zinc-100',

@@ -320,7 +320,7 @@ export default function ProductsIndex({
                         >
                             <Button
                                 size="sm"
-                                className="h-9 w-full gap-1.5 bg-[#B98B63] text-white shadow-sm hover:bg-[#9A6B45] md:w-auto"
+                                className="h-9 w-full gap-1.5 bg-primary text-white shadow-sm hover:bg-primary/90 md:w-auto"
                             >
                                 <Plus className="h-3.5 w-3.5" /> Add Product
                             </Button>
@@ -548,7 +548,7 @@ export default function ProductsIndex({
                             <Button
                                 type="submit"
                                 size="sm"
-                                className="h-9 flex-1 gap-1.5 bg-[#B98B63] text-white hover:bg-[#9A6B45] sm:flex-none"
+                                className="h-9 flex-1 gap-1.5 bg-primary text-white hover:bg-primary/90 sm:flex-none"
                             >
                                 <Search className="h-3.5 w-3.5" /> Search
                             </Button>
@@ -1011,7 +1011,7 @@ export default function ProductsIndex({
                                         className={[
                                             'h-8 min-w-8 rounded-lg px-2.5 text-xs font-medium transition-colors',
                                             link.active
-                                                ? 'bg-[#B98B63] text-white shadow-sm'
+                                                ? 'bg-primary text-white shadow-sm'
                                                 : !link.url
                                                   ? 'cursor-not-allowed text-zinc-300'
                                                   : 'text-zinc-500 hover:bg-zinc-100',

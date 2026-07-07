@@ -183,7 +183,7 @@ export default function AdminDashboard({
         <>
             <Head title="Dasbor Admin" />
 
-            <main className="flex min-h-[100dvh] flex-1 flex-col bg-white p-4 text-zinc-900 md:p-6">
+            <main className="flex min-h-[100dvh] flex-1 flex-col bg-canvas p-4 text-ink md:p-6">
                 <div className="flex w-full min-w-0 flex-col gap-6 lg:gap-8">
                     <DashboardHeader filters={filters} />
                     <StatCards stats={dashboardStats(summary)} />
@@ -192,7 +192,7 @@ export default function AdminDashboard({
                         shippingSummary={shippingSummary}
                     />
 
-                    <div className="grid grid-cols-1 gap-6 border-t border-zinc-200 pt-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.8fr)] lg:gap-10 lg:pt-8">
+                    <div className="grid grid-cols-1 gap-6 border-t border-hairline-strong pt-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.8fr)] lg:gap-10 lg:pt-8">
                         <div className="flex min-w-0 flex-col gap-6 lg:gap-10">
                             <SalesTrendCard data={salesChart} />
                             <RecentOrdersTable
@@ -200,7 +200,7 @@ export default function AdminDashboard({
                             />
                         </div>
 
-                        <aside className="flex min-w-0 flex-col gap-6 border-t border-zinc-200 pt-6 lg:gap-10 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
+                        <aside className="flex min-w-0 flex-col gap-6 border-t border-hairline-strong pt-6 lg:gap-10 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
                             <OrdersNeedAttention orders={attentionOrders} />
                             <LowStockProductsCard
                                 products={lowStockVariants.slice(0, 4)}
@@ -254,14 +254,14 @@ function DashboardHeader({ filters }: { filters: DashboardFilters }) {
     return (
         <header className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
-                <p className="mb-2 flex items-center gap-2 text-xs font-bold tracking-widest text-[#151515]/50 uppercase">
+                <p className="mb-2 flex items-center gap-2 text-xs font-semibold tracking-[0.18em] text-primary uppercase">
                     <Shirt className="size-4" strokeWidth={1.7} />
-                    Modest Fashion Admin
+                    AxeGear Admin
                 </p>
-                <h1 className="font-serif text-3xl leading-tight text-zinc-900 sm:text-4xl">
+                <h1 className="text-[34px] leading-none font-semibold tracking-[-0.02em] text-ink uppercase sm:text-[42px]">
                     Dasbor
                 </h1>
-                <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-400">
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
                     Pantau aktivitas toko hari ini dan tindakan penting.
                 </p>
             </div>
@@ -271,17 +271,17 @@ function DashboardHeader({ filters }: { filters: DashboardFilters }) {
                     onSubmit={applyCustomRange}
                     className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-end sm:justify-end"
                 >
-                    <div className="grid grid-cols-5 rounded-lg border border-zinc-200 bg-white p-1 sm:flex">
+                    <div className="grid grid-cols-5 rounded-[6px] border border-hairline-strong bg-white p-1 sm:flex">
                         {ranges.map((item) => (
                             <button
                                 key={item.value}
                                 type="button"
                                 onClick={() => applyRange(item.value)}
                                 className={[
-                                    'h-8 rounded-md px-2 text-xs font-semibold transition-colors sm:px-3',
+                                    'h-8 rounded-[4px] px-2 text-xs font-semibold transition-colors sm:px-3',
                                     range === item.value
-                                        ? 'bg-[#151515] text-white'
-                                        : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900',
+                                        ? 'bg-[#1A1A1A] text-white'
+                                        : 'text-muted-foreground hover:bg-surface-soft hover:text-ink',
                                 ].join(' ')}
                             >
                                 {item.label}
@@ -297,7 +297,7 @@ function DashboardHeader({ filters }: { filters: DashboardFilters }) {
                                 onChange={(event) =>
                                     setDateFrom(event.target.value)
                                 }
-                                className="h-9 w-full cursor-pointer rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 shadow-none outline-none focus:border-[#B98B63] focus:ring-2 focus:ring-[#B98B63]/20 sm:min-w-[150px]"
+                                className="h-9 w-full cursor-pointer rounded-[6px] border border-hairline-strong bg-white px-3 text-sm text-body shadow-none outline-none focus:border-[#F58220] focus:ring-2 focus:ring-[#F58220]/20 sm:min-w-[150px]"
                             />
                             <input
                                 type="date"
@@ -305,12 +305,12 @@ function DashboardHeader({ filters }: { filters: DashboardFilters }) {
                                 onChange={(event) =>
                                     setDateTo(event.target.value)
                                 }
-                                className="h-9 w-full cursor-pointer rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 shadow-none outline-none focus:border-[#B98B63] focus:ring-2 focus:ring-[#B98B63]/20 sm:min-w-[150px]"
+                                className="h-9 w-full cursor-pointer rounded-[6px] border border-hairline-strong bg-white px-3 text-sm text-body shadow-none outline-none focus:border-[#F58220] focus:ring-2 focus:ring-[#F58220]/20 sm:min-w-[150px]"
                             />
                             <Button
                                 type="submit"
                                 variant="outline"
-                                className="h-9 w-full rounded-lg border-zinc-200 bg-white px-4 text-zinc-600 shadow-none hover:bg-zinc-50 hover:text-zinc-800 active:scale-[0.98] sm:w-auto"
+                                className="h-9 w-full rounded-[6px] border-hairline-strong bg-white px-4 text-body shadow-none hover:bg-surface-soft hover:text-ink active:scale-[0.98] sm:w-auto"
                             >
                                 <CalendarDays
                                     className="size-4"
@@ -323,7 +323,7 @@ function DashboardHeader({ filters }: { filters: DashboardFilters }) {
                 </form>
                 <Button
                     asChild
-                    className="h-9 w-full rounded-lg bg-[#B98B63] px-4 text-white shadow-none hover:bg-[#9A6B45] active:scale-[0.98] sm:w-auto"
+                    className="h-10 w-full rounded-[6px] bg-primary px-5 text-[12px] font-semibold tracking-[0.08em] text-white uppercase shadow-none hover:bg-[#E67312] active:scale-[0.98] sm:w-auto"
                 >
                     <Link href="/admin/orders">
                         View Orders
@@ -337,7 +337,7 @@ function DashboardHeader({ filters }: { filters: DashboardFilters }) {
 
 function StatCards({ stats }: { stats: ReturnType<typeof dashboardStats> }) {
     return (
-        <section className="grid grid-cols-1 divide-y divide-zinc-200 overflow-hidden rounded-2xl border border-zinc-200 bg-white sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-4">
+        <section className="grid grid-cols-1 divide-y divide-hairline-strong overflow-hidden rounded-[8px] border border-hairline-strong bg-white sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-4">
             {stats.map((stat) => {
                 const Icon = stat.icon;
 
@@ -345,23 +345,23 @@ function StatCards({ stats }: { stats: ReturnType<typeof dashboardStats> }) {
                     <Link
                         key={stat.label}
                         href={stat.href}
-                        className="block px-4 py-4 transition-colors hover:bg-zinc-50/70 sm:px-5 sm:py-5"
+                        className="block px-4 py-4 transition-colors hover:bg-primary-soft sm:px-5 sm:py-5"
                     >
                         <div className="flex items-start justify-between gap-4">
-                            <div className="flex size-9 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-500">
+                            <div className="flex size-9 items-center justify-center rounded-[6px] border border-hairline-strong bg-surface-soft text-muted-foreground">
                                 <Icon className="size-5" strokeWidth={1.7} />
                             </div>
-                            <span className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-[11px] font-medium text-zinc-500">
+                            <span className="rounded-full border border-hairline-strong bg-surface-soft px-3 py-1 text-[11px] font-medium text-muted-foreground">
                                 Today
                             </span>
                         </div>
-                        <p className="mt-4 text-sm font-semibold text-zinc-600 sm:mt-5">
+                        <p className="mt-4 text-sm font-semibold text-body sm:mt-5">
                             {stat.label}
                         </p>
-                        <p className="mt-2 text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">
+                        <p className="mt-2 text-2xl font-bold tracking-tight text-ink sm:text-3xl">
                             {stat.value}
                         </p>
-                        <p className="mt-2 text-sm text-zinc-400">
+                        <p className="mt-2 text-sm text-muted-foreground">
                             {stat.note}
                         </p>
                     </Link>
@@ -379,7 +379,7 @@ function StatusSummary({
     shippingSummary: SummaryMetric[];
 }) {
     return (
-        <section className="grid grid-cols-1 gap-4 border-b border-zinc-200 pb-6 lg:grid-cols-2 lg:gap-8">
+        <section className="grid grid-cols-1 gap-4 border-b border-hairline-strong pb-6 lg:grid-cols-2 lg:gap-8">
             <MiniSummaryCard
                 icon={Banknote}
                 items={paymentSummary}
@@ -404,22 +404,22 @@ function MiniSummaryCard({
     title: string;
 }) {
     return (
-        <article className="rounded-2xl border border-zinc-200 p-4 sm:p-5">
+        <article className="rounded-[8px] border border-hairline-strong p-4 sm:p-5">
             <div className="mb-4 flex items-center gap-3">
-                <div className="flex size-8 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-500">
+                <div className="flex size-8 items-center justify-center rounded-[6px] border border-hairline-strong bg-surface-soft text-muted-foreground">
                     <Icon className="size-4" strokeWidth={1.7} />
                 </div>
-                <h2 className="text-sm font-semibold text-zinc-800">{title}</h2>
+                <h2 className="text-sm font-semibold text-ink">{title}</h2>
             </div>
-            <div className="grid grid-cols-2 gap-y-3 border-t border-zinc-200 pt-3 sm:grid-cols-4 sm:divide-x sm:divide-zinc-200">
+            <div className="grid grid-cols-2 gap-y-3 border-t border-hairline-strong pt-3 sm:grid-cols-4 sm:divide-x sm:divide-hairline-strong">
                 {items.map((item) => (
                     <Link
                         key={item.label}
                         href={summaryHref(item.label)}
-                        className="block px-2 transition-colors first:pl-0 hover:bg-zinc-50/70 sm:px-4 sm:last:pr-0"
+                        className="block px-2 transition-colors first:pl-0 hover:bg-primary-soft sm:px-4 sm:last:pr-0"
                     >
-                        <p className="text-xs text-zinc-400">{item.label}</p>
-                        <p className="mt-1 text-xl font-bold tracking-tight text-zinc-900">
+                        <p className="text-xs text-muted-foreground">{item.label}</p>
+                        <p className="mt-1 text-xl font-bold tracking-tight text-ink">
                             {item.value}
                         </p>
                     </Link>
@@ -431,32 +431,32 @@ function MiniSummaryCard({
 
 function SalesTrendCard({ data }: { data: ChartPoint[] }) {
     return (
-        <section className="rounded-2xl border border-zinc-200 p-4 sm:p-5">
+        <section className="rounded-[8px] border border-hairline-strong p-4 sm:p-5">
             <SectionHeader
                 subtitle="Revenue and orders from the last 7 days"
                 title="Sales Trend"
             />
 
-            <div className="mt-5 h-[240px] border-y border-zinc-200 bg-zinc-50/30 py-4 sm:h-[310px] sm:py-5">
+            <div className="mt-5 h-[240px] border-y border-hairline-strong bg-surface-soft py-4 sm:h-[310px] sm:py-5">
                 <ResponsiveContainer height="100%" width="100%">
                     <BarChart
                         data={data}
                         margin={{ left: 6, right: 8, top: 12 }}
                     >
                         <CartesianGrid
-                            stroke="#f4f4f5"
+                            stroke="#e5e5e5"
                             strokeDasharray="3 3"
                             vertical={false}
                         />
                         <XAxis
                             axisLine={false}
                             dataKey="date"
-                            tick={{ fill: '#a1a1aa', fontSize: 11 }}
+                            tick={{ fill: '#707070', fontSize: 11 }}
                             tickLine={false}
                         />
                         <YAxis
                             axisLine={false}
-                            tick={{ fill: '#a1a1aa', fontSize: 11 }}
+                            tick={{ fill: '#707070', fontSize: 11 }}
                             tickFormatter={(value) =>
                                 `Rp ${Number(value) / 1000000}m`
                             }
@@ -466,20 +466,20 @@ function SalesTrendCard({ data }: { data: ChartPoint[] }) {
                         <Tooltip
                             contentStyle={{
                                 background: '#ffffff',
-                                border: '1px solid #e4e4e7',
-                                borderRadius: 18,
+                                border: '1px solid #cfcfcf',
+                                borderRadius: 8,
                                 boxShadow: '0 10px 20px -16px rgba(0,0,0,0.3)',
-                                color: '#18181b',
+                                color: '#1A1A1A',
                             }}
                             formatter={(value) => [
                                 formatCurrency(Number(value)),
                                 'Revenue',
                             ]}
-                            labelStyle={{ color: '#71717a' }}
+                            labelStyle={{ color: '#707070' }}
                         />
                         <Bar
                             dataKey="revenue"
-                            fill="#151515"
+                            fill="#F58220"
                             radius={[12, 12, 4, 4]}
                         />
                     </BarChart>
@@ -491,33 +491,33 @@ function SalesTrendCard({ data }: { data: ChartPoint[] }) {
 
 function OrdersNeedAttention({ orders }: { orders: AttentionOrder[] }) {
     return (
-        <section className="rounded-2xl border border-zinc-200 p-4 sm:p-5">
+        <section className="rounded-[8px] border border-hairline-strong p-4 sm:p-5">
             <SectionHeader
                 icon={AlertTriangle}
                 subtitle="Admin actions with highest priority"
                 title="Orders Need Attention"
             />
 
-            <div className="mt-5 divide-y divide-zinc-200 border-y border-zinc-200">
+            <div className="mt-5 divide-y divide-hairline-strong border-y border-hairline-strong">
                 {orders.map((order) => (
                     <article
                         key={order.id}
-                        className="-mx-3 px-3 py-4 transition-colors hover:bg-zinc-50/70"
+                        className="-mx-3 px-3 py-4 transition-colors hover:bg-primary-soft"
                     >
                         <div className="flex items-start justify-between gap-3">
                             <div>
                                 <Link
                                     href={`/admin/orders/${order.id}`}
-                                    className="text-sm font-semibold text-zinc-900 transition-colors hover:text-[#151515]"
+                                    className="text-sm font-semibold text-ink transition-colors hover:text-[#1A1A1A]"
                                 >
                                     {order.order_number}
                                 </Link>
-                                <p className="mt-1 text-sm text-zinc-500">
+                                <p className="mt-1 text-sm text-muted-foreground">
                                     Customer:{' '}
                                     {order.user_id ? (
                                         <Link
                                             href={`/admin/customers/${order.user_id}`}
-                                            className="transition-colors hover:text-[#151515]"
+                                            className="transition-colors hover:text-[#1A1A1A]"
                                         >
                                             {order.customer_name}
                                         </Link>
@@ -533,7 +533,7 @@ function OrdersNeedAttention({ orders }: { orders: AttentionOrder[] }) {
                             <Button
                                 asChild
                                 variant="outline"
-                                className="h-8 rounded-lg border-zinc-200 bg-white px-3 text-xs text-zinc-600 shadow-none hover:bg-zinc-50 active:scale-[0.98]"
+                                className="h-8 rounded-[6px] border-hairline-strong bg-white px-3 text-xs text-body shadow-none hover:bg-surface-soft active:scale-[0.98]"
                             >
                                 <Link href={`/admin/orders/${order.id}`}>
                                     {order.action}
@@ -543,7 +543,7 @@ function OrdersNeedAttention({ orders }: { orders: AttentionOrder[] }) {
                     </article>
                 ))}
                 {orders.length === 0 && (
-                    <p className="py-5 text-sm text-zinc-400">
+                    <p className="py-5 text-sm text-muted-foreground">
                         No orders need action right now.
                     </p>
                 )}
@@ -554,7 +554,7 @@ function OrdersNeedAttention({ orders }: { orders: AttentionOrder[] }) {
 
 function RecentOrdersTable({ orders }: { orders: RecentOrder[] }) {
     return (
-        <section className="rounded-2xl border border-zinc-200 p-4 sm:p-5">
+        <section className="rounded-[8px] border border-hairline-strong p-4 sm:p-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <SectionHeader
                     subtitle="Latest activity from checkout"
@@ -563,15 +563,15 @@ function RecentOrdersTable({ orders }: { orders: RecentOrder[] }) {
                 <Button
                     asChild
                     variant="outline"
-                    className="h-9 w-full rounded-lg border-zinc-200 bg-white px-4 text-zinc-600 shadow-none hover:bg-zinc-50 sm:w-auto"
+                    className="h-9 w-full rounded-[6px] border-hairline-strong bg-white px-4 text-body shadow-none hover:bg-surface-soft sm:w-auto"
                 >
                     <Link href="/admin/orders">Open Orders</Link>
                 </Button>
             </div>
 
-            <div className="mt-5 overflow-x-auto rounded-xl border-y border-zinc-200">
+            <div className="mt-5 overflow-x-auto rounded-[8px] border-y border-hairline-strong">
                 <table className="w-full min-w-[760px] text-left text-sm">
-                    <thead className="border-b border-zinc-200 bg-zinc-50/70 text-xs tracking-wider text-zinc-500 uppercase">
+                    <thead className="border-b border-hairline-strong bg-surface-soft text-xs tracking-wider text-muted-foreground uppercase">
                         <tr>
                             {[
                                 'Order',
@@ -591,17 +591,17 @@ function RecentOrdersTable({ orders }: { orders: RecentOrder[] }) {
                             ))}
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-zinc-200">
+                    <tbody className="divide-y divide-hairline-strong">
                         {orders.map((order, index) => (
                             <tr
                                 key={`${order.order_number}-${index}`}
-                                className="transition-colors hover:bg-zinc-50/70"
+                                className="transition-colors hover:bg-primary-soft"
                             >
-                                <td className="py-4 pr-5 pl-4 font-semibold text-zinc-900">
+                                <td className="py-4 pr-5 pl-4 font-semibold text-ink">
                                     {order.id ? (
                                         <Link
                                             href={`/admin/orders/${order.id}`}
-                                            className="transition-colors hover:text-[#151515]"
+                                            className="transition-colors hover:text-[#1A1A1A]"
                                         >
                                             {order.order_number}
                                         </Link>
@@ -609,11 +609,11 @@ function RecentOrdersTable({ orders }: { orders: RecentOrder[] }) {
                                         order.order_number
                                     )}
                                 </td>
-                                <td className="py-4 pr-5 text-zinc-600">
+                                <td className="py-4 pr-5 text-body">
                                     {order.user_id ? (
                                         <Link
                                             href={`/admin/customers/${order.user_id}`}
-                                            className="transition-colors hover:text-[#151515]"
+                                            className="transition-colors hover:text-[#1A1A1A]"
                                         >
                                             {order.customer_name}
                                         </Link>
@@ -632,10 +632,10 @@ function RecentOrdersTable({ orders }: { orders: RecentOrder[] }) {
                                         label={order.shipping_status}
                                     />
                                 </td>
-                                <td className="py-4 pr-5 font-semibold text-zinc-900">
+                                <td className="py-4 pr-5 font-semibold text-ink">
                                     {formatCurrency(order.grand_total)}
                                 </td>
-                                <td className="py-4 text-zinc-400">
+                                <td className="py-4 text-muted-foreground">
                                     {order.created_at ?? 'Today'}
                                 </td>
                             </tr>
@@ -643,7 +643,7 @@ function RecentOrdersTable({ orders }: { orders: RecentOrder[] }) {
                         {orders.length === 0 && (
                             <tr>
                                 <td
-                                    className="px-4 py-8 text-center text-sm text-zinc-400"
+                                    className="px-4 py-8 text-center text-sm text-muted-foreground"
                                     colSpan={7}
                                 >
                                     No recent orders found.
@@ -659,7 +659,7 @@ function RecentOrdersTable({ orders }: { orders: RecentOrder[] }) {
 
 function LowStockProductsCard({ products }: { products: LowStockVariant[] }) {
     return (
-        <section className="rounded-2xl border border-zinc-200 p-4 sm:p-5">
+        <section className="rounded-[8px] border border-hairline-strong p-4 sm:p-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <SectionHeader
                     icon={Box}
@@ -669,22 +669,22 @@ function LowStockProductsCard({ products }: { products: LowStockVariant[] }) {
                 <Button
                     asChild
                     variant="outline"
-                    className="h-9 w-full rounded-lg border-zinc-200 bg-white px-4 text-zinc-600 shadow-none hover:bg-zinc-50 sm:w-auto"
+                    className="h-9 w-full rounded-[6px] border-hairline-strong bg-white px-4 text-body shadow-none hover:bg-surface-soft sm:w-auto"
                 >
                     <Link href="/admin/stock">Manage Stock</Link>
                 </Button>
             </div>
 
-            <div className="mt-5 divide-y divide-zinc-200 border-y border-zinc-200">
+            <div className="mt-5 divide-y divide-hairline-strong border-y border-hairline-strong">
                 {products.map((product, index) => {
                     const status = stockStatus(product.available_stock);
 
                     return (
                         <article
                             key={`${product.product_name}-${index}`}
-                            className="-mx-3 flex flex-col gap-3 px-3 py-4 transition-colors hover:bg-zinc-50/70 sm:flex-row sm:items-center sm:gap-4"
+                            className="-mx-3 flex flex-col gap-3 px-3 py-4 transition-colors hover:bg-primary-soft sm:flex-row sm:items-center sm:gap-4"
                         >
-                            <div className="flex size-10 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-500">
+                            <div className="flex size-10 items-center justify-center rounded-[6px] border border-hairline-strong bg-surface-soft text-muted-foreground">
                                 <PackageCheck
                                     className="size-5"
                                     strokeWidth={1.7}
@@ -694,18 +694,18 @@ function LowStockProductsCard({ products }: { products: LowStockVariant[] }) {
                                 {product.product_id ? (
                                     <Link
                                         href={`/admin/products/${product.product_id}`}
-                                        className="block truncate text-sm font-semibold text-zinc-900 transition-colors hover:text-[#151515]"
+                                        className="block truncate text-sm font-semibold text-ink transition-colors hover:text-[#1A1A1A]"
                                     >
                                         {product.product_name ??
                                             'Unnamed Product'}
                                     </Link>
                                 ) : (
-                                    <p className="truncate text-sm font-semibold text-zinc-900">
+                                    <p className="truncate text-sm font-semibold text-ink">
                                         {product.product_name ??
                                             'Unnamed Product'}
                                     </p>
                                 )}
-                                <p className="mt-1 text-xs text-zinc-400">
+                                <p className="mt-1 text-xs text-muted-foreground">
                                     {[
                                         product.color_name,
                                         product.size && `Size ${product.size}`,
@@ -718,12 +718,12 @@ function LowStockProductsCard({ products }: { products: LowStockVariant[] }) {
                                 {product.id ? (
                                     <Link
                                         href={`/admin/product-variants/${product.id}/stock-adjustment`}
-                                        className="text-sm font-semibold text-zinc-900 transition-colors hover:text-[#151515]"
+                                        className="text-sm font-semibold text-ink transition-colors hover:text-[#1A1A1A]"
                                     >
                                         Stock: {product.available_stock}
                                     </Link>
                                 ) : (
-                                    <p className="text-sm font-semibold text-zinc-900">
+                                    <p className="text-sm font-semibold text-ink">
                                         Stock: {product.available_stock}
                                     </p>
                                 )}
@@ -735,7 +735,7 @@ function LowStockProductsCard({ products }: { products: LowStockVariant[] }) {
                     );
                 })}
                 {products.length === 0 && (
-                    <p className="py-5 text-sm text-zinc-400">
+                    <p className="py-5 text-sm text-muted-foreground">
                         No low stock products right now.
                     </p>
                 )}
@@ -757,13 +757,13 @@ function SectionHeader({
         <div>
             <div className="flex items-center gap-2">
                 {Icon && (
-                    <Icon className="size-4 text-[#151515]" strokeWidth={1.7} />
+                    <Icon className="size-4 text-[#1A1A1A]" strokeWidth={1.7} />
                 )}
-                <h2 className="text-lg font-semibold tracking-tight text-zinc-900">
+                <h2 className="text-lg font-semibold tracking-tight text-ink">
                     {title}
                 </h2>
             </div>
-            <p className="mt-1 text-sm text-zinc-400">{subtitle}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
         </div>
     );
 }
@@ -773,7 +773,7 @@ function StatusBadge({ label }: { label: string }) {
     const toneClasses: Record<BadgeTone, string> = {
         danger: 'border-red-100 bg-red-50 text-red-600',
         info: 'border-blue-200 bg-blue-50 text-blue-700',
-        neutral: 'border-zinc-200 bg-zinc-50 text-zinc-500',
+        neutral: 'border-hairline-strong bg-surface-soft text-muted-foreground',
         success: 'border-emerald-100 bg-emerald-50 text-emerald-700',
         warning: 'border-amber-200 bg-amber-50 text-amber-700',
     };

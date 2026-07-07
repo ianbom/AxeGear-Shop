@@ -51,7 +51,7 @@ const adminNavGroups: NavGroup[] = [
         title: 'Ringkasan',
         items: [
             {
-                title: 'Dasbor Admin',
+                title: 'Dashboard',
                 href: '/admin/dashboard',
                 icon: LayoutGrid,
             },
@@ -220,15 +220,14 @@ export function AppSidebar() {
     const homeHref = isAdmin ? '/admin/dashboard' : dashboard();
 
     return (
-        <Sidebar collapsible="icon" variant="sidebar">
-            <SidebarHeader>
+        <Sidebar collapsible="icon" variant="sidebar" className="border-r border-ink/15">
+            <SidebarHeader className="border-b border-ink/15 p-3">
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild>
+                        <SidebarMenuButton size="lg" asChild className="h-14 rounded-[6px] text-white hover:bg-ink hover:text-white data-[active=true]:bg-ink">
                             <Link href={homeHref} prefetch>
-                                <AppLogo className="h-9 brightness-100 invert-0 group-data-[collapsible=icon]:h-8" />
-                                <span className="font-semibold group-data-[collapsible=icon]:hidden">
-                                    Dasbor Admin
+                                <span className="text-[15px] font-semibold tracking-[-0.03em] text-white uppercase group-data-[collapsible=icon]:hidden">
+                                    Dashboard AxeGear
                                 </span>
                             </Link>
                         </SidebarMenuButton>
@@ -236,7 +235,7 @@ export function AppSidebar() {
                 </SidebarMenu>
             </SidebarHeader>
 
-            <SidebarContent>
+            <SidebarContent className="gap-1 px-2 py-3">
                 {isAdmin ? (
                     <NavMain groups={adminNavGroups} />
                 ) : (
@@ -244,7 +243,7 @@ export function AppSidebar() {
                 )}
             </SidebarContent>
 
-            <SidebarFooter>
+            <SidebarFooter className="border-t border-ink/15 p-3">
                 <NavUser />
             </SidebarFooter>
         </Sidebar>
