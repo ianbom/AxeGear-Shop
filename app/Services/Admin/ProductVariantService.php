@@ -96,7 +96,7 @@ class ProductVariantService
         $variant->load('product:id,name');
 
         return [
-            ...$variant->only(['id', 'product_id', 'sku', 'color_name', 'color_hex', 'size', 'regular_price', 'stock', 'reserved_stock', 'image_url', 'is_active']),
+            ...$variant->only(['id', 'product_id', 'sku', 'barcode', 'variant_name', 'color_name', 'color_hex', 'size', 'package_type', 'regular_price', 'sale_price', 'stock', 'reserved_stock', 'weight', 'length', 'width', 'height', 'image_url', 'is_active']),
             'product' => $variant->product?->name,
         ];
     }
@@ -108,12 +108,20 @@ class ProductVariantService
             'product_id' => $variant->product_id,
             'product' => $variant->product?->name,
             'sku' => $variant->sku,
+            'barcode' => $variant->barcode,
+            'variant_name' => $variant->variant_name,
             'color_name' => $variant->color_name,
             'color_hex' => $variant->color_hex,
             'size' => $variant->size,
+            'package_type' => $variant->package_type,
             'regular_price' => $variant->regular_price,
+            'sale_price' => $variant->sale_price,
             'stock' => $variant->stock,
             'reserved_stock' => $variant->reserved_stock,
+            'weight' => $variant->weight,
+            'length' => $variant->length,
+            'width' => $variant->width,
+            'height' => $variant->height,
             'available_stock' => $variant->stock - $variant->reserved_stock,
             'image_url' => $variant->image_url,
             'is_active' => $variant->is_active,

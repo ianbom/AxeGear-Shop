@@ -44,11 +44,6 @@ class OrderItem extends Model
         return $this->belongsTo(ProductVariant::class, 'product_variant_id');
     }
 
-    public function inventoryReservations(): HasMany
-    {
-        return $this->hasMany(InventoryReservation::class);
-    }
-
     public function reviews(): HasMany
     {
         return $this->hasMany(ProductReview::class);

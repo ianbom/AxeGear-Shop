@@ -58,12 +58,20 @@ type ProductImageRow = ProductImagePayload & {
 type ProductVariantPayload = {
     id?: number;
     sku: string;
+    barcode: string;
+    variant_name: string;
     color_name: string;
     color_hex: string;
     size: string;
-    additional_price: string | number;
+    package_type: string;
+    regular_price: string | number;
+    sale_price: string | number;
     stock: string | number;
     reserved_stock: string | number;
+    weight: string | number;
+    length: string | number;
+    width: string | number;
+    height: string | number;
     image_url: string;
     is_active: boolean;
 };
@@ -76,11 +84,13 @@ type ProductFormData = {
     name: string;
     slug: string;
     sku: string;
+    brand_name: string;
+    product_line: string;
+    style_name: string;
     short_description: string;
     description: string;
-    material: string;
-    care_instruction: string;
-    base_price: string | number;
+    stock_status: string;
+    regular_price: string | number;
     sale_price: string | number;
     weight: string | number;
     length: string | number;
@@ -129,12 +139,20 @@ const blankImage = (): ProductImageRow => ({
 
 const blankVariant = (): ProductVariantRow => ({
     sku: '',
+    barcode: '',
+    variant_name: 'Default Title',
     color_name: '',
     color_hex: '',
     size: '',
-    additional_price: 0,
+    package_type: '',
+    regular_price: '',
+    sale_price: '',
     stock: 0,
     reserved_stock: 0,
+    weight: '',
+    length: '',
+    width: '',
+    height: '',
     image_url: '',
     image: null,
     is_active: true,
@@ -477,11 +495,13 @@ export default function ProductForm({ mode, product, options }: Props) {
             name: product?.name ?? '',
             slug: product?.slug ?? '',
             sku: product?.sku ?? '',
+            brand_name: product?.brand_name ?? 'Axegear',
+            product_line: product?.product_line ?? '',
+            style_name: product?.style_name ?? '',
             short_description: product?.short_description ?? '',
             description: product?.description ?? '',
-            material: product?.material ?? '',
-            care_instruction: product?.care_instruction ?? '',
-            base_price: product?.base_price ?? '',
+            stock_status: product?.stock_status ?? 'in_stock',
+            regular_price: product?.regular_price ?? '',
             sale_price: product?.sale_price ?? '',
             weight: product?.weight ?? '',
             length: product?.length ?? '',
@@ -877,6 +897,57 @@ export default function ProductForm({ mode, product, options }: Props) {
                                             </FieldGroup>
                                         </FieldRow>
 
+                                        <FieldRow cols={3}>
+                                            <FieldGroup
+                                                label="Brand"
+                                                error={errors.brand_name}
+                                            >
+                                                <Input
+                                                    value={data.brand_name}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'brand_name',
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    placeholder="Axegear"
+                                                    className="h-9 border-zinc-200 text-sm focus:border-[#151515] focus:ring-[#151515]"
+                                                />
+                                            </FieldGroup>
+                                            <FieldGroup
+                                                label="Product Line"
+                                                error={errors.product_line}
+                                            >
+                                                <Input
+                                                    value={data.product_line}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'product_line',
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    placeholder="Hydropack"
+                                                    className="h-9 border-zinc-200 text-sm focus:border-[#151515] focus:ring-[#151515]"
+                                                />
+                                            </FieldGroup>
+                                            <FieldGroup
+                                                label="Style Name"
+                                                error={errors.style_name}
+                                            >
+                                                <Input
+                                                    value={data.style_name}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'style_name',
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    placeholder="Trail Enduro"
+                                                    className="h-9 border-zinc-200 text-sm focus:border-[#151515] focus:ring-[#151515]"
+                                                />
+                                            </FieldGroup>
+                                        </FieldRow>
+
                                         <FieldGroup
                                             label="Short Description"
                                             required
@@ -918,58 +989,10 @@ export default function ProductForm({ mode, product, options }: Props) {
                                     </div>
                                 </SectionCard>
 
-                                {/* 2. Material & Care */}
-                                <SectionCard
-                                    title="Material & Care"
-                                    description="Material composition and care instructions"
-                                    icon={
-                                        <Info className="h-4 w-4 text-zinc-500" />
-                                    }
-                                >
-                                    <FieldRow cols={2}>
-                                        <FieldGroup
-                                            label="Material"
-                                            required
-                                            error={errors.material}
-                                            hint="e.g. 100% Premium Voile, Linen"
-                                        >
-                                            <Textarea
-                                                value={data.material}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        'material',
-                                                        e.target.value,
-                                                    )
-                                                }
-                                                placeholder="Describe material composition..."
-                                                className="min-h-[90px] resize-y border-zinc-200 text-sm focus:border-[#151515] focus:ring-[#151515]"
-                                            />
-                                        </FieldGroup>
-                                        <FieldGroup
-                                            label="Care Instruction"
-                                            required
-                                            error={errors.care_instruction}
-                                            hint="e.g. Hand wash cold, do not bleach"
-                                        >
-                                            <Textarea
-                                                value={data.care_instruction}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        'care_instruction',
-                                                        e.target.value,
-                                                    )
-                                                }
-                                                placeholder="Washing and care instructions..."
-                                                className="min-h-[90px] resize-y border-zinc-200 text-sm focus:border-[#151515] focus:ring-[#151515]"
-                                            />
-                                        </FieldGroup>
-                                    </FieldRow>
-                                </SectionCard>
-
-                                {/* 3. Pricing */}
+                                {/* 2. Pricing */}
                                 <SectionCard
                                     title="Pricing"
-                                    description="Set base and sale prices (IDR)"
+                                    description="Set regular and sale prices (IDR)"
                                     icon={
                                         <DollarSign className="h-4 w-4 text-zinc-500" />
                                     }
@@ -977,17 +1000,17 @@ export default function ProductForm({ mode, product, options }: Props) {
                                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                                         <div className="space-y-4">
                                             <FieldGroup
-                                                label="Base Price (IDR)"
+                                                label="Regular Price (IDR)"
                                                 required
-                                                error={errors.base_price}
+                                                error={errors.regular_price}
                                             >
                                                 <Input
                                                     type="number"
                                                     min="0"
-                                                    value={data.base_price}
+                                                    value={data.regular_price}
                                                     onChange={(e) =>
                                                         setData(
-                                                            'base_price',
+                                                            'regular_price',
                                                             e.target.value,
                                                         )
                                                     }
@@ -998,7 +1021,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                             <FieldGroup
                                                 label="Sale Price (IDR)"
                                                 error={errors.sale_price}
-                                                hint="Must be lower than or equal to base price"
+                                                hint="Must be lower than or equal to regular price"
                                             >
                                                 <Input
                                                     type="number"
@@ -1024,12 +1047,12 @@ export default function ProductForm({ mode, product, options }: Props) {
                                             <div className="space-y-2">
                                                 <div className="flex items-center justify-between text-sm">
                                                     <span className="text-zinc-500">
-                                                        Base
+                                                        Regular
                                                     </span>
                                                     <span className="font-mono text-zinc-900">
                                                         IDR{' '}
                                                         {Number(
-                                                            data.base_price ||
+                                                            data.regular_price ||
                                                                 0,
                                                         ).toLocaleString(
                                                             'id-ID',
@@ -1059,7 +1082,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                             IDR{' '}
                                                             {Number(
                                                                 data.sale_price ||
-                                                                    data.base_price ||
+                                                                    data.regular_price ||
                                                                     0,
                                                             ).toLocaleString(
                                                                 'id-ID',
@@ -1070,7 +1093,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                 {data.sale_price &&
                                                     Number(data.sale_price) <
                                                         Number(
-                                                            data.base_price,
+                                                            data.regular_price,
                                                         ) && (
                                                         <div className="mt-1 flex items-center gap-1.5">
                                                             <Badge className="border-0 bg-emerald-100 text-[10px] font-medium text-emerald-700">
@@ -1080,7 +1103,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                                             data.sale_price,
                                                                         ) /
                                                                             Number(
-                                                                                data.base_price,
+                                                                                data.regular_price,
                                                                             )) *
                                                                         100,
                                                                 )}
@@ -1425,7 +1448,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                             Image
                                                         </th>
                                                         <th className="w-24 px-3 py-2.5 text-right text-[11px] font-medium text-zinc-500">
-                                                            Price Add.
+                                                            Price
                                                         </th>
                                                         <th className="w-20 px-3 py-2.5 text-right text-[11px] font-medium text-zinc-500">
                                                             Stock
@@ -1501,11 +1524,10 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                                 </td>
                                                                 <td className="px-3 py-2 text-right font-mono text-zinc-700">
                                                                     {Number(
-                                                                        variant.additional_price ||
+                                                                        variant.sale_price ||
+                                                                            variant.regular_price ||
                                                                             0,
-                                                                    ).toLocaleString(
-                                                                        'id-ID',
-                                                                    )}
+                                                                    ).toLocaleString('id-ID')}
                                                                 </td>
                                                                 <td className="px-3 py-2 text-right font-mono text-zinc-700">
                                                                     {
@@ -1871,6 +1893,37 @@ export default function ProductForm({ mode, product, options }: Props) {
                                             )}
                                         </div>
 
+                                        <div className="space-y-1.5">
+                                            <Label className="text-xs font-medium text-zinc-700">
+                                                Stock Status
+                                            </Label>
+                                            <select
+                                                value={data.stock_status}
+                                                onChange={(e) =>
+                                                    setData(
+                                                        'stock_status',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="h-9 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-900 shadow-sm focus:border-[#151515] focus:ring-1 focus:ring-[#151515] focus:outline-none"
+                                            >
+                                                <option value="in_stock">
+                                                    In Stock
+                                                </option>
+                                                <option value="out_of_stock">
+                                                    Out of Stock
+                                                </option>
+                                                <option value="preorder">
+                                                    Preorder
+                                                </option>
+                                            </select>
+                                            {errors.stock_status && (
+                                                <p className="text-[11px] text-red-500">
+                                                    {errors.stock_status}
+                                                </p>
+                                            )}
+                                        </div>
+
                                         <div className="space-y-1.5 rounded-lg border border-zinc-100 bg-zinc-50 p-3 text-[11px] text-zinc-500">
                                             <p>
                                                 <span className="font-semibold text-zinc-700">
@@ -2017,7 +2070,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                             <span className="text-xs text-zinc-400 line-through">
                                                                 IDR{' '}
                                                                 {Number(
-                                                                    data.base_price ||
+                                                                    data.regular_price ||
                                                                         0,
                                                                 ).toLocaleString(
                                                                     'id-ID',
@@ -2036,7 +2089,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                         <span className="text-sm font-bold text-zinc-900">
                                                             IDR{' '}
                                                             {Number(
-                                                                data.base_price ||
+                                                                data.regular_price ||
                                                                     0,
                                                             ).toLocaleString(
                                                                 'id-ID',
@@ -2110,9 +2163,9 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                 icon: (
                                                     <DollarSign className="h-3.5 w-3.5" />
                                                 ),
-                                                label: 'Base Price',
-                                                value: data.base_price
-                                                    ? `IDR ${Number(data.base_price).toLocaleString('id-ID')}`
+                                                label: 'Regular Price',
+                                                value: data.regular_price
+                                                    ? `IDR ${Number(data.regular_price).toLocaleString('id-ID')}`
                                                     : '—',
                                             },
                                             {
@@ -2222,6 +2275,35 @@ export default function ProductForm({ mode, product, options }: Props) {
                                         className="h-9 border-zinc-200 font-mono text-sm focus:border-[#151515] focus:ring-[#151515]"
                                     />
                                 </FieldGroup>
+                                <FieldGroup label="Barcode">
+                                    <Input
+                                        value={variantDraft.barcode}
+                                        onChange={(e) =>
+                                            setVariantDraft({
+                                                ...variantDraft,
+                                                barcode: e.target.value,
+                                            })
+                                        }
+                                        placeholder="Optional barcode"
+                                        className="h-9 border-zinc-200 text-sm focus:border-[#151515] focus:ring-[#151515]"
+                                    />
+                                </FieldGroup>
+                            </FieldRow>
+
+                            <FieldRow cols={3}>
+                                <FieldGroup label="Variant Name">
+                                    <Input
+                                        value={variantDraft.variant_name}
+                                        onChange={(e) =>
+                                            setVariantDraft({
+                                                ...variantDraft,
+                                                variant_name: e.target.value,
+                                            })
+                                        }
+                                        placeholder="Default Title"
+                                        className="h-9 border-zinc-200 text-sm focus:border-[#151515] focus:ring-[#151515]"
+                                    />
+                                </FieldGroup>
                                 <FieldGroup label="Size">
                                     <Input
                                         value={variantDraft.size}
@@ -2232,6 +2314,19 @@ export default function ProductForm({ mode, product, options }: Props) {
                                             })
                                         }
                                         placeholder="e.g. S, M, L, XL"
+                                        className="h-9 border-zinc-200 text-sm focus:border-[#151515] focus:ring-[#151515]"
+                                    />
+                                </FieldGroup>
+                                <FieldGroup label="Package Type">
+                                    <Input
+                                        value={variantDraft.package_type}
+                                        onChange={(e) =>
+                                            setVariantDraft({
+                                                ...variantDraft,
+                                                package_type: e.target.value,
+                                            })
+                                        }
+                                        placeholder="Bag, Bundle, Apparel"
                                         className="h-9 border-zinc-200 text-sm focus:border-[#151515] focus:ring-[#151515]"
                                     />
                                 </FieldGroup>
@@ -2285,17 +2380,30 @@ export default function ProductForm({ mode, product, options }: Props) {
                                 </FieldGroup>
                             </FieldRow>
 
-                            <FieldRow cols={3}>
-                                <FieldGroup label="Price Addition">
+                            <FieldRow cols={4}>
+                                <FieldGroup label="Regular Price">
                                     <Input
                                         type="number"
                                         min="0"
-                                        value={variantDraft.additional_price}
+                                        value={variantDraft.regular_price}
                                         onChange={(e) =>
                                             setVariantDraft({
                                                 ...variantDraft,
-                                                additional_price:
-                                                    e.target.value,
+                                                regular_price: e.target.value,
+                                            })
+                                        }
+                                        className="h-9 border-zinc-200 font-mono text-sm focus:border-[#151515] focus:ring-[#151515]"
+                                    />
+                                </FieldGroup>
+                                <FieldGroup label="Sale Price">
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        value={variantDraft.sale_price}
+                                        onChange={(e) =>
+                                            setVariantDraft({
+                                                ...variantDraft,
+                                                sale_price: e.target.value,
                                             })
                                         }
                                         className="h-9 border-zinc-200 font-mono text-sm focus:border-[#151515] focus:ring-[#151515]"
@@ -2329,6 +2437,25 @@ export default function ProductForm({ mode, product, options }: Props) {
                                         className="h-9 border-zinc-200 font-mono text-sm focus:border-[#151515] focus:ring-[#151515]"
                                     />
                                 </FieldGroup>
+                            </FieldRow>
+
+                            <FieldRow cols={4}>
+                                {(['weight', 'length', 'width', 'height'] as const).map((field) => (
+                                    <FieldGroup key={field} label={field === 'weight' ? 'Weight (g)' : `${field[0].toUpperCase()}${field.slice(1)} (cm)`}>
+                                        <Input
+                                            type="number"
+                                            min="0"
+                                            value={variantDraft[field]}
+                                            onChange={(e) =>
+                                                setVariantDraft({
+                                                    ...variantDraft,
+                                                    [field]: e.target.value,
+                                                })
+                                            }
+                                            className="h-9 border-zinc-200 font-mono text-sm focus:border-[#151515] focus:ring-[#151515]"
+                                        />
+                                    </FieldGroup>
+                                ))}
                             </FieldRow>
 
                             <FieldGroup

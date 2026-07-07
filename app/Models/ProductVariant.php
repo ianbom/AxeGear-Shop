@@ -21,12 +21,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'sale_price',
     'stock',
     'reserved_stock',
-    'desty_available_stock',
-    'desty_on_hand_stock',
-    'desty_reserved_stock',
-    'desty_last_synced_at',
-    'stock_source',
-    'allow_manual_stock_edit',
     'weight',
     'length',
     'width',
@@ -53,16 +47,6 @@ class ProductVariant extends Model
         return $this->belongsTo(Product::class);
     }
 
-    public function destyMappings(): HasMany
-    {
-        return $this->hasMany(DestyVariantMapping::class);
-    }
-
-    public function reservations(): HasMany
-    {
-        return $this->hasMany(InventoryReservation::class);
-    }
-
     public function stockLogs(): HasMany
     {
         return $this->hasMany(StockLog::class);
@@ -71,11 +55,6 @@ class ProductVariant extends Model
     protected function casts(): array
     {
         return [
-            'allow_manual_stock_edit' => 'boolean',
-            'desty_available_stock' => 'integer',
-            'desty_last_synced_at' => 'datetime',
-            'desty_on_hand_stock' => 'integer',
-            'desty_reserved_stock' => 'integer',
             'height' => 'integer',
             'is_active' => 'boolean',
             'length' => 'integer',

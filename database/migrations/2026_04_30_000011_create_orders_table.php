@@ -29,8 +29,6 @@ return new class extends Migration
             $table->string('order_status', 50)->default('pending_payment');
             $table->string('shipping_status', 50)->default('not_created');
             $table->string('source_channel', 50)->default('website');
-            $table->string('desty_sync_status', 50)->default('not_synced');
-            $table->timestamp('desty_synced_at')->nullable();
             $table->boolean('no_return_refund_agreed')->default(false);
             $table->timestamp('no_return_refund_agreed_at')->nullable();
             $table->text('notes')->nullable();
@@ -50,7 +48,6 @@ return new class extends Migration
             $table->index('order_status');
             $table->index('shipping_status');
             $table->index('source_channel');
-            $table->index('desty_sync_status');
         });
     }
 

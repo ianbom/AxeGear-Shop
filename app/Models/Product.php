@@ -53,11 +53,6 @@ class Product extends Model
         return $this->belongsToMany(Collection::class, 'product_collections')->withPivot('sort_order')->withTimestamps();
     }
 
-    public function destyMappings(): HasMany
-    {
-        return $this->hasMany(DestyProductMapping::class);
-    }
-
     public function images(): HasMany
     {
         return $this->hasMany(ProductImage::class)->orderBy('sort_order');
@@ -66,11 +61,6 @@ class Product extends Model
     public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class);
-    }
-
-    public function marketplaceLinks(): HasMany
-    {
-        return $this->hasMany(ProductMarketplaceLink::class);
     }
 
     public function primaryImage(): HasOne

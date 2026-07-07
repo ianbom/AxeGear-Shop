@@ -137,7 +137,7 @@ class AxeGearSeeder extends Seeder
             [
                 'name' => 'New Arrivals',
                 'slug' => 'new-arrivals',
-                'description' => 'Fresh AxeGear product drops sourced from the latest marketplace scrape.',
+                'description' => 'Fresh AxeGear product drops from the latest catalog.',
                 'banner_desktop_url' => 'https://orcapowergear.com/_next/image?url=%2Fasset%2Fbanner%2Fwebbanner-orca.webp&w=3840&q=75',
                 'banner_mobile_url' => 'https://orcapowergear.com/asset/teamlegion/legion1.jpg',
                 'sort_order' => 10,
@@ -236,11 +236,6 @@ class AxeGearSeeder extends Seeder
                     'sale_price' => $productData['sale_price'],
                     'stock' => $variant['stock'],
                     'reserved_stock' => 0,
-                    'desty_available_stock' => $variant['stock'],
-                    'desty_on_hand_stock' => $variant['stock'],
-                    'desty_reserved_stock' => 0,
-                    'stock_source' => 'manual',
-                    'allow_manual_stock_edit' => true,
                     'weight' => $productData['weight'],
                     'length' => $productData['length'],
                     'width' => $productData['width'],
@@ -541,5 +536,3 @@ class AxeGearSeeder extends Seeder
         return str_contains($lower, 'gloves') || str_contains($lower, 'sarung tangan');
     }
 }
-
-

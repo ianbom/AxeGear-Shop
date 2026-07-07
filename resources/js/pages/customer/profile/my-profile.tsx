@@ -361,9 +361,6 @@ function ProfileInfoCard({
                                 <Upload size={24} strokeWidth={1.7} />
                                 Klik untuk mengunggah
                             </span>
-                            <span className="text-xs font-medium text-[#707070]">
-                                atau seret file ke sini
-                            </span>
                         </button>
                     </div>
                     <input

@@ -48,7 +48,7 @@ interface Product {
     category: string | null;
     collection: string | null;
     thumbnail: string | null;
-    base_price: number;
+    regular_price: number;
     sale_price: number | null;
     total_stock: number;
     variants_count: number;
@@ -648,11 +648,11 @@ export default function ProductsIndex({
                                         p.total_stock > 0 && p.total_stock <= 5;
                                     const isOutOfStock = p.total_stock === 0;
                                     const discount =
-                                        p.sale_price && p.base_price > 0
+                                        p.sale_price && p.regular_price > 0
                                             ? Math.round(
                                                   (1 -
                                                       p.sale_price /
-                                                          p.base_price) *
+                                                          p.regular_price) *
                                                       100,
                                               )
                                             : null;
@@ -735,7 +735,7 @@ export default function ProductsIndex({
                                                             {fmt(p.sale_price)}
                                                         </span>
                                                         <span className="text-xs text-zinc-400 line-through">
-                                                            {fmt(p.base_price)}
+                                                            {fmt(p.regular_price)}
                                                         </span>
                                                         {discount && (
                                                             <span className="text-[10px] font-semibold text-red-500">
@@ -745,7 +745,7 @@ export default function ProductsIndex({
                                                     </div>
                                                 ) : (
                                                     <span className="text-sm font-semibold text-zinc-900">
-                                                        {fmt(p.base_price)}
+                                                        {fmt(p.regular_price)}
                                                     </span>
                                                 )}
                                             </td>

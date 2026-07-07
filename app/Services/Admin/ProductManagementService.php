@@ -196,7 +196,7 @@ class ProductManagementService
             ]),
             'collection_id' => $product->collections->first()?->id,
             'images' => $product->images->map->only(['id', 'image_url', 'alt_text', 'sort_order', 'is_primary'])->values(),
-            'variants' => $product->variants->map->only(['id', 'sku', 'barcode', 'variant_name', 'color_name', 'color_hex', 'size', 'package_type', 'regular_price', 'sale_price', 'stock', 'reserved_stock', 'image_url', 'is_active'])->values(),
+            'variants' => $product->variants->map->only(['id', 'sku', 'barcode', 'variant_name', 'color_name', 'color_hex', 'size', 'package_type', 'regular_price', 'sale_price', 'stock', 'reserved_stock', 'weight', 'length', 'width', 'height', 'image_url', 'is_active'])->values(),
         ];
     }
 
@@ -248,6 +248,10 @@ class ProductManagementService
                 'sale_price' => $variant['sale_price'] ?? null,
                 'stock' => $variant['stock'] ?? 0,
                 'reserved_stock' => $variant['reserved_stock'] ?? 0,
+                'weight' => $variant['weight'] ?? null,
+                'length' => $variant['length'] ?? null,
+                'width' => $variant['width'] ?? null,
+                'height' => $variant['height'] ?? null,
                 'image_url' => $uploadedImage
                     ? Storage::url($uploadedImage->storeAs($folder, $this->makeVariantFilename($variant['sku'], $index, $uploadedImage->getClientOriginalExtension()), 'public'))
                     : ($variant['image_url'] ?? null),

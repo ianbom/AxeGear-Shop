@@ -21,12 +21,20 @@ type Variant = {
     product_id: number;
     product: string | null;
     sku: string;
+    barcode: string | null;
+    variant_name: string | null;
     color_name: string | null;
     color_hex: string | null;
     size: string | null;
-    additional_price: string;
+    package_type: string | null;
+    regular_price: string | null;
+    sale_price: string | null;
     stock: number;
     reserved_stock: number;
+    weight: number | null;
+    length: number | null;
+    width: number | null;
+    height: number | null;
     image_url: string | null;
     is_active: boolean;
 };
@@ -54,12 +62,20 @@ export default function ProductVariantForm({
         _method: isEdit ? 'PUT' : 'POST',
         product_id: variant?.product_id ?? selectedProductId ?? '',
         sku: variant?.sku ?? '',
+        barcode: variant?.barcode ?? '',
+        variant_name: variant?.variant_name ?? 'Default Title',
         color_name: variant?.color_name ?? '',
         color_hex: variant?.color_hex ?? '',
         size: variant?.size ?? '',
-        additional_price: variant?.additional_price ?? 0,
+        package_type: variant?.package_type ?? '',
+        regular_price: variant?.regular_price ?? '',
+        sale_price: variant?.sale_price ?? '',
         stock: variant?.stock ?? 0,
         reserved_stock: variant?.reserved_stock ?? 0,
+        weight: variant?.weight ?? '',
+        length: variant?.length ?? '',
+        width: variant?.width ?? '',
+        height: variant?.height ?? '',
         image: null as File | null,
         is_active: variant?.is_active ?? true,
     });
@@ -148,6 +164,32 @@ export default function ProductVariantForm({
                                     <InputError message={errors.sku} />
                                 </div>
                                 <div className="grid gap-2">
+                                    <Label htmlFor="barcode">Barcode</Label>
+                                    <Input
+                                        id="barcode"
+                                        value={data.barcode}
+                                        placeholder="Optional barcode"
+                                        onChange={(event) =>
+                                            setData('barcode', event.target.value)
+                                        }
+                                    />
+                                    <InputError message={errors.barcode} />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="variant_name">
+                                        Variant Name
+                                    </Label>
+                                    <Input
+                                        id="variant_name"
+                                        value={data.variant_name}
+                                        placeholder="Default Title"
+                                        onChange={(event) =>
+                                            setData('variant_name', event.target.value)
+                                        }
+                                    />
+                                    <InputError message={errors.variant_name} />
+                                </div>
+                                <div className="grid gap-2">
                                     <Label htmlFor="color_name">
                                         Color Name
                                     </Label>
@@ -199,22 +241,53 @@ export default function ProductVariantForm({
                                     />
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="additional_price">
-                                        Additional Price
+                                    <Label htmlFor="package_type">
+                                        Package Type
                                     </Label>
                                     <Input
-                                        id="additional_price"
+                                        id="package_type"
+                                        value={data.package_type}
+                                        placeholder="Bag, Bundle, Apparel"
+                                        onChange={(event) =>
+                                            setData('package_type', event.target.value)
+                                        }
+                                    />
+                                    <InputError message={errors.package_type} />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="regular_price">
+                                        Regular Price
+                                    </Label>
+                                    <Input
+                                        id="regular_price"
                                         type="number"
                                         min="0"
-                                        value={data.additional_price}
+                                        value={data.regular_price}
                                         placeholder="0"
                                         onChange={(event) =>
                                             setData(
-                                                'additional_price',
+                                                'regular_price',
                                                 event.target.value,
                                             )
                                         }
                                     />
+                                    <InputError message={errors.regular_price} />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="sale_price">
+                                        Sale Price
+                                    </Label>
+                                    <Input
+                                        id="sale_price"
+                                        type="number"
+                                        min="0"
+                                        value={data.sale_price}
+                                        placeholder="Leave empty for no sale"
+                                        onChange={(event) =>
+                                            setData('sale_price', event.target.value)
+                                        }
+                                    />
+                                    <InputError message={errors.sale_price} />
                                 </div>
                                 <div className="grid gap-2">
                                     <Label htmlFor="stock">Stock</Label>
@@ -254,6 +327,26 @@ export default function ProductVariantForm({
                                         message={errors.reserved_stock}
                                     />
                                 </div>
+                                {(['weight', 'length', 'width', 'height'] as const).map((field) => (
+                                    <div key={field} className="grid gap-2">
+                                        <Label htmlFor={field}>
+                                            {field === 'weight'
+                                                ? 'Weight (g)'
+                                                : `${field[0].toUpperCase()}${field.slice(1)} (cm)`}
+                                        </Label>
+                                        <Input
+                                            id={field}
+                                            type="number"
+                                            min="0"
+                                            value={data[field]}
+                                            placeholder="0"
+                                            onChange={(event) =>
+                                                setData(field, event.target.value)
+                                            }
+                                        />
+                                        <InputError message={errors[field]} />
+                                    </div>
+                                ))}
                             </div>
 
                             {/* Image Upload */}

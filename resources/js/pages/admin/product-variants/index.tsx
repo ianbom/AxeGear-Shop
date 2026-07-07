@@ -38,10 +38,14 @@ interface Variant {
     product_id: number;
     product: string | null;
     sku: string;
+    barcode: string | null;
+    variant_name: string | null;
     color_name: string | null;
     color_hex: string | null;
     size: string | null;
-    additional_price: string;
+    package_type: string | null;
+    regular_price: string | null;
+    sale_price: string | null;
     stock: number;
     reserved_stock: number;
     available_stock: number;
@@ -343,7 +347,7 @@ export default function ProductVariantsIndex({
                                         Color / Size
                                     </th>
                                     <th className="px-5 py-3 font-medium">
-                                        Pricing Add.
+                                        Price
                                     </th>
                                     <th className="px-5 py-3 font-medium">
                                         Stock Summary
@@ -431,7 +435,7 @@ export default function ProductVariantsIndex({
                                             </td>
                                             <td className="px-5 py-3">
                                                 <span className="font-medium text-zinc-900">
-                                                    {fmt(v.additional_price)}
+                                                    {fmt(v.sale_price ?? v.regular_price ?? 0)}
                                                 </span>
                                             </td>
                                             <td className="px-5 py-3">

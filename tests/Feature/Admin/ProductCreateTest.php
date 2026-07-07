@@ -101,14 +101,22 @@ it('creates a product with images, variants, and stock logs from the admin form 
 
     expect($variant)
         ->product_id->toBe($product->id)
+        ->barcode->toBe('899900000001')
+        ->variant_name->toBe('Black M')
         ->color_name->toBe('Black')
         ->color_hex->toBe('#000000')
         ->size->toBe('M')
+        ->package_type->toBe('Apparel')
         ->stock->toBe(12)
         ->reserved_stock->toBe(2)
         ->is_active->toBeTrue();
 
     expect((float) $variant->regular_price)->toBe(15000.00);
+    expect((float) $variant->sale_price)->toBe(12000.00);
+    expect($variant->weight)->toBe(510)
+        ->and($variant->length)->toBe(31)
+        ->and($variant->width)->toBe(26)
+        ->and($variant->height)->toBe(6);
     expect($variant->image_url)->toStartWith('/storage/product/gamis-syari-pita/variants/');
     Storage::disk('public')->assertExists(Str::after($variant->image_url, '/storage/'));
 
@@ -116,12 +124,20 @@ it('creates a product with images, variants, and stock logs from the admin form 
         'id' => $variant->id,
         'product_id' => $product->id,
         'sku' => 'GMS-001-BLK-M',
+        'barcode' => '899900000001',
+        'variant_name' => 'Black M',
         'color_name' => 'Black',
         'color_hex' => '#000000',
         'size' => 'M',
+        'package_type' => 'Apparel',
         'regular_price' => 15000,
+        'sale_price' => 12000,
         'stock' => 12,
         'reserved_stock' => 2,
+        'weight' => 510,
+        'length' => 31,
+        'width' => 26,
+        'height' => 6,
         'is_active' => true,
     ]);
 
@@ -174,12 +190,20 @@ function productPayload(Category $category, Collection $collection): array
         'variants' => [
             [
                 'sku' => 'GMS-001-BLK-M',
+                'barcode' => '899900000001',
+                'variant_name' => 'Black M',
                 'color_name' => 'Black',
                 'color_hex' => '#000000',
                 'size' => 'M',
+                'package_type' => 'Apparel',
                 'regular_price' => 15000,
+                'sale_price' => 12000,
                 'stock' => 12,
                 'reserved_stock' => 2,
+                'weight' => 510,
+                'length' => 31,
+                'width' => 26,
+                'height' => 6,
                 'image_url' => null,
                 'image' => UploadedFile::fake()->image('variant-black.jpg', 800, 1067),
                 'is_active' => true,

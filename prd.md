@@ -4,7 +4,7 @@
 **Tipe Dokumen:** Product Requirements Document (PRD)  
 **Versi:** 1.0  
 **Tanggal:** 12 Juni 2026  
-**Stack:** Laravel, Inertia.js, React, TypeScript, MySQL, Midtrans, Biteship, Desty Omni  
+**Stack:** Laravel, Inertia.js, React, TypeScript, MySQL, Midtrans, Biteship
 **Target Platform:** Web desktop dan mobile responsive
 
 ---
@@ -15,7 +15,7 @@ Website e-commerce Axegear adalah platform penjualan online resmi untuk produk a
 
 Website ini dibuat untuk memberikan pengalaman belanja langsung dari brand, tanpa hanya bergantung pada marketplace seperti Shopee dan Tokopedia. Website tetap menyediakan link marketplace sebagai opsi pembelian tambahan, tetapi checkout utama dapat dilakukan langsung di website.
 
-Website akan menggunakan Laravel sebagai backend utama, Inertia.js sebagai penghubung backend dan frontend, React TypeScript sebagai frontend, MySQL sebagai database, Midtrans sebagai payment gateway, Biteship sebagai shipping aggregator, dan Desty Omni sebagai sumber utama sinkronisasi stok.
+Website akan menggunakan Laravel sebagai backend utama, Inertia.js sebagai penghubung backend dan frontend, React TypeScript sebagai frontend, MySQL sebagai database, Midtrans sebagai payment gateway, Biteship sebagai shipping aggregator, dan sistem stok lokal sebagai sumber utama pengelolaan stok.
 
 ---
 
@@ -27,9 +27,9 @@ Tujuan utama website ini adalah:
 2. Memungkinkan customer membeli produk langsung melalui website.
 3. Mengintegrasikan pembayaran online menggunakan Midtrans.
 4. Mengintegrasikan pengiriman menggunakan Biteship.
-5. Menampilkan stok yang akurat dengan menjadikan Desty Omni sebagai master stock.
-6. Menghindari overselling akibat stok berbeda antara website, marketplace, dan Desty Omni.
-7. Memberikan admin panel untuk mengelola produk, kategori, collection, order, pembayaran, pengiriman, voucher, banner, halaman statis, dan integrasi.
+5. Menampilkan stok yang akurat dari data lokal website.
+6. Menghindari overselling dengan mekanisme `reserved_stock` saat checkout.
+7. Memberikan admin panel untuk mengelola produk, kategori, collection, order, pembayaran, pengiriman, voucher, banner, halaman statis, dan stok.
 8. Menyediakan fondasi database yang sederhana, scalable, dan sesuai kebutuhan toko Axegear.
 
 ---
@@ -80,7 +80,7 @@ Website mencakup:
 23. CMS pages.
 24. Payment webhook handling.
 25. Shipping webhook handling.
-26. Desty Omni stock mapping and sync logs.
+26. Stock adjustment and stock logs.
 27. Notification system.
 28. Wishlist.
 29. Product review.
@@ -97,7 +97,7 @@ Fitur berikut tidak wajib pada MVP pertama:
 6. Product comparison.
 7. Advanced recommendation engine.
 8. Mobile app native.
-9. Warehouse management internal selain Desty.
+9. Warehouse management internal kompleks.
 10. Full accounting system.
 11. ERP internal.
 12. Return/refund automation kompleks.
@@ -150,7 +150,7 @@ Kemampuan:
 - Mengelola collection.
 - Mengelola gambar produk.
 - Mengelola varian produk.
-- Melihat stok hasil sinkron Desty.
+- Melihat dan menyesuaikan stok produk.
 - Mengelola order.
 - Melihat pembayaran.
 - Membuat pengiriman Biteship.
@@ -170,7 +170,7 @@ Kemampuan tambahan:
 - Mengelola admin.
 - Mengelola konfigurasi integrasi Midtrans.
 - Mengelola konfigurasi integrasi Biteship.
-- Mengelola konfigurasi Desty Omni.
+- Mengelola konfigurasi stok dan site settings.
 - Mengatur site settings.
 - Melihat semua audit log.
 
@@ -199,7 +199,7 @@ Website harus menonjolkan:
 4. Pembayaran aman melalui Midtrans.
 5. Pengiriman fleksibel melalui Biteship.
 6. Opsi beli langsung di website atau marketplace.
-7. Stok lebih akurat karena terhubung dengan Desty Omni.
+7. Stok lebih akurat karena dikelola langsung dari admin website.
 8. Deskripsi produk lengkap dengan foto, spesifikasi, fitur, dan isi paket.
 
 ---
@@ -212,7 +212,7 @@ Website harus menonjolkan:
 - PHP 8.3+.
 - Laravel Breeze / Starter Kit React Inertia.
 - Laravel Queue untuk proses async.
-- Laravel Scheduler untuk sync berkala.
+- Laravel Scheduler untuk scheduled jobs.
 - Laravel Notifications untuk notifikasi internal.
 - Laravel Policies untuk authorization.
 - Laravel Form Request untuk validasi.
@@ -246,11 +246,12 @@ Website harus menonjolkan:
 - Biteship Tracking API.
 - Biteship webhook.
 
-### 8.6 Inventory Sync
+### 8.6 Inventory Management
 
-- Desty Omni API.
-- Desty as master stock.
-- Website stores stock snapshot only.
+- Stok dikelola lokal di database website.
+- `product_variants.stock` menjadi stok utama per SKU.
+- `product_variants.reserved_stock` digunakan untuk menahan stok sementara saat order belum selesai dibayar.
+- `stock_logs` mencatat perubahan stok manual dan pengurangan stok karena order.
 
 ### 8.7 Storage
 
@@ -267,13 +268,13 @@ Website harus menonjolkan:
 3. React TypeScript digunakan untuk UI yang modern dan typed.
 4. MySQL digunakan sebagai relational database.
 5. Product detail tidak dibuat banyak tabel; rich content disimpan di `products.description`.
-6. Stok utama berasal dari Desty Omni.
-7. Website tidak boleh menjadi master stock jika Desty aktif.
-8. Order yang sudah dibayar harus dikirim ke Desty.
-9. Jika sync Desty gagal, order tidak boleh hilang; status masuk `paid_pending_desty_sync` atau `sync_failed`.
+6. Stok utama berasal dari `product_variants.stock`.
+7. Website menjadi master stock untuk penjualan langsung.
+8. Order yang sudah dibayar mengurangi stok final.
+9. Jika pembayaran gagal atau expired, stok reservation harus dilepas.
 10. Semua webhook harus idempotent.
-11. Semua request penting ke Midtrans, Biteship, dan Desty harus dicatat dalam log.
-12. Proses berat seperti sync stok, create shipment, dan push order ke Desty harus menggunakan queue.
+11. Semua request penting ke Midtrans dan Biteship harus dicatat dalam log.
+12. Proses berat seperti create shipment dan webhook processing harus menggunakan queue.
 
 ---
 
@@ -326,7 +327,7 @@ Tabel utama:
 4. `product_collections`
 5. `product_images`
 6. `product_variants`
-7. `product_marketplace_links`
+7. `stock_logs`
 
 ### Requirement
 
@@ -340,8 +341,8 @@ Tabel utama:
 - Admin dapat mengatur harga normal dan harga sale.
 - Admin dapat mengisi deskripsi produk menggunakan Tiptap.js.
 - Admin dapat memasukkan spesifikasi, fitur, isi paket, dan best for langsung di deskripsi rich text.
-- Admin dapat memasukkan link Shopee, Tokopedia, TikTok Shop, atau marketplace lain.
-- Admin tidak boleh mengubah stok manual jika `stock_source = desty` dan `allow_manual_stock_edit = false`.
+- Admin dapat mengatur stok varian dari dashboard admin.
+- Setiap perubahan stok penting harus dicatat ke `stock_logs`.
 
 ### Contoh produk
 
@@ -362,11 +363,6 @@ Varian:
 - Hitam
 - Hitam + Water Bladder 2L
 - Army
-
-Marketplace Links:
-
-- Shopee
-- Tokopedia
 
 ---
 
@@ -427,23 +423,22 @@ Collection adalah grouping marketing atau campaign.
 
 ### Deskripsi
 
-Varian produk menyimpan SKU, harga varian, stok cache, dan mapping ke Desty.
+Varian produk menyimpan SKU, harga varian, stok utama, reserved stock, dan metadata varian.
 
 ### Requirement
 
 - Setiap produk minimal memiliki 1 varian.
 - Varian default bernama `Default Title` jika produk tidak memiliki variasi.
 - SKU varian wajib unik.
-- SKU varian harus cocok atau termapping dengan SKU Desty.
 - Stok ditampilkan berdasarkan `stock` pada `product_variants`.
-- `stock` adalah cache dari Desty, bukan master stock.
+- `stock` adalah master stock lokal website.
 - Saat checkout, sistem menggunakan `reserved_stock` untuk menahan stok sementara.
-- Jika Desty aktif, admin tidak boleh mengubah stok langsung dari website.
+- Admin dapat melakukan stock adjustment dan sistem mencatat perubahan ke `stock_logs`.
 
 ### Formula stok website
 
 ```text
-stock = desty_available_stock - reserved_stock
+available_stock = stock - reserved_stock
 ```
 
 Jika hasil kurang dari 0, tampilkan 0.
@@ -485,12 +480,12 @@ Checkout adalah proses customer memilih alamat, memilih kurir, membuat order, da
 7. Sistem menghitung subtotal, diskon, ongkir, biaya layanan, dan grand total.
 8. Customer menyetujui kebijakan toko.
 9. Sistem membuat order dengan status `pending_payment`.
-10. Sistem membuat inventory reservation.
+10. Sistem menaikkan `reserved_stock` pada varian terkait.
 11. Sistem membuat Snap token Midtrans.
 12. Customer membayar melalui Midtrans Snap.
 13. Midtrans mengirim webhook.
-14. Jika payment sukses, order menjadi `paid` atau `paid_pending_desty_sync`.
-15. Sistem push order ke Desty.
+14. Jika payment sukses, order menjadi `paid`.
+15. Sistem finalisasi stok dengan mengurangi `stock` dan `reserved_stock`.
 16. Sistem membuat shipment Biteship jika diperlukan.
 
 ### Requirement
@@ -501,7 +496,7 @@ Checkout adalah proses customer memilih alamat, memilih kurir, membuat order, da
 - Checkout wajib validasi stok terbaru.
 - Checkout harus menggunakan idempotency key untuk mencegah order dobel.
 - Setelah order dibuat, cart item yang sudah checkout dihapus.
-- Jika payment expired, inventory reservation dilepas.
+- Jika payment expired, `reserved_stock` dilepas.
 
 ---
 
@@ -574,59 +569,54 @@ Biteship digunakan untuk cek ongkir, membuat pengiriman, dan tracking paket.
 
 ---
 
-## 10.10 Desty Omni Integration
+## 10.10 Stock Management
 
 ### Deskripsi
 
-Desty Omni digunakan sebagai master stock dan sinkronisasi stok lintas channel.
+Stock management dikelola langsung di website menggunakan model stok lama: `stock`, `reserved_stock`, dan `stock_logs`.
 
 ### Prinsip
 
-- Desty adalah master stock.
-- Website adalah sales channel.
-- Website menyimpan stock snapshot.
-- SKU varian website harus termapping dengan SKU Desty.
-- Stok masuk dan stok keluar utama mengikuti Desty.
-- Order dari website harus dikirim ke Desty setelah payment sukses.
+- Website adalah master stock untuk checkout website.
+- Stok tersedia dihitung dari `stock - reserved_stock`.
+- `reserved_stock` hanya menahan stok sementara sampai payment selesai, gagal, atau expired.
+- Stok final dikurangi setelah payment sukses.
+- Semua perubahan stok penting harus tercatat di `stock_logs`.
 
 ### Requirement
 
-- Admin dapat menyimpan konfigurasi koneksi Desty.
-- Admin dapat mapping produk website ke produk Desty.
-- Admin dapat mapping varian website ke SKU Desty.
-- Sistem dapat melakukan pull stock dari Desty.
-- Sistem dapat menerima webhook Desty jika tersedia.
-- Sistem dapat push order website ke Desty.
-- Sistem mencatat semua sync job ke `desty_sync_jobs`.
-- Sistem mencatat semua webhook ke `desty_webhook_logs`.
-- Jika sync gagal, sistem retry melalui queue.
-- Jika order sudah paid tetapi gagal sync ke Desty, status order menjadi `paid_pending_desty_sync` atau `sync_failed`.
+- Admin dapat melihat stok total, reserved stock, dan available stock.
+- Admin dapat melakukan stock adjustment dari dashboard.
+- Sistem menolak adjustment yang membuat `stock < reserved_stock`.
+- Sistem mencatat stock adjustment manual ke `stock_logs`.
+- Saat checkout, sistem validasi stok terbaru dengan row lock.
+- Saat order dibuat, sistem menaikkan `reserved_stock`.
+- Saat payment sukses, sistem mengurangi `stock` dan `reserved_stock`.
+- Saat payment expired/cancelled/failed, sistem melepas `reserved_stock`.
 
 ### Flow stok masuk
 
-1. Admin update stok di Desty.
-2. Website pull stock atau menerima webhook.
-3. Website update `desty_available_stock`.
-4. Website update `stock`.
-5. Website mencatat `stock_logs` dengan source `desty`.
+1. Admin membuka halaman stock adjustment.
+2. Admin menambah stok varian.
+3. Website update `product_variants.stock`.
+4. Website mencatat perubahan ke `stock_logs`.
 
 ### Flow stok keluar website
 
 1. Customer checkout.
-2. Website reserve stok lokal.
-3. Customer bayar.
-4. Website push order ke Desty.
-5. Desty mengurangi stok pusat.
-6. Website sync ulang stok.
-7. Reservation menjadi finalized.
+2. Website validasi available stock.
+3. Website menaikkan `reserved_stock`.
+4. Customer bayar.
+5. Payment sukses dari Midtrans.
+6. Website mengurangi `stock` dan `reserved_stock`.
+7. Website mencatat pengurangan stok ke `stock_logs`.
 
 ### Flow payment expired
 
 1. Payment expired dari Midtrans.
 2. Order menjadi expired.
-3. Reservation dilepas.
+3. Website melepas reservation.
 4. `reserved_stock` dikurangi.
-5. Tidak perlu push stock out ke Desty.
 
 ---
 
@@ -702,7 +692,7 @@ Admin dashboard digunakan untuk mengelola operasional website.
 12. Page CMS.
 13. Customer list.
 14. Review moderation.
-15. Desty mapping.
+15. Stock logs.
 16. Integration logs.
 17. Site settings.
 18. Admin activity logs.
@@ -713,7 +703,6 @@ Admin dashboard digunakan untuk mengelola operasional website.
 - Total orders.
 - Pending payment.
 - Paid orders.
-- Orders pending Desty sync.
 - Orders pending shipment.
 - Low stock products.
 - Best selling products.
@@ -775,7 +764,6 @@ Admin login
 → Isi description dengan Tiptap
 → Upload gambar
 → Tambah varian
-→ Mapping SKU Desty
 → Publish
 ```
 
@@ -783,8 +771,6 @@ Admin login
 
 ```text
 Order paid
-→ Cek sync Desty
-→ Jika belum sync, retry sync
 → Create shipment Biteship
 → Cetak label
 → Update tracking otomatis via webhook
@@ -802,12 +788,10 @@ Order paid
 |---|---|
 | `pending_payment` | Order dibuat, customer belum bayar |
 | `paid` | Pembayaran sukses, belum masuk proses berikutnya |
-| `paid_pending_desty_sync` | Sudah bayar, tetapi belum berhasil sync ke Desty |
 | `processing` | Order sedang diproses admin |
 | `shipped` | Order sudah dikirim |
 | `completed` | Order selesai |
 | `cancelled` | Order dibatalkan |
-| `sync_failed` | Sinkronisasi ke sistem eksternal gagal |
 
 ## 12.2 Payment Status
 
@@ -859,24 +843,12 @@ Database final mengikuti struktur berikut.
 - `product_collections`
 - `product_images`
 - `product_variants`
-- `product_marketplace_links`
 
-### 13.3 Desty Integration
-
-- `desty_connections`
-- `desty_warehouses`
-- `desty_product_mappings`
-- `desty_variant_mappings`
-- `desty_order_mappings`
-- `desty_sync_jobs`
-- `desty_webhook_logs`
-
-### 13.4 Stock
+### 13.3 Stock
 
 - `stock_logs`
-- `inventory_reservations`
 
-### 13.5 Cart & Order
+### 13.4 Cart & Order
 
 - `carts`
 - `cart_items`
@@ -884,24 +856,24 @@ Database final mengikuti struktur berikut.
 - `order_items`
 - `order_addresses`
 
-### 13.6 Payment
+### 13.5 Payment
 
 - `payments`
 - `payment_logs`
 
-### 13.7 Shipping
+### 13.6 Shipping
 
 - `shipments`
 - `shipment_trackings`
 - `biteship_webhook_logs`
 
-### 13.8 Promotion
+### 13.7 Promotion
 
 - `vouchers`
 - `voucher_products`
 - `voucher_categories`
 
-### 13.9 Additional
+### 13.8 Additional
 
 - `product_reviews`
 - `wishlists`
@@ -959,9 +931,10 @@ Karena menggunakan Inertia, sebagian besar route adalah web route Laravel. Endpo
 | GET | `/admin/orders` | Order list |
 | GET | `/admin/orders/{id}` | Order detail |
 | POST | `/admin/orders/{id}/create-shipment` | Create Biteship shipment |
-| POST | `/admin/orders/{id}/retry-desty-sync` | Retry Desty sync |
-| GET | `/admin/desty/mappings` | Desty mapping page |
-| POST | `/admin/desty/sync-stock` | Trigger stock sync |
+| GET | `/admin/stock` | Stock list |
+| GET | `/admin/stock/logs` | Stock log list |
+| GET | `/admin/product-variants/{id}/stock-adjustment` | Stock adjustment page |
+| PUT | `/admin/product-variants/{id}/stock-adjustment` | Update stock |
 
 ## 14.4 Webhook Routes
 
@@ -969,7 +942,6 @@ Karena menggunakan Inertia, sebagian besar route adalah web route Laravel. Endpo
 |---|---|---|
 | POST | `/webhooks/midtrans` | Midtrans notification |
 | POST | `/webhooks/biteship` | Biteship webhook |
-| POST | `/webhooks/desty` | Desty webhook jika tersedia |
 
 ## 14.5 Utility API Routes
 
@@ -1047,34 +1019,30 @@ Karena menggunakan Inertia, sebagian besar route adalah web route Laravel. Endpo
 
 ---
 
-## 15.3 Desty Omni
+## 15.3 Stock Management
 
-### Trigger pull stock
+### Trigger stock adjustment
 
-- Scheduler setiap 5-15 menit.
-- Manual trigger oleh admin.
-- Webhook jika tersedia.
-
-### Trigger push order
-
-- Setelah payment sukses.
+- Admin menambah atau mengurangi stok dari dashboard.
+- Sistem finalisasi stok setelah payment sukses.
+- Sistem melepas reserved stock saat payment expired, failed, atau cancelled.
 
 ### Data penting
 
-- Product ID Desty.
-- Variant ID Desty.
-- SKU Desty.
-- Warehouse ID.
-- Available stock.
-- On hand stock.
-- Order ID Desty.
+- Product variant ID.
+- SKU varian.
+- Stock before.
+- Stock after.
+- Quantity perubahan.
+- Reference type dan reference ID.
+- Admin user ID jika perubahan dilakukan manual.
 
 ### Failure handling
 
-- Semua sync dicatat ke `desty_sync_jobs`.
-- Retry maksimal 3 kali.
-- Jika tetap gagal, status menjadi `failed`.
-- Admin dapat retry manual.
+- Sistem menolak stok negatif.
+- Sistem menolak adjustment jika hasil `stock` lebih kecil dari `reserved_stock`.
+- Semua perubahan stok penting dicatat ke `stock_logs`.
+- Jika finalisasi stok gagal karena invariant rusak, error dilog dan order tidak diproses dua kali.
 
 ---
 
@@ -1108,11 +1076,11 @@ Karena menggunakan Inertia, sebagian besar route adalah web route Laravel. Endpo
 
 - Order number wajib unik.
 - Order tidak boleh dibayar dua kali.
-- Order expired harus melepas inventory reservation.
+- Order expired harus melepas reserved stock.
 
 ### Stock
 
-- Admin tidak boleh edit stok manual jika sumber stok Desty.
+- Admin boleh edit stok manual melalui stock adjustment.
 - Stock log wajib dibuat untuk perubahan stok penting.
 - Reservation wajib dilepas jika payment expired.
 
@@ -1127,7 +1095,7 @@ Karena menggunakan Inertia, sebagian besar route adalah web route Laravel. Endpo
 - Image harus dioptimasi.
 - Query product list harus menggunakan index.
 - Admin order list harus menggunakan pagination dan filter.
-- Heavy sync menggunakan queue.
+- Heavy processing seperti webhook dan shipment creation menggunakan queue.
 
 ## 17.2 Security
 
@@ -1145,13 +1113,13 @@ Karena menggunakan Inertia, sebagian besar route adalah web route Laravel. Endpo
 - Webhook harus idempotent.
 - Payment log wajib menyimpan payload.
 - Biteship webhook log wajib menyimpan payload.
-- Desty sync job wajib menyimpan request dan response.
+- Stock log wajib menyimpan perubahan stok penting.
 - Queue worker harus diawasi.
 - Scheduler harus aktif.
 
 ## 17.4 Maintainability
 
-- Gunakan service class untuk Midtrans, Biteship, dan Desty.
+- Gunakan service class untuk Midtrans, Biteship, dan stock management.
 - Gunakan action class untuk checkout dan order flow.
 - Gunakan policy untuk authorization.
 - Gunakan form request untuk validasi.
@@ -1183,17 +1151,14 @@ app/
       GetBiteshipRatesAction.php
       CreateBiteshipShipmentAction.php
       HandleBiteshipWebhookAction.php
-    Desty/
-      PullDestyStockAction.php
-      PushOrderToDestyAction.php
-      HandleDestyWebhookAction.php
+    Stock/
+      FinalizeReservedStockAction.php
+      ReleaseStockReservationAction.php
 
   Enums/
     OrderStatus.php
     PaymentStatus.php
     ShippingStatus.php
-    StockSource.php
-    InventoryReservationStatus.php
 
   Http/
     Controllers/
@@ -1208,8 +1173,6 @@ app/
       VoucherRequest.php
 
   Jobs/
-    SyncDestyStockJob.php
-    PushOrderToDestyJob.php
     CreateBiteshipShipmentJob.php
     ProcessMidtransWebhookJob.php
 
@@ -1224,7 +1187,7 @@ app/
   Services/
     MidtransService.php
     BiteshipService.php
-    DestyService.php
+    StockService.php
 
 resources/
   js/
@@ -1334,7 +1297,6 @@ Komponen:
 - Upload product images.
 - Set primary image.
 - Manage variants.
-- Manage marketplace links.
 - Rich text description editor.
 
 ## 20.2 Order Management
@@ -1345,14 +1307,13 @@ Komponen:
 - Filter by payment status.
 - Filter by shipping status.
 - Order detail.
-- Retry Desty sync.
 - Create shipment.
 - View payment raw response.
 - View shipment tracking.
 
 ## 20.3 Integration Log
 
-- Desty sync job list.
+- Stock log list.
 - Midtrans payment log list.
 - Biteship webhook log list.
 - Error detail.
@@ -1393,13 +1354,13 @@ Komponen:
 - Tracking update dapat disimpan.
 - Customer dapat melihat status pengiriman.
 
-## 21.5 Desty
+## 21.5 Stock
 
-- Admin dapat mapping SKU website ke SKU Desty.
-- Sistem dapat menyimpan hasil sync stok.
-- Stok product variant berubah berdasarkan data Desty.
-- Order paid dapat dikirim ke Desty.
-- Jika sync gagal, sistem menandai status order dan membuat log.
+- Admin dapat melihat stok varian.
+- Admin dapat melakukan stock adjustment.
+- Sistem mencatat perubahan stok ke `stock_logs`.
+- Order paid mengurangi stok final.
+- Payment expired/cancelled/failed melepas reserved stock.
 
 ---
 
@@ -1407,13 +1368,12 @@ Komponen:
 
 | Risiko | Dampak | Mitigasi |
 |---|---|---|
-| SKU website dan Desty tidak sama | Stok salah | Wajib mapping SKU sebelum publish produk |
+| SKU varian tidak rapi | Operasional stok sulit dilacak | Wajib SKU unik dan konsisten sebelum publish produk |
 | Webhook Midtrans ganda | Order diproses dua kali | Gunakan payload hash dan idempotency |
 | Biteship rate gagal | Customer tidak bisa checkout | Tampilkan retry dan fallback message |
-| Desty sync gagal | Order paid belum mengurangi stok pusat | Status `paid_pending_desty_sync` dan retry queue |
-| Admin edit stok manual | Stok tidak sinkron | Disable manual edit jika stock source Desty |
+| Stock adjustment salah | Stok tidak akurat | Gunakan stock log dan validasi `stock >= reserved_stock` |
 | Rich text mengandung script | XSS | Sanitasi HTML dari Tiptap |
-| Queue worker mati | Sync tidak berjalan | Monitoring worker dan scheduler |
+| Queue worker mati | Job webhook/shipment tidak berjalan | Monitoring worker dan scheduler |
 
 ---
 
@@ -1432,8 +1392,8 @@ MVP pertama sebaiknya fokus pada:
 9. Basic shipment creation.
 10. Admin product management.
 11. Admin order management.
-12. Desty SKU mapping.
-13. Pull stock dari Desty.
+12. Stock adjustment.
+13. Stock logs.
 14. Stock reservation.
 15. Payment webhook.
 16. Biteship tracking webhook.
@@ -1486,10 +1446,6 @@ BITESHIP_API_KEY=
 BITESHIP_BASE_URL=https://api.biteship.com
 BITESHIP_ORIGIN_AREA_ID=
 
-DESTY_BASE_URL=
-DESTY_VENDOR_ID=
-DESTY_API_KEY=
-
 QUEUE_CONNECTION=database
 FILESYSTEM_DISK=public
 ```
@@ -1514,14 +1470,14 @@ FILESYSTEM_DISK=public
 - Handle Midtrans webhook.
 - Get Biteship rates.
 - Create shipment.
-- Pull Desty stock.
-- Push order to Desty.
+- Stock adjustment.
+- Stock reservation and release.
 
 ### Integration Test
 
 - Midtrans sandbox.
 - Biteship staging.
-- Desty sandbox/staging jika tersedia.
+- Biteship staging.
 
 ### Manual Test
 
@@ -1531,7 +1487,7 @@ FILESYSTEM_DISK=public
 - Checkout from mobile.
 - Payment flow.
 - Shipping tracking.
-- Admin retry sync.
+- Admin review stock logs.
 
 ---
 
@@ -1562,8 +1518,6 @@ Fitur dianggap selesai jika:
 - Biteship API Introduction: https://biteship.com/en/docs/intro
 - Biteship Rates API: https://biteship.com/id/docs/api/rates/overview
 - Biteship Create Order API: https://biteship.com/en/docs/api/orders/create
-- Desty Omni API Documentation: https://api.desty.app/
-- Mekari Desty Inventory: https://desty.mekari.com/fitur/sistem-manajemen-inventory
 
 ---
 
@@ -1578,7 +1532,6 @@ products
 product_collections
 product_images
 product_variants
-product_marketplace_links
 ```
 
 Prinsip penyederhanaan:
@@ -1593,6 +1546,6 @@ Prinsip penyederhanaan:
 
 ## 30. Kesimpulan
 
-Website e-commerce Axegear akan dibangun sebagai modern monolith menggunakan Laravel, Inertia, React TypeScript, dan MySQL. Fokus utama sistem adalah katalog produk yang sederhana, checkout yang aman, pembayaran Midtrans, pengiriman Biteship, serta stok yang tersinkron dengan Desty Omni.
+Website e-commerce Axegear akan dibangun sebagai modern monolith menggunakan Laravel, Inertia, React TypeScript, dan MySQL. Fokus utama sistem adalah katalog produk yang sederhana, checkout yang aman, pembayaran Midtrans, pengiriman Biteship, serta stok lokal yang dikelola langsung dari dashboard admin.
 
 Dengan PRD ini, tim developer dapat langsung menurunkan kebutuhan menjadi backlog, database migration, desain UI, service integration, dan task development per sprint.

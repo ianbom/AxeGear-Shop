@@ -28,8 +28,6 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'order_status',
     'shipping_status',
     'source_channel',
-    'desty_sync_status',
-    'desty_synced_at',
     'no_return_refund_agreed',
     'no_return_refund_agreed_at',
     'notes',
@@ -57,16 +55,6 @@ class Order extends Model
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
-    }
-
-    public function destyMappings(): HasMany
-    {
-        return $this->hasMany(DestyOrderMapping::class);
-    }
-
-    public function inventoryReservations(): HasMany
-    {
-        return $this->hasMany(InventoryReservation::class);
     }
 
     public function payment(): HasOne
@@ -100,7 +88,6 @@ class Order extends Model
             'cancelled_at' => 'datetime',
             'completed_at' => 'datetime',
             'discount_amount' => 'decimal:2',
-            'desty_synced_at' => 'datetime',
             'expired_at' => 'datetime',
             'grand_total' => 'decimal:2',
             'insurance_cost' => 'decimal:2',

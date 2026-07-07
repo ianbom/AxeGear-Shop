@@ -44,10 +44,14 @@ type ProductImage = {
 type ProductVariant = {
     id: number;
     sku: string;
+    barcode: string | null;
+    variant_name: string | null;
     color_name: string | null;
     color_hex: string | null;
     size: string | null;
-    additional_price: number | string;
+    package_type: string | null;
+    regular_price: number | string | null;
+    sale_price: number | string | null;
     stock: number;
     reserved_stock: number;
     image_url: string | null;
@@ -80,11 +84,13 @@ type Product = {
     name: string;
     slug: string;
     sku: string;
+    brand_name: string;
+    product_line: string | null;
+    style_name: string | null;
     short_description: string;
     description: string;
-    material: string;
-    care_instruction: string;
-    base_price: number | string;
+    stock_status: string;
+    regular_price: number | string;
     sale_price: number | string;
     weight: number | string;
     length: number | string;
@@ -245,8 +251,8 @@ export default function ProductShow({ product }: Props) {
                     <MetricCard
                         icon={<Tag className="size-5 text-violet-600" />}
                         iconBg="bg-violet-50"
-                        label="Base Price"
-                        value={formatPrice(product.base_price)}
+                        label="Regular Price"
+                        value={formatPrice(product.regular_price)}
                         sub={
                             product.sale_price
                                 ? `Sale: ${formatPrice(product.sale_price)}`
@@ -454,29 +460,6 @@ export default function ProductShow({ product }: Props) {
                             </Card>
                         )}
 
-                        {(product.material || product.care_instruction) && (
-                            <Card>
-                                <CardHeader className="pb-3">
-                                    <CardTitle className="text-base">
-                                        Care and Materials
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="grid gap-3 text-sm">
-                                    {product.material && (
-                                        <InfoRow
-                                            label="Material"
-                                            value={product.material}
-                                        />
-                                    )}
-                                    {product.care_instruction && (
-                                        <InfoRow
-                                            label="Care Instruction"
-                                            value={product.care_instruction}
-                                        />
-                                    )}
-                                </CardContent>
-                            </Card>
-                        )}
                     </div>
                     {/* RIGHT COLUMN */}
                     <div className="flex flex-col gap-6">
@@ -561,11 +544,12 @@ export default function ProductShow({ product }: Props) {
                                                                     )}
                                                                     <div>
                                                                         <div className="font-medium">
-                                                                            {variant.color_name ??
-                                                                                '-'}
+                                                                    {variant.variant_name ??
+                                                                        variant.color_name ??
+                                                                        '-'}
                                                                         </div>
                                                                         <div className="text-xs text-muted-foreground">
-                                                                            {variant.size ??
+                                                                            {[variant.package_type, variant.size].filter(Boolean).join(' / ') ||
                                                                                 '-'}
                                                                         </div>
                                                                     </div>
@@ -576,9 +560,10 @@ export default function ProductShow({ product }: Props) {
                                                             </td>
                                                             <td className="px-4 py-3 text-right">
                                                                 {Number(
-                                                                    variant.additional_price,
+                                                                    variant.sale_price ??
+                                                                        variant.regular_price,
                                                                 ) > 0 ? (
-                                                                    `+${formatPrice(variant.additional_price)}`
+                                                                    formatPrice(variant.sale_price ?? variant.regular_price ?? 0)
                                                                 ) : (
                                                                     <span className="text-muted-foreground">
                                                                         &mdash;

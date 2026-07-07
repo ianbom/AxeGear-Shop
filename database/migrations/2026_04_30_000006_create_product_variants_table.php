@@ -22,12 +22,6 @@ return new class extends Migration
             $table->decimal('sale_price', 15, 2)->nullable();
             $table->integer('stock')->default(0);
             $table->integer('reserved_stock')->default(0);
-            $table->integer('desty_available_stock')->default(0);
-            $table->integer('desty_on_hand_stock')->default(0);
-            $table->integer('desty_reserved_stock')->default(0);
-            $table->timestamp('desty_last_synced_at')->nullable();
-            $table->string('stock_source', 50)->default('desty');
-            $table->boolean('allow_manual_stock_edit')->default(false);
             $table->integer('weight')->nullable();
             $table->integer('length')->nullable();
             $table->integer('width')->nullable();
@@ -43,7 +37,6 @@ return new class extends Migration
             $table->index('size');
             $table->index('package_type');
             $table->index('is_active');
-            $table->index('stock_source');
         });
     }
 

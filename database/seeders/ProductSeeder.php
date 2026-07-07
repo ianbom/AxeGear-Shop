@@ -6,7 +6,6 @@ use App\Models\Category;
 use App\Models\Collection;
 use App\Models\Product;
 use App\Models\ProductImage;
-use App\Models\ProductMarketplaceLink;
 use App\Models\ProductVariant;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -79,7 +78,6 @@ class ProductSeeder extends Seeder
                 $record->collections()->sync($collectionIds);
                 $this->syncImages($record, $product['images']);
                 $this->syncVariants($record, $product);
-                $this->syncMarketplaceLink($record, $product);
 
                 $seededSkus[] = $product['sku'];
             }
@@ -138,11 +136,6 @@ class ProductSeeder extends Seeder
                     'sale_price' => $productData['sale_price'],
                     'stock' => $variant['stock'],
                     'reserved_stock' => 0,
-                    'desty_available_stock' => $variant['stock'],
-                    'desty_on_hand_stock' => $variant['stock'],
-                    'desty_reserved_stock' => 0,
-                    'stock_source' => 'manual',
-                    'allow_manual_stock_edit' => true,
                     'weight' => $productData['weight'],
                     'length' => $productData['length'],
                     'width' => $productData['width'],
@@ -163,25 +156,6 @@ class ProductSeeder extends Seeder
             ->where('product_id', $product->id)
             ->whereNotIn('sku', $keptSkus)
             ->delete();
-    }
-
-    private function syncMarketplaceLink(Product $product, array $productData): void
-    {
-        ProductMarketplaceLink::query()->updateOrCreate(
-            [
-                'product_id' => $product->id,
-                'marketplace_name' => '100Percent Reference',
-            ],
-            [
-                'external_product_id' => $productData['slug'],
-                'external_sku' => $productData['sku'],
-                'product_url' => $productData['images'][0],
-                'price_snapshot' => $productData['sale_price'] ?? $productData['regular_price'],
-                'stock_snapshot' => collect($productData['variants'])->sum('stock'),
-                'last_synced_at' => now(),
-                'is_active' => true,
-            ],
-        );
     }
 
     public static function products(): array

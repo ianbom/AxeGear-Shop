@@ -221,10 +221,10 @@ export function AppSidebar() {
 
     return (
         <Sidebar collapsible="icon" variant="sidebar" className="border-r border-ink/15">
-            <SidebarHeader className="border-b border-ink/15 p-3">
+            <SidebarHeader className="h-16 border-b border-ink/15 px-3">
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild className="h-14 rounded-[6px] text-white hover:bg-ink hover:text-white data-[active=true]:bg-ink">
+                        <SidebarMenuButton size="lg" asChild className="h-10 rounded-[6px] text-white hover:bg-ink hover:text-white data-[active=true]:bg-ink">
                             <Link href={homeHref} prefetch>
                                 <span className="text-[15px] font-semibold tracking-[-0.03em] text-white uppercase group-data-[collapsible=icon]:hidden">
                                     Dashboard AxeGear

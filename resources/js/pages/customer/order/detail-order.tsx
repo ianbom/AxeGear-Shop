@@ -239,11 +239,11 @@ function ActionButton({
     tone?: 'default' | 'danger';
 }) {
     const base =
-        'group flex w-full items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-[12px] font-semibold transition-all duration-150 hover:shadow-sm active:scale-[0.98]';
+        'group flex w-full items-center justify-center gap-2 rounded-[8px] border px-4 py-2.5 text-[12px] font-semibold transition-all duration-150 active:scale-[0.98]';
     const toneClass =
         tone === 'danger'
             ? 'border-red-200 bg-red-50 text-red-700 hover:border-red-300 hover:bg-red-100'
-            : 'border-[#e5d7ca] bg-white text-[#4a392c] hover:border-[#c9a983] hover:bg-[#fbf4ed]';
+            : 'border-hairline-strong bg-white text-ink hover:border-primary hover:bg-primary-soft';
 
     if (onClick) {
         return (
@@ -306,14 +306,14 @@ function InfoLine({
     return (
         <div className="flex items-start gap-3 py-2.5 text-sm">
             <Icon
-                className="mt-0.5 shrink-0 text-[#9b8777]"
+                className="mt-0.5 shrink-0 text-muted-foreground"
                 size={15}
                 strokeWidth={1.65}
             />
-            <span className="w-28 shrink-0 text-xs text-[#8b7b6e]">
+            <span className="w-28 shrink-0 text-xs text-muted-foreground">
                 {label}
             </span>
-            <span className="min-w-0 text-sm font-medium break-words text-[#3f3025]">
+            <span className="min-w-0 text-sm font-medium break-words text-ink">
                 {value || '-'}
             </span>
         </div>
@@ -330,11 +330,9 @@ function SectionCard({
     noPad?: boolean;
 }) {
     return (
-        <div className="overflow-hidden rounded-2xl border border-[#e7e2de] bg-white shadow-sm">
-            <div className="border-b border-[#f0ebe4] px-5 py-4 sm:px-6">
-                <h2 className="font-serif text-lg text-[#2d2119] sm:text-xl">
-                    {title}
-                </h2>
+        <div className="overflow-hidden rounded-[8px] border border-hairline-strong bg-white">
+            <div className="border-b border-hairline-strong px-5 py-4 sm:px-6">
+                <h2 className="text-lg text-ink sm:text-xl">{title}</h2>
             </div>
             <div className={noPad ? '' : 'p-5 sm:p-6'}>{children}</div>
         </div>
@@ -344,12 +342,10 @@ function SectionCard({
 function MetaChip({ label, children }: { label: string; children: ReactNode }) {
     return (
         <div className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-semibold tracking-widest text-[#9a8575] uppercase">
+            <span className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
                 {label}
             </span>
-            <div className="text-sm font-semibold text-[#3d3027]">
-                {children}
-            </div>
+            <div className="text-sm font-semibold text-ink">{children}</div>
         </div>
     );
 }
@@ -533,17 +529,17 @@ export default function DetailOrder({ order }: Props) {
                 {/* Left column */}
                 <div className="space-y-5">
                     {/* Order Header */}
-                    <div className="overflow-hidden rounded-2xl border border-[#e7e2de] bg-white shadow-sm">
+                    <div className="overflow-hidden rounded-[8px] border border-hairline-strong bg-white">
                         <div className="p-5 sm:p-6">
                             <div className="flex flex-wrap items-start justify-between gap-3">
                                 <div>
-                                    <p className="text-[10px] font-semibold tracking-widest text-[#9a8575] uppercase">
+                                    <p className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
                                         Nomor Pesanan
                                     </p>
-                                    <h2 className="mt-1 font-serif text-2xl leading-tight text-[#2d2119] sm:text-3xl">
+                                    <h2 className="mt-1 text-2xl leading-tight text-ink sm:text-3xl">
                                         {order.order_number}
                                     </h2>
-                                    <p className="mt-1 text-xs text-[#7f6d60]">
+                                    <p className="mt-1 text-xs text-muted-foreground">
                                         {order.created_date ?? '-'} &bull;{' '}
                                         {order.created_time ?? '-'}
                                     </p>
@@ -561,7 +557,7 @@ export default function DetailOrder({ order }: Props) {
                                     </StatusPill>
                                 </div>
                             </div>
-                            <div className="mt-5 grid grid-cols-2 gap-4 border-t border-[#f0ebe4] pt-5 sm:grid-cols-3">
+                            <div className="mt-5 grid grid-cols-2 gap-4 border-t border-hairline-strong pt-5 sm:grid-cols-3">
                                 <MetaChip label="Metode Pembayaran">
                                     {paymentMethod}
                                 </MetaChip>
@@ -573,7 +569,7 @@ export default function DetailOrder({ order }: Props) {
                                 </MetaChip>
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-3 border-t border-[#f0ebe4] p-4 sm:grid-cols-4 sm:p-5">
+                        <div className="grid grid-cols-2 gap-3 border-t border-hairline-strong p-4 sm:grid-cols-4 sm:p-5">
                             <ActionButton
                                 href={trackingUrl}
                                 external
@@ -632,17 +628,17 @@ export default function DetailOrder({ order }: Props) {
                                             className="relative flex flex-col items-center px-1 text-center"
                                         >
                                             <div
-                                                className={`relative z-10 flex h-11 w-11 items-center justify-center rounded-full border-2 transition-all ${step.active ? 'border-[#2f2016] bg-[#2f2016] text-white shadow-lg shadow-[#2f2016]/20' : step.complete ? 'border-[#c9a983] bg-[#fdf6ee] text-[#8a6b55]' : 'border-[#e2ddd8] bg-white text-[#c6bdb4]'}`}
+                                                className={`relative z-10 flex h-11 w-11 items-center justify-center rounded-full border-2 transition-all ${step.active ? 'border-ink bg-ink text-white' : step.complete ? 'bg-primary-soft border-primary text-primary' : 'border-hairline-strong bg-white text-muted-foreground'}`}
                                             >
                                                 <Icon
                                                     size={16}
                                                     strokeWidth={1.8}
                                                 />
                                             </div>
-                                            <p className="mt-3 text-[11px] leading-tight font-bold text-[#4b3a2d]">
+                                            <p className="mt-3 text-[11px] leading-tight font-bold text-ink">
                                                 {step.label}
                                             </p>
-                                            <p className="mt-0.5 text-[10px] leading-tight font-medium text-[#a08d80]">
+                                            <p className="mt-0.5 text-[10px] leading-tight font-medium text-muted-foreground">
                                                 {step.time}
                                             </p>
                                         </div>
@@ -659,7 +655,7 @@ export default function DetailOrder({ order }: Props) {
                             <div className="hide-scrollbar overflow-x-auto">
                                 <table className="w-full min-w-[580px] border-collapse text-left">
                                     <thead>
-                                        <tr className="border-b border-[#f0ebe4] bg-[#faf6f2] text-[11px] tracking-wide text-[#9a8575] uppercase">
+                                        <tr className="border-b border-hairline-strong bg-surface-soft text-[11px] tracking-wide text-muted-foreground uppercase">
                                             <th className="px-5 py-3 font-semibold sm:px-6">
                                                 Barang
                                             </th>
@@ -677,7 +673,7 @@ export default function DetailOrder({ order }: Props) {
                                             </th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-[#f0ebe4]">
+                                    <tbody className="divide-y divide-hairline-strong">
                                         {order.items.map((item) => {
                                             const productUrl = item.product_slug
                                                 ? productShow.url({
@@ -691,7 +687,7 @@ export default function DetailOrder({ order }: Props) {
                                             return (
                                                 <tr
                                                     key={item.id}
-                                                    className="bg-white transition-colors hover:bg-[#fdfaf7]"
+                                                    className="bg-white transition-colors hover:bg-surface-soft"
                                                 >
                                                     <td className="px-5 py-4 sm:px-6">
                                                         <div className="flex items-center gap-3">
@@ -699,7 +695,7 @@ export default function DetailOrder({ order }: Props) {
                                                                 href={
                                                                     productUrl
                                                                 }
-                                                                className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-[#f4ebe4]"
+                                                                className="h-16 w-16 shrink-0 overflow-hidden rounded-[8px] bg-surface-soft"
                                                             >
                                                                 <img
                                                                     src={
@@ -717,13 +713,13 @@ export default function DetailOrder({ order }: Props) {
                                                                     href={
                                                                         productUrl
                                                                     }
-                                                                    className="line-clamp-2 text-[13px] font-semibold text-[#3d3027] transition hover:text-[#8f684b]"
+                                                                    className="line-clamp-2 text-[13px] font-semibold text-ink transition hover:text-primary"
                                                                 >
                                                                     {
                                                                         item.product_name
                                                                     }
                                                                 </Link>
-                                                                <p className="mt-0.5 text-[11px] text-[#9a8575]">
+                                                                <p className="mt-0.5 text-[11px] text-muted-foreground">
                                                                     SKU:{' '}
                                                                     {item.variant_sku ??
                                                                         item.product_sku ??
@@ -733,24 +729,24 @@ export default function DetailOrder({ order }: Props) {
                                                         </div>
                                                     </td>
                                                     <td className="px-4 py-4">
-                                                        <div className="space-y-1 text-[12px] text-[#6d5c50]">
+                                                        <div className="space-y-1 text-[12px] text-muted-foreground">
                                                             <p>
                                                                 Warna:{' '}
-                                                                <span className="font-semibold text-[#3d3027]">
+                                                                <span className="font-semibold text-ink">
                                                                     {item.color_name ??
                                                                         '-'}
                                                                 </span>
                                                             </p>
                                                             <p>
                                                                 Ukuran:{' '}
-                                                                <span className="font-semibold text-[#3d3027]">
+                                                                <span className="font-semibold text-ink">
                                                                     {item.size ??
                                                                         '-'}
                                                                 </span>
                                                             </p>
                                                             <p>
                                                                 Berat:{' '}
-                                                                <span className="font-semibold text-[#3d3027]">
+                                                                <span className="font-semibold text-ink">
                                                                     {item.weight
                                                                         ? `${item.weight} gr`
                                                                         : '-'}
@@ -758,17 +754,17 @@ export default function DetailOrder({ order }: Props) {
                                                             </p>
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-4 text-[13px] font-semibold text-[#3d3027]">
+                                                    <td className="px-4 py-4 text-[13px] font-semibold text-ink">
                                                         {formatPrice(
                                                             item.price,
                                                         )}
                                                     </td>
                                                     <td className="px-4 py-4 text-center">
-                                                        <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-[#f4ebe4] text-[12px] font-semibold text-[#4a392c]">
+                                                        <span className="inline-flex h-7 w-7 items-center justify-center rounded-[6px] bg-surface-soft text-[12px] font-semibold text-ink">
                                                             {item.quantity}
                                                         </span>
                                                     </td>
-                                                    <td className="px-5 py-4 text-right text-[13px] font-semibold text-[#3d3027] sm:px-6">
+                                                    <td className="px-5 py-4 text-right text-[13px] font-semibold text-ink sm:px-6">
                                                         {formatPrice(
                                                             item.subtotal,
                                                         )}
@@ -792,11 +788,11 @@ export default function DetailOrder({ order }: Props) {
                                 return (
                                     <div
                                         key={item.id}
-                                        className="flex gap-3 rounded-xl border border-[#f0ebe4] bg-white p-3"
+                                        className="flex gap-3 rounded-[8px] border border-hairline-strong bg-white p-3"
                                     >
                                         <Link
                                             href={productUrl}
-                                            className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[#f4ebe4]"
+                                            className="h-20 w-20 shrink-0 overflow-hidden rounded-[8px] bg-surface-soft"
                                         >
                                             <img
                                                 src={
@@ -810,15 +806,15 @@ export default function DetailOrder({ order }: Props) {
                                         <div className="min-w-0 flex-1">
                                             <Link
                                                 href={productUrl}
-                                                className="line-clamp-2 text-[13px] font-semibold text-[#3d3027] hover:text-[#8f684b]"
+                                                className="line-clamp-2 text-[13px] font-semibold text-ink hover:text-primary"
                                             >
                                                 {item.product_name}
                                             </Link>
-                                            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-[#9a8575]">
+                                            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
                                                 {item.color_name && (
                                                     <span>
                                                         Warna:{' '}
-                                                        <strong className="text-[#4a392c]">
+                                                        <strong className="text-ink">
                                                             {item.color_name}
                                                         </strong>
                                                     </span>
@@ -826,7 +822,7 @@ export default function DetailOrder({ order }: Props) {
                                                 {item.size && (
                                                     <span>
                                                         Ukuran:{' '}
-                                                        <strong className="text-[#4a392c]">
+                                                        <strong className="text-ink">
                                                             {item.size}
                                                         </strong>
                                                     </span>
@@ -834,26 +830,26 @@ export default function DetailOrder({ order }: Props) {
                                                 {item.weight && (
                                                     <span>
                                                         Berat:{' '}
-                                                        <strong className="text-[#4a392c]">
+                                                        <strong className="text-ink">
                                                             {item.weight} gr
                                                         </strong>
                                                     </span>
                                                 )}
                                             </div>
-                                            <p className="mt-0.5 text-[11px] text-[#9a8575]">
+                                            <p className="mt-0.5 text-[11px] text-muted-foreground">
                                                 SKU:{' '}
                                                 {item.variant_sku ??
                                                     item.product_sku ??
                                                     '-'}
                                             </p>
                                             <div className="mt-2.5 flex items-center justify-between">
-                                                <span className="text-xs text-[#9a8575]">
+                                                <span className="text-xs text-muted-foreground">
                                                     Jumlah:{' '}
-                                                    <strong className="text-[#4a392c]">
+                                                    <strong className="text-ink">
                                                         {item.quantity}
                                                     </strong>
                                                 </span>
-                                                <span className="text-[13px] font-bold text-[#3d3027]">
+                                                <span className="text-[13px] font-bold text-ink">
                                                     {formatPrice(item.subtotal)}
                                                 </span>
                                             </div>
@@ -867,7 +863,7 @@ export default function DetailOrder({ order }: Props) {
                     {/* Shipping + Payment Info */}
                     <div className="grid gap-5 md:grid-cols-2">
                         <SectionCard title="Info Pengiriman">
-                            <div className="divide-y divide-[#f5ede6]">
+                            <div className="divide-y divide-hairline">
                                 <InfoLine
                                     icon={UserRound}
                                     label="Penerima"
@@ -911,7 +907,7 @@ export default function DetailOrder({ order }: Props) {
                             </div>
                         </SectionCard>
                         <SectionCard title="Info Pembayaran">
-                            <div className="divide-y divide-[#f5ede6]">
+                            <div className="divide-y divide-hairline">
                                 <InfoLine
                                     icon={CreditCard}
                                     label="Metode"
@@ -933,11 +929,11 @@ export default function DetailOrder({ order }: Props) {
                                 />
                                 <div className="flex items-center gap-3 py-2.5">
                                     <WalletCards
-                                        className="shrink-0 text-[#9b8777]"
+                                        className="shrink-0 text-muted-foreground"
                                         size={15}
                                         strokeWidth={1.65}
                                     />
-                                    <span className="w-28 shrink-0 text-xs text-[#8b7b6e]">
+                                    <span className="w-28 shrink-0 text-xs text-muted-foreground">
                                         Status
                                     </span>
                                     <StatusPill
@@ -982,11 +978,11 @@ export default function DetailOrder({ order }: Props) {
                                 value={formatPrice(order.service_fee)}
                             />
                         </div>
-                        <div className="mt-5 rounded-xl bg-[#faf6f1] px-4 py-4">
-                            <p className="text-[10px] font-semibold tracking-widest text-[#9a8575] uppercase">
+                        <div className="mt-5 rounded-[8px] bg-surface-soft px-4 py-4">
+                            <p className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
                                 Total Pembayaran
                             </p>
-                            <p className="mt-1 font-serif text-2xl leading-none font-medium text-[#221914] sm:text-3xl">
+                            <p className="mt-1 text-2xl leading-none font-medium text-ink sm:text-3xl">
                                 {formatPrice(order.grand_total)}
                             </p>
                         </div>
@@ -994,7 +990,7 @@ export default function DetailOrder({ order }: Props) {
 
                     {/* Order Notes */}
                     <SectionCard title="Catatan Pesanan">
-                        <p className="border-l-2 border-[#e5d7ca] pl-3 text-sm leading-relaxed text-[#716155] italic">
+                        <p className="border-l-2 border-primary pl-3 text-sm leading-relaxed text-muted-foreground italic">
                             {order.notes ??
                                 'Tidak ada catatan untuk pesanan ini.'}
                         </p>
@@ -1004,7 +1000,7 @@ export default function DetailOrder({ order }: Props) {
 
             {isCancelModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 backdrop-blur-sm">
-                    <div className="w-full max-w-md overflow-hidden rounded-3xl border border-red-100 bg-white shadow-2xl shadow-black/20">
+                    <div className="w-full max-w-md overflow-hidden rounded-[8px] border border-red-100 bg-white">
                         <div className="border-b border-red-100 bg-red-50 px-6 py-5">
                             <div className="flex items-start gap-4">
                                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-700">
@@ -1017,7 +1013,7 @@ export default function DetailOrder({ order }: Props) {
                                     <p className="text-[10px] font-semibold tracking-[0.2em] text-red-500 uppercase">
                                         Batalkan Pesanan
                                     </p>
-                                    <h2 className="mt-1 font-serif text-xl leading-tight text-[#2d2119]">
+                                    <h2 className="mt-1 text-xl leading-tight text-ink">
                                         Batalkan order ini?
                                     </h2>
                                 </div>
@@ -1025,28 +1021,28 @@ export default function DetailOrder({ order }: Props) {
                         </div>
 
                         <div className="space-y-4 px-6 py-5">
-                            <p className="text-sm leading-6 text-[#6f5e52]">
+                            <p className="text-sm leading-6 text-muted-foreground">
                                 Order belum dibayar. Jika dibatalkan, transaksi
                                 pembayaran Midtrans akan dibuat tidak bisa
                                 dibayar lagi dan stok yang tertahan akan
                                 dilepaskan.
                             </p>
-                            <div className="rounded-2xl border border-[#f0ebe4] bg-[#faf6f1] px-4 py-3">
-                                <p className="text-[10px] font-semibold tracking-widest text-[#9a8575] uppercase">
+                            <div className="rounded-[8px] border border-hairline-strong bg-surface-soft px-4 py-3">
+                                <p className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
                                     Nomor Pesanan
                                 </p>
-                                <p className="mt-1 font-mono text-sm font-semibold text-[#3d3027]">
+                                <p className="mt-1 font-mono text-sm font-semibold text-ink">
                                     {order.order_number}
                                 </p>
                             </div>
                         </div>
 
-                        <div className="grid gap-3 border-t border-[#f0ebe4] px-6 py-5 sm:grid-cols-2">
+                        <div className="grid gap-3 border-t border-hairline-strong px-6 py-5 sm:grid-cols-2">
                             <button
                                 type="button"
                                 onClick={() => setIsCancelModalOpen(false)}
                                 disabled={isCancelling}
-                                className="rounded-xl border border-[#e5d7ca] bg-white px-4 py-2.5 text-[12px] font-semibold text-[#4a392c] transition hover:bg-[#fbf4ed] disabled:cursor-not-allowed disabled:opacity-60"
+                                className="hover:bg-primary-soft rounded-[6px] border border-hairline-strong bg-white px-4 py-2.5 text-[12px] font-semibold text-ink transition disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 Kembali
                             </button>
@@ -1054,7 +1050,7 @@ export default function DetailOrder({ order }: Props) {
                                 type="button"
                                 onClick={cancelOrder}
                                 disabled={isCancelling}
-                                className="rounded-xl border border-red-600 bg-red-600 px-4 py-2.5 text-[12px] font-semibold text-white transition hover:border-red-700 hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                className="rounded-[6px] border border-red-600 bg-red-600 px-4 py-2.5 text-[12px] font-semibold text-white transition hover:border-red-700 hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 {isCancelling
                                     ? 'Membatalkan...'
@@ -1079,9 +1075,9 @@ function SummaryRow({
 }) {
     return (
         <div className="flex items-center justify-between gap-4 text-sm">
-            <span className="text-[#6f5e52]">{label}</span>
+            <span className="text-muted-foreground">{label}</span>
             <span
-                className={`${danger ? 'font-semibold text-[#c45745]' : 'font-semibold text-[#3d3027]'}`}
+                className={`${danger ? 'font-semibold text-red-600' : 'font-semibold text-ink'}`}
             >
                 {value}
             </span>
