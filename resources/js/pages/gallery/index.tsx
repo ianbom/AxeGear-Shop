@@ -1,383 +1,153 @@
-import { Link } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { ArrowRight } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+
 import ShopLayout from '@/layouts/shop-layout';
 
-const TABS = ['All', 'Sunglasses', 'Goggles', 'Gloves', 'Apparel', 'Accessories', 'Athletes', 'Lifestyle', 'Detail Shots'];
+const tabs = ['All', 'Sunglasses', 'Goggles', 'Gloves', 'Apparel', 'Accessories', 'Athletes', 'Lifestyle', 'Detail Shots'] as const;
+
+type GalleryTab = (typeof tabs)[number];
+type GalleryImage = { src: string; alt: string; categories: GalleryTab[] };
+
+const mosaicImages: GalleryImage[] = [
+    { src: '/img/gallery/mosaic-cyclist.jpg', alt: 'Road cyclist wearing AxeGear performance eyewear', categories: ['All', 'Sunglasses', 'Athletes', 'Lifestyle'] },
+    { src: '/img/gallery/mosaic-moto.jpg', alt: 'Trail rider wearing AxeGear moto goggles', categories: ['All', 'Goggles', 'Athletes', 'Lifestyle'] },
+    { src: '/img/gallery/mosaic-goggles.jpg', alt: 'AxeGear orange lens performance goggles', categories: ['All', 'Goggles', 'Accessories', 'Detail Shots'] },
+    { src: '/img/gallery/mosaic-gloves.jpg', alt: 'AxeGear gloves and riding accessories', categories: ['All', 'Gloves', 'Accessories', 'Detail Shots'] },
+    { src: '/img/gallery/mosaic-athlete.jpg', alt: 'Athlete wearing black AxeGear apparel', categories: ['All', 'Apparel', 'Athletes', 'Lifestyle'] },
+    { src: '/img/gallery/mosaic-trail.jpg', alt: 'AxeGear rider on a dusty trail', categories: ['All', 'Athletes', 'Lifestyle'] },
+    { src: '/img/gallery/mosaic-glasses.jpg', alt: 'Black AxeGear performance sunglasses', categories: ['All', 'Sunglasses', 'Accessories', 'Detail Shots'] },
+    { src: '/img/gallery/mosaic-goggles-black.jpg', alt: 'Black AxeGear moto goggles', categories: ['All', 'Goggles', 'Accessories', 'Detail Shots'] },
+];
+
+const spotlightItems = [
+    ['Performance Sunglasses', 'Lightweight, durable, and built for every condition.', 'spotlight-sunglasses.jpg'],
+    ['Moto / MTB Goggles', 'Maximum vision. Ultimate protection. No compromises.', 'spotlight-goggles.jpg'],
+    ['Performance Gloves', 'Grip. Control. Comfort. Engineered for performance.', 'spotlight-gloves.jpg'],
+    ['Riding Apparel', 'Technical gear that moves with you and keeps you ahead.', 'spotlight-apparel.jpg'],
+].map(([title, description, image]) => ({ title, description, image: `/img/gallery/${image}` }));
+
+const trackImages = Array.from({ length: 6 }, (_, index) => ({ src: `/img/gallery/track-${index + 1}.jpg`, alt: `AxeGear athlete in action ${index + 1}` }));
+const detailItems = [
+    ['Hydrophobic Lens Coating', 'Repels water. Enhances clarity.'],
+    ['TR90 Frame Technology', 'Lightweight. Flexible. Tough.'],
+    ['Breathable Performance Fabric', 'Stay cool. Stay focused.'],
+    ['Reinforced Stitching', 'Engineered for performance.'],
+    ['Secure Fit System', 'Lock in. Ride hard.'],
+    ['Triple-Layer Face Foam', 'All-day comfort. Zero distractions.'],
+].map(([title, description], index) => ({ title, description, image: `/img/gallery/detail-${index + 1}.jpg` }));
+const actionImages = Array.from({ length: 6 }, (_, index) => ({ src: `/img/gallery/action-${index + 1}.jpg`, alt: `AxeGear community action shot ${index + 1}` }));
+
+function fillMosaic(images: GalleryImage[]): GalleryImage[] {
+    const source = images.length === 0 ? mosaicImages : images;
+    return Array.from({ length: 8 }, (_, index) => source[index % source.length]);
+}
 
 export default function Gallery() {
-    const [activeTab, setActiveTab] = useState('All');
+    const [activeTab, setActiveTab] = useState<GalleryTab>('All');
+    const visibleMosaic = useMemo(
+        () => fillMosaic(activeTab === 'All' ? mosaicImages : mosaicImages.filter((image) => image.categories.includes(activeTab))),
+        [activeTab],
+    );
 
     return (
-        <ShopLayout
-            title="AxeGear Gallery"
-            description="Explore the visual world of AxeGear through performance-driven product imagery, athlete moments, gear details, and lifestyle captures."
-        >
-            {/* 1. HERO SECTION */}
-            <section className="flex flex-col border-b-2 border-ink bg-white lg:flex-row">
-                <div className="flex w-full flex-col justify-center border-b-2 border-ink px-5 py-16 lg:w-1/2 lg:border-r-2 lg:border-b-0 lg:px-12 lg:py-24 xl:px-20">
-                    <span className="mb-4 text-[13px] font-bold tracking-widest text-primary uppercase">
-                        Visual Showcase
-                    </span>
-                    <h1 className="mb-6 font-sans text-5xl font-black text-ink uppercase tracking-tight lg:text-7xl">
-                        AxeGear Gallery
-                    </h1>
-                    <p className="mb-8 max-w-[420px] text-base leading-relaxed text-ink/80 lg:text-lg">
-                        Explore the visual world of AxeGear through
-                        performance-driven product imagery, athlete moments,
-                        gear details, and lifestyle captures.
-                    </p>
-                    <Link
-                        href="/list"
-                        className="group inline-flex w-fit items-center gap-2 border-b-2 border-ink pb-1 font-bold text-ink transition-colors hover:border-primary hover:text-primary"
-                    >
-                        View Latest Collection
-                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                    </Link>
-                </div>
-                <div className="w-full lg:w-1/2">
-                    <img
-                        src="https://images.unsplash.com/photo-1541625602330-2277a4c46182?auto=format&fit=crop&q=80&w=1200"
-                        alt="AxeGear Athletes"
-                        className="h-full min-h-[400px] w-full object-cover grayscale transition-all duration-700 hover:grayscale-0 lg:min-h-[600px]"
-                    />
-                </div>
-            </section>
+        <ShopLayout>
+            <Head title="AxeGear Gallery">
+                <meta name="description" content="Explore the visual world of AxeGear through performance-driven product imagery, athlete moments, gear details, and lifestyle captures." />
+            </Head>
 
-            {/* 2. GALLERY TABS & MASONRY */}
-            <section className="bg-white">
-                {/* Tabs */}
-                <div className="scrollbar-hide flex overflow-x-auto border-b-2 border-ink px-5 lg:justify-center">
-                    <div className="flex w-max min-w-full justify-start space-x-6 lg:justify-center lg:space-x-10 xl:space-x-14">
-                        {TABS.map((tab) => (
-                            <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab)}
-                                className={elative py-6 text-[13px] font-bold tracking-wider uppercase whitespace-nowrap transition-colors  + (activeTab === tab ? 'text-primary' : 'text-ink hover:text-primary')}
-                            >
-                                {tab}
-                                {activeTab === tab && (
-                                    <span className="absolute bottom-[-2px] left-0 h-[2px] w-full bg-primary" />
-                                )}
-                            </button>
+            <div className="bg-white text-[#1A1A1A]">
+                <section className="grid min-h-[250px] border-b border-[#D9D9D9] lg:grid-cols-[42.8%_57.2%]">
+                    <div className="flex flex-col justify-center px-7 py-12 sm:px-11 lg:px-[43px] lg:py-10">
+                        <p className="text-[10px] leading-none font-bold tracking-[0.03em] text-[#F58220] uppercase">Visual Showcase</p>
+                        <h1 className="mt-4 text-[44px] leading-[0.92] font-black tracking-[-0.045em] text-[#090909] sm:text-[52px] lg:text-[48px]">AxeGear Gallery</h1>
+                        <p className="mt-5 max-w-[315px] text-[13px] leading-[1.55] text-[#343434]">Explore the visual world of AxeGear through performance-driven product imagery, athlete moments, gear details, and lifestyle captures.</p>
+                        <Link href="/list" className="mt-6 inline-flex w-fit items-center gap-3 border-b border-[#F58220] pb-1 text-[11px] font-bold text-[#1A1A1A]">View Latest Collection <ArrowRight className="h-4 w-4 text-[#F58220]" strokeWidth={1.8} /></Link>
+                    </div>
+                    <img src="/img/gallery/hero.jpg" alt="AxeGear cyclists wearing performance helmets and eyewear" className="h-[285px] w-full object-cover sm:h-[340px] lg:h-full lg:min-h-[250px]" />
+                </section>
+
+                <section aria-label="Gallery categories" className="border-b border-[#D9D9D9]">
+                    <div className="scrollbar-hide flex overflow-x-auto px-5 sm:px-7">
+                        <div className="mx-auto flex min-w-max items-center gap-7 sm:gap-10 lg:gap-[52px]">
+                            {tabs.map((tab) => (
+                                <button key={tab} type="button" aria-pressed={activeTab === tab} onClick={() => setActiveTab(tab)} className={`relative rounded-none px-0 py-[17px] text-[10px] leading-none font-semibold whitespace-nowrap ${activeTab === tab ? 'text-[#F58220]' : 'text-[#171717] hover:text-[#F58220]'}`}>
+                                    {tab}
+                                    {activeTab === tab && <span className="absolute right-[-12px] bottom-0 left-[-12px] h-px bg-[#F58220]" />}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                <section className="px-4 py-3 sm:px-7 sm:py-4">
+                    <div className="grid auto-rows-[132px] grid-cols-2 gap-1 sm:auto-rows-[148px] sm:grid-cols-4">
+                        {visibleMosaic.map((image, index) => (
+                            <div key={`${activeTab}-${index}-${image.src}`} className={`overflow-hidden bg-[#F1F1F1] ${index === 0 ? 'row-span-2' : index === 2 || index === 3 || index === 7 ? 'col-span-2' : ''}`}>
+                                <img src={image.src} alt={image.alt} className="h-full w-full object-cover" />
+                            </div>
                         ))}
                     </div>
-                </div>
+                </section>
 
-                {/* Masonry Grid Placeholder */}
-                <div className="p-5 lg:p-10 xl:p-16 border-b-2 border-ink">
-                    <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
-                        {/* Col 1 */}
-                        <div className="flex flex-col gap-5">
-                            <img
-                                src="https://images.unsplash.com/photo-1541625602330-2277a4c46182?auto=format&fit=crop&q=80&w=800"
-                                alt="Gallery item"
-                                className="w-full object-cover grayscale transition duration-500 hover:grayscale-0 h-[600px]"
-                            />
-                        </div>
-                        {/* Col 2 */}
-                        <div className="flex flex-col gap-5">
-                            <img
-                                src="https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&q=80&w=800"
-                                alt="Gallery item"
-                                className="w-full object-cover grayscale transition duration-500 hover:grayscale-0 h-[290px]"
-                            />
-                            <div className="grid grid-cols-2 gap-5 h-[290px]">
-                                <img
-                                    src="https://images.unsplash.com/photo-1521193089946-7c980277bdbe?auto=format&fit=crop&q=80&w=800"
-                                    alt="Gallery item"
-                                    className="w-full object-cover grayscale transition duration-500 hover:grayscale-0 h-full"
-                                />
-                                <img
-                                    src="https://images.unsplash.com/photo-1582283921893-68d71249767f?auto=format&fit=crop&q=80&w=800"
-                                    alt="Gallery item"
-                                    className="w-full object-cover grayscale transition duration-500 hover:grayscale-0 h-full"
-                                />
-                            </div>
-                        </div>
-                        {/* Col 3 */}
-                        <div className="flex flex-col gap-5">
-                            <img
-                                src="https://images.unsplash.com/photo-1511994298241-608e28f14fde?auto=format&fit=crop&q=80&w=800"
-                                alt="Gallery item"
-                                className="w-full object-cover grayscale transition duration-500 hover:grayscale-0 h-[400px]"
-                            />
-                            <img
-                                src="https://images.unsplash.com/photo-1533282960533-51328aa26626?auto=format&fit=crop&q=80&w=800"
-                                alt="Gallery item"
-                                className="w-full object-cover grayscale transition duration-500 hover:grayscale-0 h-[180px]"
-                            />
-                        </div>
-                        {/* Col 4 */}
-                        <div className="flex flex-col gap-5">
-                            <img
-                                src="https://images.unsplash.com/photo-1517409249780-e885d56411ab?auto=format&fit=crop&q=80&w=800"
-                                alt="Gallery item"
-                                className="w-full object-cover grayscale transition duration-500 hover:grayscale-0 h-[290px]"
-                            />
-                            <img
-                                src="https://images.unsplash.com/photo-1473043831969-906d203920c8?auto=format&fit=crop&q=80&w=800"
-                                alt="Gallery item"
-                                className="w-full object-cover grayscale transition duration-500 hover:grayscale-0 h-[290px]"
-                            />
-                        </div>
-                    </div>
-                </div>
-            </section>
+                <img src="/img/gallery/speed-banner.jpg" alt="Built for Speed. Designed for Clarity. Premium materials and athlete-tested design." className="h-auto w-full" />
 
-            {/* 3. HERO PARALLAX / FULL WIDTH */}
-            <section className="relative flex h-[350px] w-full items-center justify-start lg:h-[450px]">
-                <div className="absolute inset-0 z-0">
-                    <img
-                        src="https://images.unsplash.com/photo-1536762303534-77bfd0f367eb?auto=format&fit=crop&q=80&w=2000"
-                        alt="Built for Speed"
-                        className="h-full w-full object-cover object-top grayscale"
-                    />
-                    <div className="absolute inset-0 bg-ink/70" />
-                </div>
-                <div className="relative z-10 px-5 lg:px-12 xl:px-20 max-w-[800px]">
-                    <h2 className="mb-4 font-sans text-4xl font-black text-white uppercase tracking-tight lg:text-5xl xl:text-6xl">
-                        Built for Speed.<br />Designed for Clarity.
-                    </h2>
-                    <p className="max-w-[480px] text-base font-medium text-white/90 lg:text-lg">
-                        Premium materials. Athlete-tested design.<br/>
-                        Performance engineered for every edge.
-                    </p>
-                </div>
-            </section>
-
-            {/* 4. PRODUCT SPOTLIGHT */}
-            <section className="border-y-2 border-ink bg-white">
-                <div className="border-b-2 border-ink py-10 text-center">
-                    <h2 className="text-2xl font-black text-ink uppercase tracking-tight lg:text-4xl">
-                        Product Spotlight
-                    </h2>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-                    {[
-                        {
-                            title: 'Performance Sunglasses',
-                            desc: 'Lightweight, durable, and built for every condition.',
-                            img: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&q=80&w=600',
-                        },
-                        {
-                            title: 'Moto / MTB Goggles',
-                            desc: 'Maximum vision. Ultimate protection. No compromises.',
-                            img: 'https://images.unsplash.com/photo-1582283921893-68d71249767f?auto=format&fit=crop&q=80&w=600',
-                        },
-                        {
-                            title: 'Performance Gloves',
-                            desc: 'Grip. Control. Comfort. Engineered for performance.',
-                            img: 'https://images.unsplash.com/photo-1473043831969-906d203920c8?auto=format&fit=crop&q=80&w=600',
-                        },
-                        {
-                            title: 'Riding Apparel',
-                            desc: 'Technical gear that moves with you and keeps you ahead.',
-                            img: 'https://images.unsplash.com/photo-1541625602330-2277a4c46182?auto=format&fit=crop&q=80&w=600',
-                        },
-                    ].map((item, idx) => (
-                        <div
-                            key={idx}
-                            className="group flex flex-col border-b-2 border-ink md:border-r-2 md:[&:nth-child(2n)]:border-r-0 lg:border-b-0 lg:border-r-2 lg:[&:nth-child(2n)]:border-r-2 lg:[&:last-child]:border-r-0"
-                        >
-                            <div className="h-[250px] w-full overflow-hidden border-b-2 border-ink lg:h-[300px]">
-                                <img
-                                    src={item.img}
-                                    alt={item.title}
-                                    className="h-full w-full object-cover grayscale transition-transform duration-700 group-hover:scale-105 group-hover:grayscale-0"
-                                />
-                            </div>
-                            <div className="flex flex-1 flex-col p-6">
-                                <h3 className="mb-2 text-lg font-bold text-ink uppercase tracking-tight">
-                                    {item.title}
-                                </h3>
-                                <p className="mb-6 text-sm text-ink/70">
-                                    {item.desc}
-                                </p>
-                                <div className="mt-auto">
-                                    <Link
-                                        href="/list"
-                                        className="inline-flex items-center gap-2 text-[12px] font-bold text-ink transition-colors hover:text-primary uppercase tracking-widest"
-                                    >
-                                        View Collection
-                                        <ArrowRight className="h-4 w-4" />
-                                    </Link>
+                <section className="px-4 pt-3 pb-4 sm:px-7">
+                    <h2 className="text-center text-[21px] leading-none font-black tracking-[-0.04em] text-[#111111]">Product Spotlight</h2>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                        {spotlightItems.map((item) => (
+                            <article key={item.title} className="border border-[#DEDEDE] bg-white">
+                                <img src={item.image} alt={item.title} className="aspect-[1.83/1] w-full object-cover" />
+                                <div className="px-7 py-3 sm:px-5">
+                                    <h3 className="text-[12px] leading-tight font-bold text-[#171717]">{item.title}</h3>
+                                    <p className="mt-1 min-h-8 text-[9px] leading-[1.35] text-[#202020]">{item.description}</p>
+                                    <Link href="/list" className="mt-2 inline-flex items-center gap-3 text-[9px] font-bold text-[#171717]">View Collection <ArrowRight className="h-3 w-3 text-[#F58220]" strokeWidth={1.8} /></Link>
                                 </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </section>
+                            </article>
+                        ))}
+                    </div>
+                </section>
 
-            {/* 5. ON THE TRACK */}
-            <section className="bg-white pb-16 pt-10">
-                <div className="mb-10 text-center">
-                    <h2 className="text-2xl font-black text-ink uppercase tracking-tight lg:text-3xl">
-                        On the Track. On the Trail. On the Move.
-                    </h2>
-                </div>
-                <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-5 px-5">
-                    {[
-                        'https://images.unsplash.com/photo-1511994298241-608e28f14fde?auto=format&fit=crop&q=80&w=400',
-                        'https://images.unsplash.com/photo-1533282960533-51328aa26626?auto=format&fit=crop&q=80&w=400',
-                        'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&q=80&w=400',
-                        'https://images.unsplash.com/photo-1541625602330-2277a4c46182?auto=format&fit=crop&q=80&w=400',
-                        'https://images.unsplash.com/photo-1521193089946-7c980277bdbe?auto=format&fit=crop&q=80&w=400',
-                    ].map((img, idx) => (
-                        <div key={idx} className="aspect-[4/3] w-full overflow-hidden">
-                            <img
-                                src={img}
-                                alt="Action shot"
-                                className="h-full w-full object-cover grayscale transition-all duration-500 hover:scale-105 hover:grayscale-0"
-                            />
-                        </div>
-                    ))}
-                </div>
-            </section>
+                <ImageStrip title="On the Track. On the Trail. On the Move." images={trackImages} />
 
-            {/* 6. DETAILS MATTER */}
-            <section className="bg-white pb-16 pt-10">
-                <div className="mb-10 text-center">
-                    <h2 className="text-2xl font-black text-ink uppercase tracking-tight lg:text-3xl">
-                        Details Matter
-                    </h2>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 px-5 gap-6">
-                    {[
-                        {
-                            title: 'Hydrophobic Lens Coating',
-                            desc: 'Repels water. Enhances clarity.',
-                            img: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&q=80&w=400',
-                        },
-                        {
-                            title: 'TR90 Frame Technology',
-                            desc: 'Lightweight. Flexible. Tough.',
-                            img: 'https://images.unsplash.com/photo-1582283921893-68d71249767f?auto=format&fit=crop&q=80&w=400',
-                        },
-                        {
-                            title: 'Breathable Performance Fabric',
-                            desc: 'Stay cool. Stay focused.',
-                            img: 'https://images.unsplash.com/photo-1473043831969-906d203920c8?auto=format&fit=crop&q=80&w=400',
-                        },
-                        {
-                            title: 'Reinforced Stitching',
-                            desc: 'Engineered for performance.',
-                            img: 'https://images.unsplash.com/photo-1541625602330-2277a4c46182?auto=format&fit=crop&q=80&w=400',
-                        },
-                    ].map((item, idx) => (
-                        <div key={idx} className="flex flex-col text-center">
-                            <div className="mb-4 aspect-[2/1] w-full overflow-hidden">
-                                <img
-                                    src={item.img}
-                                    alt={item.title}
-                                    className="h-full w-full object-cover grayscale transition-all duration-500 hover:scale-105 hover:grayscale-0"
-                                />
-                            </div>
-                            <h3 className="mb-1 text-[13px] font-bold text-ink uppercase tracking-tight">
-                                {item.title}
-                            </h3>
-                            <p className="text-xs text-ink/70">
-                                {item.desc}
-                            </p>
-                        </div>
-                    ))}
-                </div>
-                {/* 2 more detail matter to center them below the 4 */}
-                <div className="grid grid-cols-1 md:grid-cols-2 px-5 gap-6 max-w-[800px] mx-auto mt-6">
-                     {[
-                        {
-                            title: 'Secure Fit System',
-                            desc: 'Lock in. Ride hard.',
-                            img: 'https://images.unsplash.com/photo-1521193089946-7c980277bdbe?auto=format&fit=crop&q=80&w=400',
-                        },
-                        {
-                            title: 'Triple-Layer Face Foam',
-                            desc: 'All-day comfort. Zero distractions.',
-                            img: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&q=80&w=400',
-                        }
-                    ].map((item, idx) => (
-                        <div key={idx} className="flex flex-col text-center">
-                            <div className="mb-4 aspect-[2/1] w-full overflow-hidden">
-                                <img
-                                    src={item.img}
-                                    alt={item.title}
-                                    className="h-full w-full object-cover grayscale transition-all duration-500 hover:scale-105 hover:grayscale-0"
-                                />
-                            </div>
-                            <h3 className="mb-1 text-[13px] font-bold text-ink uppercase tracking-tight">
-                                {item.title}
-                            </h3>
-                            <p className="text-xs text-ink/70">
-                                {item.desc}
-                            </p>
-                        </div>
-                    ))}
-                </div>
-            </section>
+                <section className="px-4 pb-4 sm:px-7">
+                    <h2 className="text-center text-[17px] leading-none font-black tracking-[-0.035em] text-[#111111]">Details Matter</h2>
+                    <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-4 sm:grid-cols-3 lg:grid-cols-6">
+                        {detailItems.map((item) => (
+                            <article key={item.title} className="text-center">
+                                <img src={item.image} alt={item.title} className="aspect-[1.62/1] w-full object-cover" />
+                                <h3 className="mt-1.5 text-[8px] leading-tight font-bold text-[#151515]">{item.title}</h3>
+                                <p className="mt-0.5 text-[7px] leading-tight text-[#333333]">{item.description}</p>
+                            </article>
+                        ))}
+                    </div>
+                </section>
 
-            {/* 7. #AxeGear In Action */}
-            <section className="bg-white pb-16 pt-10">
-                <div className="mb-10 text-center">
-                    <h2 className="text-2xl font-black text-ink uppercase tracking-tight lg:text-3xl">
-                        #AxeGear In Action
-                    </h2>
-                </div>
-                <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-5 px-5">
-                    {[
-                        'https://images.unsplash.com/photo-1533282960533-51328aa26626?auto=format&fit=crop&q=80&w=400',
-                        'https://images.unsplash.com/photo-1511994298241-608e28f14fde?auto=format&fit=crop&q=80&w=400',
-                        'https://images.unsplash.com/photo-1521193089946-7c980277bdbe?auto=format&fit=crop&q=80&w=400',
-                        'https://images.unsplash.com/photo-1541625602330-2277a4c46182?auto=format&fit=crop&q=80&w=400',
-                        'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&q=80&w=400',
-                    ].map((img, idx) => (
-                        <div key={idx} className="aspect-[4/3] w-full overflow-hidden">
-                            <img
-                                src={img}
-                                alt="Action shot"
-                                className="h-full w-full object-cover grayscale transition-all duration-500 hover:scale-105 hover:grayscale-0"
-                            />
-                        </div>
-                    ))}
-                </div>
-            </section>
+                <ImageStrip title="#AxeGear In Action" images={actionImages} />
 
-            {/* 8. READY TO GEAR UP CTA */}
-            <section className="flex flex-col items-center justify-between border-t-2 border-ink bg-white px-5 py-8 lg:flex-row lg:px-20">
-                <div className="mb-8 w-full max-w-[250px] lg:mb-0 lg:w-1/4 xl:max-w-[300px]">
-                    <img
-                        src="https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&q=80&w=400"
-                        alt="AxeGear product"
-                        className="w-full grayscale mix-blend-multiply"
-                    />
-                </div>
-                <div className="mb-8 w-full text-center lg:mb-0 lg:w-2/4 lg:text-left lg:px-10">
-                    <h2 className="mb-2 text-2xl font-black text-ink uppercase tracking-tight lg:text-3xl">
-                        Ready to Gear Up?
-                    </h2>
-                    <p className="text-sm text-ink/80 lg:text-[15px]">
-                        Discover performance eyewear and gear built<br/>
-                        for riders, racers, and athletes who demand more.
-                    </p>
-                </div>
-                <div className="flex w-full flex-col items-center gap-4 lg:w-1/4 lg:items-end">
-                    <Link
-                        href="/list"
-                        className="flex w-full items-center justify-center gap-2 bg-primary px-8 py-3.5 text-sm font-bold text-white transition-colors hover:bg-[#E67312] lg:w-auto uppercase tracking-wider"
-                    >
-                        Shop Collection
-                        <ArrowRight className="h-4 w-4" />
-                    </Link>
-                    <Link
-                        href="/list"
-                        className="group flex items-center gap-2 text-xs font-bold text-ink transition-colors hover:text-primary uppercase tracking-widest"
-                    >
-                        Explore New Arrivals
-                        <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
-                    </Link>
-                </div>
-            </section>
+                <section className="grid items-center gap-5 border-t border-[#E4E4E4] bg-[#FAFAFA] px-7 py-4 sm:grid-cols-[30%_1fr_auto] sm:gap-7 lg:px-[68px]">
+                    <img src="/img/gallery/cta-product.jpg" alt="AxeGear performance eyewear collection" className="mx-auto max-h-[76px] w-full object-contain sm:mx-0" />
+                    <div className="text-center sm:text-left">
+                        <h2 className="text-[23px] leading-none font-black tracking-[-0.04em] text-[#111111]">Ready to Gear Up?</h2>
+                        <p className="mt-2 max-w-[335px] text-[10px] leading-[1.45] text-[#333333]">Discover performance eyewear and gear built for riders, racers, and athletes who demand more.</p>
+                    </div>
+                    <div className="flex flex-col items-center gap-3 sm:items-start">
+                        <Link href="/list" className="inline-flex min-w-[134px] items-center justify-center gap-3 bg-[#F58220] px-5 py-3 text-[10px] font-bold text-white">Shop Collection <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.8} /></Link>
+                        <Link href="/list" className="inline-flex items-center gap-3 text-[9px] font-bold text-[#171717]">Explore New Arrivals <ArrowRight className="h-3 w-3 text-[#F58220]" strokeWidth={1.8} /></Link>
+                    </div>
+                </section>
+            </div>
         </ShopLayout>
     );
 }
 
-
+function ImageStrip({ title, images }: { title: string; images: Array<{ src: string; alt: string }> }) {
+    return (
+        <section className="px-4 pb-4 sm:px-7">
+            <h2 className="text-center text-[17px] leading-none font-black tracking-[-0.035em] text-[#111111]">{title}</h2>
+            <div className="mt-2 grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-6">
+                {images.map((image) => <img key={image.src} src={image.src} alt={image.alt} className="aspect-[1.56/1] w-full object-cover" />)}
+            </div>
+        </section>
+    );
+}

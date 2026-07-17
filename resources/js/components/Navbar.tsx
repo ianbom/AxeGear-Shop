@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Menu, Search, ShoppingCart, User, X } from 'lucide-react';
+import { Heart, Menu, Search, ShoppingCart, User, X } from 'lucide-react';
 import { useState } from 'react';
 import { login } from '@/routes';
 
@@ -33,16 +33,36 @@ export default function Navbar({
     const [isOpen, setIsOpen] = useState(false);
     const cartBadge = cartCount > 99 ? '99+' : String(cartCount);
     const accountHref = isAuthenticated ? '/my-profile' : login.url();
-    const navItems = collections.map((collection) => ({
-        label: collection.name,
-        href: `/list?collection=${collection.slug}`,
-    }));
+    const isBlog = currentUrl.startsWith('/blog');
+    const navItems = isBlog
+        ? [
+              { label: 'New', href: '/list?sort=newest' },
+              { label: 'Sport', href: '/list?search=sport' },
+              { label: 'Sunglasses', href: '/list?search=sunglasses' },
+              { label: 'Goggles', href: '/list?search=goggles' },
+              { label: 'Gloves', href: '/list?search=gloves' },
+              { label: 'Apparel & Accessories', href: '/list?search=apparel' },
+              { label: 'Sale', href: '/list?search=sale' },
+              { label: 'Explore', href: '/blog' },
+          ]
+        : collections.map((collection) => ({
+              label: collection.name,
+              href: `/list?collection=${collection.slug}`,
+          }));
 
     const isActive = (href: string) =>
         href.includes('?') && currentUrl === href;
 
     return (
         <header className="sticky top-0 z-50 border-b-2 border-ink bg-canvas">
+            {isBlog && (
+                <div className="flex h-6 items-center justify-between bg-black px-5 text-[9px] font-medium text-white sm:px-11">
+                    <span>Discover the latest AxeGear performance stories</span>
+                    <Link href="/blog" className="font-semibold text-[#F58220]">
+                        Explore Now
+                    </Link>
+                </div>
+            )}
             <div className="flex h-[72px] items-center justify-between px-5 sm:px-8 lg:h-[78px] lg:px-9">
                 <Link
                     href="/"
@@ -52,13 +72,15 @@ export default function Navbar({
                     <AxeGearWordmark />
                 </Link>
 
-                <nav className="hidden items-center gap-8 text-[15px] leading-none font-extrabold tracking-[0.03em] text-ink uppercase xl:flex">
+                <nav className={`hidden items-center leading-none font-extrabold tracking-[0.03em] text-ink uppercase ${isBlog ? 'gap-4 text-[10px] md:flex' : 'gap-8 text-[15px] xl:flex'}`}>
                     {navItems.map((item) => (
                         <Link
                             key={item.label}
                             href={item.href}
                             className={`py-7 transition-colors hover:text-primary ${
-                                isActive(item.href) ? 'text-primary' : 'text-ink'
+                                isActive(item.href)
+                                    ? 'text-primary'
+                                    : 'text-ink'
                             }`}
                         >
                             {item.label}
@@ -67,6 +89,15 @@ export default function Navbar({
                 </nav>
 
                 <div className="flex items-center gap-3 text-ink sm:gap-5">
+                    {isBlog && (
+                        <Link
+                            href="/blog#articles"
+                            aria-label="Search stories"
+                            className="hidden size-9 items-center justify-center hover:text-primary sm:flex"
+                        >
+                            <Search size={22} strokeWidth={1.8} />
+                        </Link>
+                    )}
                     <Link
                         href={accountHref}
                         aria-label={
@@ -76,6 +107,15 @@ export default function Navbar({
                     >
                         <User size={31} strokeWidth={2.1} />
                     </Link>
+                    {isBlog && (
+                        <Link
+                            href="/wishlist"
+                            aria-label="Open wishlist"
+                            className="hidden size-9 items-center justify-center hover:text-primary sm:flex"
+                        >
+                            <Heart size={23} strokeWidth={1.8} />
+                        </Link>
+                    )}
                     <Link
                         href="/my-cart"
                         aria-label="Open cart"
@@ -90,7 +130,7 @@ export default function Navbar({
                         type="button"
                         aria-label="Open menu"
                         onClick={() => setIsOpen(true)}
-                        className="flex size-11 items-center justify-center hover:text-primary xl:hidden"
+                        className={`size-11 items-center justify-center hover:text-primary ${isBlog ? 'flex md:hidden' : 'flex xl:hidden'}`}
                     >
                         <Menu size={31} strokeWidth={2.2} />
                     </button>
@@ -101,12 +141,12 @@ export default function Navbar({
                 type="button"
                 aria-label="Close menu overlay"
                 onClick={() => setIsOpen(false)}
-                className={`fixed inset-0 z-[70] bg-black/50 transition-opacity xl:hidden ${
+                className={`fixed inset-0 z-[70] bg-black/50 transition-opacity ${isBlog ? 'md:hidden' : 'xl:hidden'} ${
                     isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
                 }`}
             />
             <aside
-                className={`fixed top-0 right-0 bottom-0 z-[80] w-[min(86vw,360px)] border-l border-ink bg-canvas p-5 transition-transform xl:hidden ${
+                className={`fixed top-0 right-0 bottom-0 z-[80] w-[min(86vw,360px)] border-l border-ink bg-canvas p-5 transition-transform ${isBlog ? 'md:hidden' : 'xl:hidden'} ${
                     isOpen ? 'translate-x-0' : 'translate-x-full'
                 }`}
             >
@@ -128,7 +168,9 @@ export default function Navbar({
                             href={item.href}
                             onClick={() => setIsOpen(false)}
                             className={`py-4 hover:text-primary ${
-                                isActive(item.href) ? 'text-primary' : 'text-ink'
+                                isActive(item.href)
+                                    ? 'text-primary'
+                                    : 'text-ink'
                             }`}
                         >
                             {item.label}
