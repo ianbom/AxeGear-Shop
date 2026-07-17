@@ -25,6 +25,14 @@ type Collection = {
     banner_mobile_url: string | null;
     is_featured: boolean;
     is_active: boolean;
+    products?: Array<{
+        id: number;
+        name: string;
+        status: string;
+        regular_price: string | number;
+        sale_price: string | number | null;
+        primary_image: { image_url: string } | null;
+    }>;
 };
 
 type Props = {
@@ -161,169 +169,244 @@ export default function CollectionForm({ mode, collection }: Props) {
                     description="Collection aktif bisa dipakai untuk campaign dan assignment produk."
                 />
 
-                <Card className="max-w-3xl">
-                    <CardHeader>
-                        <CardTitle>Collection Information</CardTitle>
-                        <CardDescription>
-                            Upload banner desktop (landscape) dan mobile
-                            (portrait) untuk collection ini.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <form onSubmit={submit} className="flex flex-col gap-5">
-                            <div className="grid gap-5 md:grid-cols-2">
-                                <div className="grid gap-2">
-                                    <Label htmlFor="name">Name</Label>
-                                    <Input
-                                        id="name"
-                                        value={data.name}
-                                        onChange={(event) => {
-                                            const name = event.target.value;
-
-                                            setData({
-                                                ...data,
-                                                name,
-                                                slug: slugManuallyEdited
-                                                    ? data.slug
-                                                    : slugify(name),
-                                            });
-                                        }}
-                                        placeholder="Contoh: Eid Signature Series"
-                                    />
-                                    <InputError message={errors.name} />
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="slug">Slug</Label>
-                                    <div className="flex gap-2">
+                <div
+                    className={`grid items-start gap-6 ${isEdit ? 'lg:grid-cols-[minmax(0,1fr)_380px]' : 'max-w-3xl'}`}
+                >
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Collection Information</CardTitle>
+                            <CardDescription>
+                                Upload banner desktop (landscape) dan mobile
+                                (portrait) untuk collection ini.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <form
+                                onSubmit={submit}
+                                className="flex flex-col gap-5"
+                            >
+                                <div className="grid gap-5 md:grid-cols-2">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="name">Name</Label>
                                         <Input
-                                            id="slug"
-                                            value={data.slug}
+                                            id="name"
+                                            value={data.name}
                                             onChange={(event) => {
-                                                setSlugManuallyEdited(true);
-                                                setData(
-                                                    'slug',
-                                                    slugify(event.target.value),
-                                                );
+                                                const name = event.target.value;
+
+                                                setData({
+                                                    ...data,
+                                                    name,
+                                                    slug: slugManuallyEdited
+                                                        ? data.slug
+                                                        : slugify(name),
+                                                });
                                             }}
-                                            placeholder="eid-signature-series"
+                                            placeholder="Contoh: Eid Signature Series"
                                         />
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={generateSlug}
-                                            disabled={!data.name.trim()}
-                                        >
-                                            Generate
-                                        </Button>
+                                        <InputError message={errors.name} />
                                     </div>
-                                    <InputError message={errors.slug} />
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="slug">Slug</Label>
+                                        <div className="flex gap-2">
+                                            <Input
+                                                id="slug"
+                                                value={data.slug}
+                                                onChange={(event) => {
+                                                    setSlugManuallyEdited(true);
+                                                    setData(
+                                                        'slug',
+                                                        slugify(
+                                                            event.target.value,
+                                                        ),
+                                                    );
+                                                }}
+                                                placeholder="eid-signature-series"
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={generateSlug}
+                                                disabled={!data.name.trim()}
+                                            >
+                                                Generate
+                                            </Button>
+                                        </div>
+                                        <InputError message={errors.slug} />
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div className="grid gap-2">
-                                <Label htmlFor="description">Description</Label>
-                                <textarea
-                                    id="description"
-                                    value={data.description}
-                                    onChange={(event) =>
-                                        setData(
-                                            'description',
-                                            event.target.value,
-                                        )
+                                <div className="grid gap-2">
+                                    <Label htmlFor="description">
+                                        Description
+                                    </Label>
+                                    <textarea
+                                        id="description"
+                                        value={data.description}
+                                        onChange={(event) =>
+                                            setData(
+                                                'description',
+                                                event.target.value,
+                                            )
+                                        }
+                                        className="min-h-28 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                    />
+                                    <InputError message={errors.description} />
+                                </div>
+
+                                <ImageUploadField
+                                    label="Desktop Banner"
+                                    currentUrl={
+                                        collection?.banner_desktop_url ?? null
                                     }
-                                    className="min-h-28 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                    previewUrl={desktopPreview}
+                                    onPreviewChange={setDesktopPreview}
+                                    onFileChange={(file) =>
+                                        setData('banner_desktop', file)
+                                    }
+                                    error={errors.banner_desktop}
+                                    description="Landscape — maks. 4 MB (JPG, PNG, WEBP)"
                                 />
-                                <InputError message={errors.description} />
-                            </div>
 
-                            <ImageUploadField
-                                label="Desktop Banner"
-                                currentUrl={
-                                    collection?.banner_desktop_url ?? null
-                                }
-                                previewUrl={desktopPreview}
-                                onPreviewChange={setDesktopPreview}
-                                onFileChange={(file) =>
-                                    setData('banner_desktop', file)
-                                }
-                                error={errors.banner_desktop}
-                                description="Landscape — maks. 4 MB (JPG, PNG, WEBP)"
-                            />
+                                <ImageUploadField
+                                    label="Mobile Banner"
+                                    currentUrl={
+                                        collection?.banner_mobile_url ?? null
+                                    }
+                                    previewUrl={mobilePreview}
+                                    onPreviewChange={setMobilePreview}
+                                    onFileChange={(file) =>
+                                        setData('banner_mobile', file)
+                                    }
+                                    error={errors.banner_mobile}
+                                    description="Portrait — maks. 2 MB (JPG, PNG, WEBP)"
+                                />
 
-                            <ImageUploadField
-                                label="Mobile Banner"
-                                currentUrl={
-                                    collection?.banner_mobile_url ?? null
-                                }
-                                previewUrl={mobilePreview}
-                                onPreviewChange={setMobilePreview}
-                                onFileChange={(file) =>
-                                    setData('banner_mobile', file)
-                                }
-                                error={errors.banner_mobile}
-                                description="Portrait — maks. 2 MB (JPG, PNG, WEBP)"
-                            />
+                                <div className="grid gap-3 md:grid-cols-2">
+                                    <label className="flex items-start gap-3 rounded-lg border p-4 text-sm">
+                                        <input
+                                            type="checkbox"
+                                            checked={data.is_featured}
+                                            onChange={(event) =>
+                                                setData(
+                                                    'is_featured',
+                                                    event.target.checked,
+                                                )
+                                            }
+                                            className="mt-1"
+                                        />
+                                        <span>
+                                            <span className="block font-medium">
+                                                Featured collection
+                                            </span>
+                                            <span className="text-muted-foreground">
+                                                Bisa ditampilkan di homepage.
+                                            </span>
+                                        </span>
+                                    </label>
+                                    <label className="flex items-start gap-3 rounded-lg border p-4 text-sm">
+                                        <input
+                                            type="checkbox"
+                                            checked={data.is_active}
+                                            onChange={(event) =>
+                                                setData(
+                                                    'is_active',
+                                                    event.target.checked,
+                                                )
+                                            }
+                                            className="mt-1"
+                                        />
+                                        <span>
+                                            <span className="block font-medium">
+                                                Active collection
+                                            </span>
+                                            <span className="text-muted-foreground">
+                                                Collection aktif bisa tampil ke
+                                                customer.
+                                            </span>
+                                        </span>
+                                    </label>
+                                </div>
 
-                            <div className="grid gap-3 md:grid-cols-2">
-                                <label className="flex items-start gap-3 rounded-lg border p-4 text-sm">
-                                    <input
-                                        type="checkbox"
-                                        checked={data.is_featured}
-                                        onChange={(event) =>
-                                            setData(
-                                                'is_featured',
-                                                event.target.checked,
-                                            )
-                                        }
-                                        className="mt-1"
-                                    />
-                                    <span>
-                                        <span className="block font-medium">
-                                            Featured collection
-                                        </span>
-                                        <span className="text-muted-foreground">
-                                            Bisa ditampilkan di homepage.
-                                        </span>
-                                    </span>
-                                </label>
-                                <label className="flex items-start gap-3 rounded-lg border p-4 text-sm">
-                                    <input
-                                        type="checkbox"
-                                        checked={data.is_active}
-                                        onChange={(event) =>
-                                            setData(
-                                                'is_active',
-                                                event.target.checked,
-                                            )
-                                        }
-                                        className="mt-1"
-                                    />
-                                    <span>
-                                        <span className="block font-medium">
-                                            Active collection
-                                        </span>
-                                        <span className="text-muted-foreground">
-                                            Collection aktif bisa tampil ke
-                                            customer.
-                                        </span>
-                                    </span>
-                                </label>
-                            </div>
+                                <div className="flex justify-end gap-3 border-t pt-5">
+                                    <Button
+                                        asChild
+                                        type="button"
+                                        variant="outline"
+                                    >
+                                        <Link href="/admin/collections">
+                                            Cancel
+                                        </Link>
+                                    </Button>
+                                    <Button type="submit" disabled={processing}>
+                                        <Save />
+                                        Save Collection
+                                    </Button>
+                                </div>
+                            </form>
+                        </CardContent>
+                    </Card>
 
-                            <div className="flex justify-end gap-3 border-t pt-5">
-                                <Button asChild type="button" variant="outline">
-                                    <Link href="/admin/collections">
-                                        Cancel
-                                    </Link>
-                                </Button>
-                                <Button type="submit" disabled={processing}>
-                                    <Save />
-                                    Save Collection
-                                </Button>
-                            </div>
-                        </form>
-                    </CardContent>
-                </Card>
+                    {isEdit && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>
+                                    Products in Collection (
+                                    {collection.products?.length || 0})
+                                </CardTitle>
+                                <CardDescription>
+                                    Daftar produk yang termasuk dalam koleksi
+                                    ini.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {collection.products?.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-8 text-center">
+                                        <p className="text-sm text-muted-foreground">
+                                            Belum ada produk di koleksi ini.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4">
+                                        {collection.products?.map((product) => (
+                                            <div
+                                                key={product.id}
+                                                className="flex flex-col overflow-hidden rounded-lg border bg-white shadow-sm transition-shadow hover:shadow-md"
+                                            >
+                                                <div className="relative aspect-square w-full bg-muted">
+                                                    {product.primary_image
+                                                        ?.image_url ? (
+                                                        <img
+                                                            src={
+                                                                product
+                                                                    .primary_image
+                                                                    .image_url
+                                                            }
+                                                            alt={product.name}
+                                                            className="h-full w-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="flex h-full w-full items-center justify-center">
+                                                            <ImageIcon className="h-8 w-8 text-muted-foreground/30" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="p-3">
+                                                    <p
+                                                        className="line-clamp-2 text-xs leading-tight font-medium text-zinc-900"
+                                                        title={product.name}
+                                                    >
+                                                        {product.name}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
             </div>
         </>
     );

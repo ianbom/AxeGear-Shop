@@ -30,7 +30,8 @@ class ProductRequest extends FormRequest
 
         return [
             'category_id' => ['nullable', 'integer', 'exists:categories,id'],
-            'collection_id' => ['nullable', 'integer', 'exists:collections,id'],
+            'collection_ids' => ['nullable', 'array'],
+            'collection_ids.*' => ['nullable', 'integer', 'exists:collections,id'],
             'name' => ['required', 'string', 'max:200'],
             'slug' => ['required', 'string', 'max:220', Rule::unique('products', 'slug')->ignore($product)],
             'sku' => ['nullable', 'string', 'max:100', Rule::unique('products', 'sku')->ignore($product)],

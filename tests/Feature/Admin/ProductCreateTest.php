@@ -27,7 +27,7 @@ it('creates a product with images, variants, and stock logs from the admin form 
         'is_active' => true,
     ]);
 
-    $collection = Collection::query()->create([
+    $collection1 = Collection::query()->create([
         'name' => 'Ramadan Collection',
         'slug' => 'ramadan-collection',
         'description' => 'Ramadan collection',
@@ -35,7 +35,15 @@ it('creates a product with images, variants, and stock logs from the admin form 
         'is_active' => true,
     ]);
 
-    $payload = productPayload($category, $collection);
+    $collection2 = Collection::query()->create([
+        'name' => 'Eid Collection',
+        'slug' => 'eid-collection',
+        'description' => 'Eid collection',
+        'is_featured' => false,
+        'is_active' => true,
+    ]);
+
+    $payload = productPayload($category, $collection1, $collection2);
 
     $this->actingAs($admin)
         ->post(route('admin.products.store'), $payload)
@@ -81,7 +89,12 @@ it('creates a product with images, variants, and stock logs from the admin form 
 
     $this->assertDatabaseHas('product_collections', [
         'product_id' => $product->id,
-        'collection_id' => $collection->id,
+        'collection_id' => $collection1->id,
+    ]);
+
+    $this->assertDatabaseHas('product_collections', [
+        'product_id' => $product->id,
+        'collection_id' => $collection2->id,
     ]);
 
     $this->assertDatabaseHas('product_images', [
@@ -156,11 +169,11 @@ it('creates a product with images, variants, and stock logs from the admin form 
 /**
  * @return array<string, mixed>
  */
-function productPayload(Category $category, Collection $collection): array
+function productPayload(Category $category, Collection $collection1, Collection $collection2): array
 {
     return [
         'category_id' => $category->id,
-        'collection_id' => $collection->id,
+        'collection_ids' => [$collection1->id, $collection2->id],
         'name' => 'Gamis Syar\'i Pita',
         'slug' => 'gamis-syari-pita',
         'sku' => 'GMS-001',

@@ -34,6 +34,12 @@ class CollectionController extends Controller
 
     public function edit(Collection $collection): Response
     {
+        $collection->load(['products' => function ($query) {
+            $query->select('products.id', 'name', 'status', 'regular_price', 'sale_price')
+                ->with('primaryImage:id,product_id,image_url')
+                ->latest('products.created_at');
+        }]);
+
         return inertia('admin/collections/form', [
             'mode' => 'edit',
             'collection' => $collection,

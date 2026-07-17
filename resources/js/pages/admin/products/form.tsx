@@ -80,7 +80,7 @@ type ProductVariantRow = ProductVariantPayload & {
 };
 type ProductFormData = {
     category_id: string | number;
-    collection_id: string | number;
+    collection_ids: Array<string | number>;
     name: string;
     slug: string;
     sku: string;
@@ -491,7 +491,7 @@ export default function ProductForm({ mode, product, options }: Props) {
     const { data, setData, post, processing, errors, transform } =
         useForm<ProductFormData>({
             category_id: product?.category_id ?? '',
-            collection_id: product?.collection_id ?? '',
+            collection_ids: product?.collection_ids ?? [],
             name: product?.name ?? '',
             slug: product?.slug ?? '',
             sku: product?.sku ?? '',
@@ -867,33 +867,35 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                 </select>
                                             </FieldGroup>
                                             <FieldGroup
-                                                label="Collection"
-                                                error={errors.collection_id}
+                                                label="Collections"
+                                                error={errors.collection_ids || (errors as any)['collection_ids.0']}
                                             >
-                                                <select
-                                                    value={data.collection_id}
-                                                    onChange={(e) =>
-                                                        setData(
-                                                            'collection_id',
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                    className="h-9 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-900 shadow-sm focus:border-[#151515] focus:ring-1 focus:ring-[#151515] focus:outline-none"
-                                                >
-                                                    <option value="">
-                                                        No collection
-                                                    </option>
-                                                    {options.collections.map(
-                                                        (c) => (
-                                                            <option
-                                                                key={c.id}
-                                                                value={c.id}
-                                                            >
-                                                                {c.name}
-                                                            </option>
-                                                        ),
+                                                <div className="grid max-h-48 grid-cols-2 gap-2 overflow-y-auto rounded-md border border-zinc-200 bg-white p-3">
+                                                    {options.collections.length === 0 ? (
+                                                        <span className="col-span-2 text-sm text-zinc-400">No collections available</span>
+                                                    ) : (
+                                                        options.collections.map((c) => {
+                                                            const isChecked = data.collection_ids.includes(c.id);
+                                                            return (
+                                                                <label key={c.id} className="flex items-center gap-2 rounded-md border border-zinc-100 p-2 hover:bg-zinc-50 cursor-pointer">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={isChecked}
+                                                                        onChange={(e) => {
+                                                                            if (e.target.checked) {
+                                                                                setData('collection_ids', [...data.collection_ids, c.id]);
+                                                                            } else {
+                                                                                setData('collection_ids', data.collection_ids.filter(id => id !== c.id));
+                                                                            }
+                                                                        }}
+                                                                        className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-[#151515]"
+                                                                    />
+                                                                    <span className="text-sm text-zinc-700">{c.name}</span>
+                                                                </label>
+                                                            );
+                                                        })
                                                     )}
-                                                </select>
+                                                </div>
                                             </FieldGroup>
                                         </FieldRow>
 
@@ -2144,13 +2146,13 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                 icon: (
                                                     <Layers className="h-3.5 w-3.5" />
                                                 ),
-                                                label: 'Collection',
-                                                value:
-                                                    options.collections.find(
-                                                        (c) =>
-                                                            c.id.toString() ===
-                                                            data.collection_id.toString(),
-                                                    )?.name || '—',
+                                                label: 'Collections',
+                                                value: data.collection_ids?.length > 0
+                                                    ? options.collections
+                                                        .filter(c => data.collection_ids.includes(c.id))
+                                                        .map(c => c.name)
+                                                        .join(', ')
+                                                    : '—',
                                             },
                                             {
                                                 icon: (

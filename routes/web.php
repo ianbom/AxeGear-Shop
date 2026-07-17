@@ -39,6 +39,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [CustomerHomeController::class, 'index'])->name('home');
+Route::inertia('/gallery', 'gallery/index')->name('gallery');
 Route::inertia('/about', 'about/index')->name('about');
 
 Route::middleware('guest')->group(function () {
@@ -212,3 +213,4 @@ Route::middleware(['auth', 'admin', 'admin.activity'])->prefix('admin')->name('a
 // Route::post('/payments/midtrans/notification', MidtransWebhookController::class)->name('payments.midtrans.notification');
 
 require __DIR__.'/settings.php';
+

@@ -359,7 +359,6 @@ function DetailProductContent({
                             <FadeInOnScroll delay={40}>
                                 <ProductSpecs
                                     product={product}
-                                    selectedVariant={selectedVariant}
                                     productDescription={productDescription}
                                 />
                             </FadeInOnScroll>

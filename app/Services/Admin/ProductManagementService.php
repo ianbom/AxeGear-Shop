@@ -86,7 +86,7 @@ class ProductManagementService
 
         return DB::transaction(function () use ($request, $validated): Product {
             $product = Product::query()->create($this->payload($request, $validated));
-            $this->syncCollections($product, $validated['collection_id'] ?? null);
+            $this->syncCollections($product, $validated['collection_ids'] ?? []);
             $this->images->sync($request, $product, $validated['images'] ?? []);
             $this->syncVariants($request, $product, $validated['variants'] ?? [], $request->user()->id);
 
@@ -101,7 +101,7 @@ class ProductManagementService
 
         DB::transaction(function () use ($request, $product, $validated): void {
             $product->update($this->payload($request, $validated));
-            $this->syncCollections($product, $validated['collection_id'] ?? null);
+            $this->syncCollections($product, $validated['collection_ids'] ?? []);
             $this->images->sync($request, $product, $validated['images'] ?? []);
             $this->syncVariants($request, $product, $validated['variants'] ?? [], $request->user()->id);
         });
@@ -194,7 +194,7 @@ class ProductManagementService
                 'stock_status', 'weight', 'length', 'width', 'height',
                 'status', 'is_featured', 'is_new_arrival', 'is_best_seller', 'meta_title', 'meta_description',
             ]),
-            'collection_id' => $product->collections->first()?->id,
+            'collection_ids' => $product->collections->pluck('id')->values()->all(),
             'images' => $product->images->map->only(['id', 'image_url', 'alt_text', 'sort_order', 'is_primary'])->values(),
             'variants' => $product->variants->map->only(['id', 'sku', 'barcode', 'variant_name', 'color_name', 'color_hex', 'size', 'package_type', 'regular_price', 'sale_price', 'stock', 'reserved_stock', 'weight', 'length', 'width', 'height', 'image_url', 'is_active'])->values(),
         ];
@@ -212,7 +212,7 @@ class ProductManagementService
     private function payload(Request $request, array $validated): array
     {
         return [
-            ...collect($validated)->except(['images', 'variants', 'collection_id'])->all(),
+            ...collect($validated)->except(['images', 'variants', 'collection_ids'])->all(),
             'brand_name' => $validated['brand_name'] ?? 'Axegear',
             'stock_status' => $validated['stock_status'] ?? 'in_stock',
             'is_featured' => $request->boolean('is_featured'),
@@ -290,9 +290,9 @@ class ProductManagementService
         });
     }
 
-    private function syncCollections(Product $product, mixed $collectionId): void
+    private function syncCollections(Product $product, ?array $collectionIds): void
     {
-        $product->collections()->sync(filled($collectionId) ? [(int) $collectionId] : []);
+        $product->collections()->sync($collectionIds ?: []);
     }
 
     private function makeVariantFilename(string $sku, int $index, string $extension): string
