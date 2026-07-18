@@ -42,6 +42,8 @@ Route::get('/', [CustomerHomeController::class, 'index'])->name('home');
 Route::inertia('/gallery', 'gallery/index')->name('gallery');
 Route::inertia('/about', 'about/index')->name('about');
 Route::inertia('/blog', 'blog/index')->name('blog');
+Route::inertia('/blog/{slug}', 'blog/show')->name('blog.show');
+Route::inertia('/contact', 'contact/index')->name('contact');
 
 Route::middleware('guest')->group(function () {
     Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])->name('auth.google.redirect');

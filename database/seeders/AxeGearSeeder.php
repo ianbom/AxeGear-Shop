@@ -82,40 +82,7 @@ class AxeGearSeeder extends Seeder
 
     private function ensureCategories()
     {
-        $categories = [
-            [
-                'name' => 'Bags & Hydropacks',
-                'slug' => 'bags-hydropacks',
-                'description' => 'Trail bags, hydropacks, boot bags, and compact carry solutions for riding days.',
-                'image_url' => 'https://down-id.img.susercontent.com/file/id-11134207-7r98w-loeyxusgxjru44',
-                'sort_order' => 10,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Bundles',
-                'slug' => 'bundles',
-                'description' => 'Value packs and bundled trail gear combinations from AxeGear.',
-                'image_url' => 'https://down-id.img.susercontent.com/file/id-11134207-7r98p-low92wfi0sybc4',
-                'sort_order' => 20,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Apparel & Gloves',
-                'slug' => 'apparel-gloves',
-                'description' => 'Technical jerseys, gloves, and wearable performance gear.',
-                'image_url' => 'https://down-id.img.susercontent.com/file/id-11134207-7rbk2-m8okjffi65tu16',
-                'sort_order' => 30,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Care & Utility',
-                'slug' => 'care-utility',
-                'description' => 'Cleaning, maintenance, and practical utility accessories for everyday use.',
-                'image_url' => 'https://down-id.img.susercontent.com/file/sg-11134201-81zuc-mmvm1ymm58g4ee',
-                'sort_order' => 40,
-                'is_active' => true,
-            ],
-        ];
+        $categories = CategorySeeder::categories();
 
         foreach ($categories as $category) {
             $record = Category::query()->withTrashed()->updateOrCreate(
@@ -133,48 +100,7 @@ class AxeGearSeeder extends Seeder
 
     private function ensureCollections()
     {
-        $collections = [
-            [
-                'name' => 'New Arrivals',
-                'slug' => 'new-arrivals',
-                'description' => 'Fresh AxeGear product drops from the latest catalog.',
-                'banner_desktop_url' => 'https://orcapowergear.com/_next/image?url=%2Fasset%2Fbanner%2Fwebbanner-orca.webp&w=3840&q=75',
-                'banner_mobile_url' => 'https://orcapowergear.com/asset/teamlegion/legion1.jpg',
-                'sort_order' => 10,
-                'is_featured' => true,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Sport Performance',
-                'slug' => 'sport-performance',
-                'description' => 'Technical trail and outdoor gear built for active performance.',
-                'banner_desktop_url' => 'https://orcapowergear.com/_next/image?url=%2Fasset%2Fbanner%2Fwebbanner-orca.webp&w=3840&q=75',
-                'banner_mobile_url' => 'https://orcapowergear.com/asset/teamlegion/legion3.jpg',
-                'sort_order' => 20,
-                'is_featured' => true,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Explore Essentials',
-                'slug' => 'explore-essentials',
-                'description' => 'Everyday utility products, compact storage, and trail-day essentials.',
-                'banner_desktop_url' => 'https://orcapowergear.com/_next/image?url=%2Fasset%2Fbanner%2Fwebbanner-orca.webp&w=3840&q=75',
-                'banner_mobile_url' => 'https://orcapowergear.com/asset/teamlegion/legion2.jpg',
-                'sort_order' => 30,
-                'is_featured' => true,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Sale',
-                'slug' => 'sale',
-                'description' => 'Bundled value offers and promo-friendly product groupings.',
-                'banner_desktop_url' => '/img/login-image.png',
-                'banner_mobile_url' => '/img/login-image.png',
-                'sort_order' => 40,
-                'is_featured' => false,
-                'is_active' => true,
-            ],
-        ];
+        $collections = CollectionSeeder::collections();
 
         foreach ($collections as $collection) {
             $record = Collection::query()->withTrashed()->updateOrCreate(
@@ -373,28 +299,25 @@ class AxeGearSeeder extends Seeder
         $haystack = Str::lower($name.' '.$categoryText);
 
         return match (true) {
-            str_contains($haystack, 'bundling') => 'bundles',
-            str_contains($haystack, 'jersey'),
-            str_contains($haystack, 'sarung tangan'),
-            str_contains($haystack, 'gloves') => 'apparel-gloves',
-            str_contains($haystack, 'microfiber') => 'care-utility',
-            default => 'bags-hydropacks',
+            str_contains($haystack, 'bundle'), str_contains($haystack, 'bundling') => 'bundles',
+            str_contains($haystack, 'microfiber'), str_contains($haystack, 'cleaner'), str_contains($haystack, 'care') => 'care-utility',
+            str_contains($haystack, 'hydropack'), str_contains($haystack, 'bag'), str_contains($haystack, 'tas'), str_contains($haystack, 'running belt') => 'bags-hydropack',
+            default => 'accessories',
         };
     }
 
     private static function collectionSlugs(string $name, string $categorySlug, int $index): array
     {
-        $slugs = match ($categorySlug) {
-            'apparel-gloves' => ['sport-performance'],
-            'bundles' => ['explore-essentials', 'sale'],
-            'care-utility' => ['explore-essentials'],
-            default => str_contains(Str::lower($name), 'hydropack')
-                ? ['sport-performance', 'explore-essentials']
-                : ['explore-essentials'],
+        $haystack = Str::lower($name);
+        $slugs = match (true) {
+            str_contains($haystack, 'running'), str_contains($haystack, 'jogging') => ['running'],
+            str_contains($haystack, 'mtb'), str_contains($haystack, 'sepeda'), str_contains($haystack, 'cycling') => ['mtb'],
+            str_contains($haystack, 'enduro'), str_contains($haystack, 'trail'), str_contains($haystack, 'motor'), str_contains($haystack, 'moto'), str_contains($haystack, 'gloves') => ['enduro'],
+            default => ['adventure'],
         };
 
         if ($index < 8) {
-            $slugs[] = 'new-arrivals';
+            $slugs[] = 'new-product';
         }
 
         return array_values(array_unique($slugs));

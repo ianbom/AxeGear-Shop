@@ -1,9 +1,7 @@
 import { Head, InfiniteScroll, Link, router, usePage } from '@inertiajs/react';
 import {
     ChevronDown,
-    Grid3X3,
     Heart,
-    List as ListIcon,
     Search,
 } from 'lucide-react';
 import type { FormEvent, MouseEvent, ReactNode } from 'react';
@@ -116,14 +114,6 @@ const defaultFilters: FilterState = {
     per_page: '12',
 };
 
-const typeOptions = [
-    { value: 'all', label: 'All' },
-    { value: 'featured', label: 'Featured' },
-    { value: 'new_arrival', label: 'New' },
-    { value: 'best_seller', label: 'Best Seller' },
-    { value: 'discount', label: 'Sale' },
-];
-
 const availabilityOptions = [
     { value: 'all', label: 'All' },
     { value: 'in_stock', label: 'In Stock' },
@@ -212,6 +202,7 @@ export default function ListProduct({
         visit({
             ...form,
             [key]: value,
+            ...(key === 'collection' && value !== '' ? { search: '' } : {}),
         });
     };
 
@@ -272,6 +263,7 @@ export default function ListProduct({
                             setForm((current) => ({
                                 ...current,
                                 search: value,
+                                collection: value.trim() === '' ? current.collection : '',
                             }))
                         }
                         compact
@@ -332,7 +324,7 @@ export default function ListProduct({
                         className="flex items-center gap-3 text-[17px] text-ink"
                     >
                         <Link
-                            href="/"
+                            href={list.url()}
                             className="font-normal hover:text-primary"
                         >
                             Shop
@@ -404,6 +396,7 @@ export default function ListProduct({
                                 setForm((current) => ({
                                     ...current,
                                     search: value,
+                                    collection: value.trim() === '' ? current.collection : '',
                                 }))
                             }
                         />
@@ -492,7 +485,7 @@ function FilterPanel({
                 ))}
             </FilterSection>
 
-            <FilterSection title="Style">
+            <FilterSection title="Collections">
                 <FilterRadio
                     label="All Collections"
                     active={form.collection === ''}
@@ -510,18 +503,7 @@ function FilterPanel({
                 ))}
             </FilterSection>
 
-            <FilterSection title="Type">
-                {typeOptions.map((type) => (
-                    <FilterRadio
-                        key={type.value}
-                        label={type.label}
-                        active={form.type === type.value}
-                        onClick={() => setFilter('type', type.value)}
-                    />
-                ))}
-            </FilterSection>
-
-            <FilterSection title="Sport">
+            <FilterSection title="Price">
                 {options.priceRanges.map((price) => (
                     <FilterRadio
                         key={price.value}
@@ -530,65 +512,6 @@ function FilterPanel({
                         onClick={() => setFilter('price', price.value)}
                     />
                 ))}
-            </FilterSection>
-
-            <FilterSection title="Colors">
-                <div className="flex flex-wrap gap-2.5 py-1">
-                    <button
-                        type="button"
-                        onClick={() => setFilter('color', '')}
-                        aria-label="All colors"
-                        className={`size-7 border bg-white ${
-                            form.color === ''
-                                ? 'border-primary ring-2 ring-primary'
-                                : 'border-ink'
-                        }`}
-                    />
-                    {options.colors.map((color, index) => (
-                        <button
-                            key={`${color.hex ?? color.name ?? 'color'}-${index}`}
-                            type="button"
-                            onClick={() => setFilter('color', color.hex ?? '')}
-                            aria-label={color.name ?? color.hex ?? 'Color'}
-                            className={`size-7 border ${
-                                form.color === color.hex
-                                    ? 'border-primary ring-2 ring-primary'
-                                    : 'border-hairline-strong'
-                            }`}
-                            style={{ backgroundColor: color.hex }}
-                        />
-                    ))}
-                </div>
-            </FilterSection>
-
-            <FilterSection title="Size">
-                <div className="flex flex-wrap gap-2 py-1 text-[12px] font-extrabold uppercase">
-                    <button
-                        type="button"
-                        onClick={() => setFilter('size', '')}
-                        className={`h-9 min-w-11 border px-3 ${
-                            form.size === ''
-                                ? 'border-ink bg-ink text-white'
-                                : 'border-hairline-strong hover:border-ink'
-                        }`}
-                    >
-                        All
-                    </button>
-                    {options.sizes.map((size) => (
-                        <button
-                            key={size}
-                            type="button"
-                            onClick={() => setFilter('size', size)}
-                            className={`h-9 min-w-11 border px-3 ${
-                                form.size === size
-                                    ? 'border-ink bg-ink text-white'
-                                    : 'border-hairline-strong hover:border-ink'
-                            }`}
-                        >
-                            {size}
-                        </button>
-                    ))}
-                </div>
             </FilterSection>
 
             <FilterSection title="Availability">
@@ -604,18 +527,6 @@ function FilterPanel({
                 ))}
             </FilterSection>
 
-            <FilterSection title="Lens Type">
-                <FilterRadio
-                    label="All Lens Types"
-                    active={form.price === 'all'}
-                    onClick={() => setFilter('price', 'all')}
-                />
-                <FilterRadio
-                    label="Sale Pricing"
-                    active={form.type === 'discount'}
-                    onClick={() => setFilter('type', 'discount')}
-                />
-            </FilterSection>
         </div>
     );
 }

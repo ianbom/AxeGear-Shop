@@ -14,32 +14,27 @@ const columns = [
     {
         title: 'SHOP',
         links: [
-            { label: 'Sunglasses', href: '/list?search=sunglasses' },
-            { label: 'Goggles', href: '/list?search=goggles' },
-            { label: 'Gloves', href: '/list?search=gloves' },
-            { label: 'Apparel', href: '/list?search=apparel' },
-            { label: 'Accessories', href: '/list?search=accessories' },
-            { label: 'Sale', href: '/list?search=sale' },
+            { label: 'Enduro', href: '#' },
+            { label: 'MTB', href: '#' },
+            { label: 'Running', href: '#' },
+            { label: 'Adventure', href: '#' },
+            { label: 'New Product', href: '#' },
         ],
     },
     {
         title: 'EXPLORE',
         links: [
-            { label: 'Our Story', href: '/about' },
-            { label: 'Technology', href: '/about' },
-            { label: 'Athlete Stories', href: '/about' },
+            { label: 'About Axegear', href: '/about' },
+            { label: 'Brand Ambassador', href: '#' },
+            { label: 'Gallery', href: '/gallery' },
             { label: 'Blog', href: '/blog' },
-            { label: 'Care Guide', href: '/size-guide.webp' },
         ],
     },
     {
         title: 'SUPPORT',
         links: [
-            { label: 'FAQ', href: '/about' },
-            { label: 'Shipping & Returns', href: '/shipping-policy' },
-            { label: 'Warranty', href: '/no-return-policy' },
-            { label: 'Contact Us', href: '/about' },
-            { label: 'Size Guide', href: '/size-guide.webp' },
+            { label: 'FAQ', href: '#' },
+            { label: 'Contact Us', href: '#' },
         ],
     },
 ];
@@ -59,7 +54,7 @@ const trustItems = [
 
 export default function Footer() {
     return (
-        <footer className="bg-[#0d0d0d] text-white">
+        <footer id="contact" className="bg-[#0d0d0d] text-white">
             <section className="relative overflow-hidden bg-[#111111] px-6 py-10 text-white md:px-12 md:py-14">
                 <div
                     className="absolute inset-0 bg-cover bg-center opacity-18"
@@ -149,6 +144,11 @@ export default function Footer() {
                                     <li key={link.label}>
                                         <Link
                                             href={link.href}
+                                            onClick={(event) => {
+                                                if (link.href === '#') {
+                                                    event.preventDefault();
+                                                }
+                                            }}
                                             className="text-[16px] leading-none font-medium text-white/82 transition-colors hover:text-[#F58220]"
                                         >
                                             {link.label}
@@ -195,22 +195,6 @@ export default function Footer() {
                                 </button>
                             </div>
                         </form>
-                        <div className="mt-8 grid gap-4 sm:grid-cols-3 sm:gap-6">
-                            {trustItems.map(({ label, icon: Icon }) => (
-                                <div
-                                    key={label}
-                                    className="flex items-center gap-3 text-white/82"
-                                >
-                                    <Icon
-                                        className="h-[18px] w-[18px] shrink-0 text-white"
-                                        strokeWidth={2}
-                                    />
-                                    <span className="text-[15px] leading-[1.25] font-medium">
-                                        {label}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
                     </section>
                 </div>
             </section>

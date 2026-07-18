@@ -303,10 +303,12 @@ class ProductBrowsingService
 
     private function validatedFilters(Request $request): array
     {
+        $search = trim((string) $request->query('search', ''));
+
         return [
-            'search' => trim((string) $request->query('search', '')),
+            'search' => $search,
             'category' => (string) $request->query('category', ''),
-            'collection' => (string) $request->query('collection', ''),
+            'collection' => $search === '' ? (string) $request->query('collection', '') : '',
             'type' => $this->option($request, 'type', ['all', 'featured', 'new_arrival', 'best_seller', 'discount'], 'all'),
             'availability' => $this->option($request, 'availability', ['all', 'in_stock', 'out_of_stock'], 'all'),
             'price' => $this->option($request, 'price', ['all', 'under_410', '410_830', '830_1200', 'above_1200'], 'all'),
