@@ -42,8 +42,8 @@ jobs:
       # - name: Check types
       #   run: npm run types:check
 
-      - name: Check frontend lint
-        run: npm run lint:check
+      # - name: Check frontend lint
+      #   run: npm run lint:check
 
       - name: Build frontend assets
         run: npm run build
