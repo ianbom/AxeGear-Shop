@@ -1,0 +1,90 @@
+name: Deploy to production
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Check types
+        run: npm run types:check
+
+      - name: Check frontend lint
+        run: npm run lint:check
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Create deployment archive
+        run: tar --exclude=.git --exclude=.env --exclude=node_modules --exclude=vendor --exclude=storage --exclude=deploy.tar.gz -czf deploy.tar.gz .
+
+      - name: Upload deployment archive
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          username: ${{ secrets.DEPLOY_USER }}
+          password: ${{ secrets.DEPLOY_PASSWORD }}
+          fingerprint: ${{ secrets.DEPLOY_HOST_KEY }}
+          source: deploy.tar.gz
+          target: /tmp
+          overwrite: true
+
+      - name: Release deployment
+        uses: appleboy/ssh-action@v1.2.2
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          ARCHIVE: /tmp/deploy.tar.gz
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          username: ${{ secrets.DEPLOY_USER }}
+          password: ${{ secrets.DEPLOY_PASSWORD }}
+          fingerprint: ${{ secrets.DEPLOY_HOST_KEY }}
+          envs: DEPLOY_PATH,ARCHIVE
+          script_stop: true
+          script: |
+            set -eu
+            mkdir -p "$DEPLOY_PATH"
+            tar -xzf "$ARCHIVE" -C "$DEPLOY_PATH"
+            cd "$DEPLOY_PATH"
+            composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+            php artisan migrate --force
+            php artisan optimize:clear
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            rm -f "$ARCHIVE"

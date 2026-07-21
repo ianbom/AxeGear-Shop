@@ -55,45 +55,6 @@ const trustItems = [
 export default function Footer() {
     return (
         <footer id="contact" className="bg-[#0d0d0d] text-white">
-            <section className="relative overflow-hidden bg-[#111111] px-6 py-10 text-white md:px-12 md:py-14">
-                <div
-                    className="absolute inset-0 bg-cover bg-center opacity-18"
-                    style={{
-                        backgroundImage:
-                            "url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1800&auto=format&fit=crop')",
-                    }}
-                />
-                <div className="relative mx-auto grid max-w-[1600px] gap-8 md:grid-cols-[1fr_0.9fr] md:items-center">
-                    <div>
-                        <h2 className="text-[48px] leading-[0.9] font-black text-white uppercase italic md:text-[68px]">
-                            Join the AxeGear community
-                        </h2>
-                        <p className="mt-4 max-w-[560px] text-[17px] leading-8 font-medium text-white/82">
-                            Be first to know about new releases, exclusive
-                            offers, and athlete stories.
-                        </p>
-                    </div>
-
-                    <form
-                        className="grid gap-3 sm:grid-cols-[1fr_auto]"
-                        onSubmit={(event) => event.preventDefault()}
-                    >
-                        <input
-                            type="email"
-                            placeholder="Enter your email"
-                            aria-label="Enter your email"
-                            className="h-13 border border-white/35 bg-white px-5 text-[15px] font-medium text-[#1A1A1A] placeholder:text-[#707070] focus:border-[#F58220] focus:outline-none"
-                        />
-                        <button
-                            type="submit"
-                            className="inline-flex h-13 items-center justify-center bg-[#F58220] px-10 text-[14px] font-black tracking-[0.06em] text-white uppercase hover:bg-[#E67312]"
-                        >
-                            Join Us
-                        </button>
-                    </form>
-                </div>
-            </section>
-
             <section className="border-b border-white/10 bg-[#0c0c0c]">
                 <div className="mx-auto grid max-w-[1728px] gap-10 px-6 py-9 sm:px-8 md:grid-cols-[1.25fr_0.7fr_0.7fr_0.7fr_1.45fr] md:gap-0 md:px-[68px] md:py-10">
                     <section className="pr-0 md:pr-12">
