@@ -60,7 +60,7 @@ jobs:
           port: ${{ secrets.DEPLOY_PORT }}
           username: ${{ secrets.DEPLOY_USER }}
           password: ${{ secrets.DEPLOY_PASSWORD }}
-          fingerprint: ${{ secrets.DEPLOY_HOST_KEY }}
+          fingerprint: SHA256:1/3Uep711vvOXQrsAEingPCrTrg8aKamt7TfRfxwdUY
           source: .deploy/deploy.tar.gz
           target: /tmp
           overwrite: true
@@ -76,7 +76,7 @@ jobs:
           port: ${{ secrets.DEPLOY_PORT }}
           username: ${{ secrets.DEPLOY_USER }}
           password: ${{ secrets.DEPLOY_PASSWORD }}
-          fingerprint: ${{ secrets.DEPLOY_HOST_KEY }}
+          fingerprint: SHA256:1/3Uep711vvOXQrsAEingPCrTrg8aKamt7TfRfxwdUY
           envs: DEPLOY_PATH,ARCHIVE
           script_stop: true
           script: |
