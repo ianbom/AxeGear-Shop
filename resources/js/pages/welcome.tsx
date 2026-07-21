@@ -59,6 +59,16 @@ type Props = {
 const fallbackImage =
     'https://orcapowergear.com/_next/image?url=%2Fasset%2Fbanner%2Fwebbanner-orca.webp&w=3840&q=75';
 
+const fallbackSlide: NonNullable<BannerCard> = {
+    id: 0,
+    title: 'AxeGear performance banner',
+    subtitle: null,
+    image_desktop_url: fallbackImage,
+    image_mobile_url: null,
+    button_text: null,
+    button_url: null,
+};
+
 function SectionSeparator({
     accent = 'red',
     label,
@@ -100,15 +110,15 @@ export default function Welcome({
 }: Props) {
     const heroSlides = useMemo(
         () =>
-            heroBanners
-                .filter(Boolean)
-                .map((banner) => banner!.image_desktop_url),
+            heroBanners.filter(
+                (banner): banner is NonNullable<BannerCard> => banner !== null,
+            ),
         [heroBanners],
     );
     const performanceImage =
         collectionBanners.find(Boolean)?.image_desktop_url ?? fallbackImage;
     const tiles = collections.slice(0, 4);
-    const slides = heroSlides.length > 0 ? heroSlides : [fallbackImage];
+    const slides = heroSlides.length > 0 ? heroSlides : [fallbackSlide];
     const [activeSlide, setActiveSlide] = useState(0);
 
     useEffect(() => {
@@ -141,16 +151,24 @@ export default function Welcome({
                     >
                         {slides.map((slide, index) => (
                             <div
-                                key={`${slide}-${index}`}
+                                key={`${slide.id}-${index}`}
                                 className="relative h-full min-w-full"
                             >
                                 <img
-                                    src={slide}
-                                    alt={`AxeGear hero slide ${index + 1}`}
+                                    src={slide.image_desktop_url}
+                                    alt={slide.title}
                                     className="h-full w-full object-cover object-center"
                                     loading={index === 0 ? 'eager' : 'lazy'}
                                     decoding="async"
                                 />
+                                {slide.button_text && slide.button_url && (
+                                    <Link
+                                        href={slide.button_url}
+                                        className="absolute bottom-7 left-5 z-10 inline-flex min-h-11 items-center justify-center border border-white bg-black/80 px-6 py-3 text-sm font-bold tracking-[0.08em] text-white uppercase backdrop-blur-sm transition-colors hover:bg-white hover:text-black sm:bottom-9 sm:left-8 sm:px-8 sm:text-base lg:bottom-12 lg:left-12"
+                                    >
+                                        {slide.button_text}
+                                    </Link>
+                                )}
                             </div>
                         ))}
                     </div>
