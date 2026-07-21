@@ -1,7 +1,6 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import {
     ArrowRight,
-    BriefcaseBusiness,
     CheckCircle2,
     Clock3,
     Instagram,
@@ -64,38 +63,41 @@ export default function ContactIndex() {
         <ShopLayout>
             <Head title="Contact Us" />
             <div className="bg-white text-[13px] text-[#171717] [&_a]:text-[12px] [&_button]:text-[12px] [&_input]:text-[13px] [&_label]:text-[12px] [&_p]:text-[13px] [&_select]:text-[13px] [&_textarea]:text-[13px]">
-                <section className="grid border-b border-[#D9D9D9] lg:h-[240px] lg:grid-cols-[48%_52%]">
-                    <div className="flex flex-col justify-center px-6 py-8 sm:px-10 lg:px-[52px] lg:py-5">
-                        <div className="mb-7 flex gap-3 text-[10px] text-[#8A8A8A]">
-                            <Link href="/">Home</Link>
-                            <span>/</span>
-                            <span>Contact Us</span>
-                        </div>
-                        <p className="text-[12px] font-bold tracking-[0.04em] text-[#F58220] uppercase">
-                            Customer Support
-                        </p>
-                        <h1 className="mt-2 text-[45px] leading-none font-black tracking-[-0.035em] uppercase sm:text-[56px]">
-                            Let’s Talk
-                        </h1>
-                        <p className="mt-4 max-w-[430px] text-[13px] leading-[1.5] text-[#444]">
-                            Questions about products, orders, shipping, or
-                            warranty?
-                            <br />
-                            Our team is here to help you find the answers you
-                            need.
-                        </p>
-                        <span className="mt-7 h-[3px] w-12 bg-[#F58220]" />
-                    </div>
+                <section className="relative h-[320px] overflow-hidden sm:h-[340px]">
                     <img
-                        src={unsplash('photo-1541625602330-2277a4c46182')}
-                        alt="Cyclist wearing performance eyewear"
-                        className="h-[220px] w-full object-cover object-center lg:h-[240px]"
+                        src={unsplash('photo-1558981806-ec527fa84c39', 1800)}
+                        alt="Enduro rider exploring an outdoor trail"
+                        className="absolute inset-0 h-full w-full object-cover object-[65%_45%]"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-r from-white via-white/88 to-white/0" />
+                    <div className="relative mx-auto flex h-full max-w-[1640px] items-center px-7 py-9 sm:px-11 lg:px-[76px]">
+                        <div className="max-w-[390px]">
+                            <p className="flex items-center gap-3 text-[13px] font-bold tracking-[0.04em] uppercase">
+                                <span className="h-px w-6 bg-[#F58220]" />
+                                Customer Support
+                            </p>
+                            <h1 className="mt-3 text-[38px] leading-[0.93] font-black tracking-[-0.035em] uppercase sm:text-[50px]">
+                                Let’s Talk
+                            </h1>
+                            <p className="mt-4 max-w-[420px] text-[16px] leading-[1.5]">
+                                Questions about products, orders, shipping, or
+                                warranty? Our team is here to help you find the
+                                answers you need.
+                            </p>
+                            <a
+                                href="#contact-form"
+                                className="mt-5 inline-flex items-center gap-3 text-[14px] font-bold text-[#F58220]"
+                            >
+                                Contact Support <ArrowRight className="h-4 w-4" />
+                            </a>
+                        </div>
+                    </div>
                 </section>
 
                 <div className="mx-auto max-w-[1450px] px-4 py-5 sm:px-8 lg:px-[52px]">
                     <section className="mt-5 grid gap-5 lg:grid-cols-[1.55fr_1fr]">
                         <form
+                            id="contact-form"
                             onSubmit={submitContact}
                             className="border border-[#D8D8D8] p-5 sm:p-8"
                         >

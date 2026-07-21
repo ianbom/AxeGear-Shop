@@ -142,35 +142,36 @@ export default function Gallery() {
             </Head>
 
             <div className="bg-white text-[14px] text-[#1A1A1A]">
-                <section className="grid border-b border-[#D9D9D9] md:h-[250px] md:grid-cols-[48%_52%]">
-                    <div className="flex flex-col justify-center px-7 py-9 sm:px-11 md:px-[43px] md:py-6">
-                        <p className="text-[13px] leading-none font-bold tracking-[0.03em] text-[#F58220] uppercase">
-                            Visual Showcase
-                        </p>
-                        <h1 className="mt-5 text-[44px] leading-[0.92] font-black tracking-[-0.045em] text-[#090909] sm:text-[52px] md:text-[48px]">
-                            AxeGear Gallery
-                        </h1>
-                        <p className="mt-5 max-w-[420px] text-[16px] leading-[1.6] text-[#343434]">
-                            Explore the visual world of AxeGear through
-                            performance-driven product imagery, athlete moments,
-                            gear details, and lifestyle captures.
-                        </p>
-                        <Link
-                            href="/list"
-                            className="mt-6 inline-flex w-fit items-center gap-3 border-b border-[#F58220] pb-1 text-[14px] font-bold text-[#1A1A1A]"
-                        >
-                            View Latest Collection
-                            <ArrowRight
-                                className="h-4 w-4 text-[#F58220]"
-                                strokeWidth={1.8}
-                            />
-                        </Link>
-                    </div>
+                <section className="relative h-[320px] overflow-hidden sm:h-[340px]">
                     <img
-                        src={unsplash('photo-1541625602330-2277a4c46182', 1800)}
-                        alt="Cyclists wearing performance helmets and eyewear"
-                        className="h-[220px] w-full object-cover sm:h-[240px] md:h-[250px]"
+                        src={unsplash('photo-1502744688674-c619d1586c9e', 1800)}
+                        alt="Mountain cyclist riding across a rocky trail"
+                        className="absolute inset-0 h-full w-full object-cover object-[65%_45%]"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-r from-white via-white/88 to-white/0" />
+                    <div className="relative mx-auto flex h-full max-w-[1640px] items-center px-7 py-9 sm:px-11 lg:px-[76px]">
+                        <div className="max-w-[390px]">
+                            <p className="flex items-center gap-3 text-[13px] font-bold tracking-[0.04em] uppercase">
+                                <span className="h-px w-6 bg-[#F58220]" />
+                                Visual Showcase
+                            </p>
+                            <h1 className="mt-3 text-[38px] leading-[0.93] font-black tracking-[-0.035em] uppercase sm:text-[50px]">
+                                AxeGear Gallery
+                            </h1>
+                            <p className="mt-4 max-w-[420px] text-[16px] leading-[1.5]">
+                                Explore the visual world of AxeGear through
+                                performance-driven product imagery, athlete
+                                moments, gear details, and lifestyle captures.
+                            </p>
+                            <Link
+                                href="/list"
+                                className="mt-5 inline-flex items-center gap-3 text-[14px] font-bold text-[#F58220]"
+                            >
+                                View Latest Collection{' '}
+                                <ArrowRight className="h-4 w-4" />
+                            </Link>
+                        </div>
+                    </div>
                 </section>
 
                 <section
@@ -202,7 +203,7 @@ export default function Gallery() {
                 </section>
 
                 <section className="px-4 py-10 sm:px-7 sm:py-14">
-                    <div className="grid auto-rows-[165px] grid-cols-2 gap-2 sm:auto-rows-[190px] sm:grid-cols-4 sm:gap-3">
+                    <div className="grid grid-flow-dense auto-rows-[165px] grid-cols-2 gap-2 sm:auto-rows-[190px] sm:grid-cols-4 sm:gap-3">
                         {visibleMosaic.map((image, index) => (
                             <div
                                 key={`${activeTab}-${index}-${image.src}`}

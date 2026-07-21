@@ -76,14 +76,14 @@ export default function Blog() {
             </Head>
 
             <div className="bg-white text-[14px] text-[#111111]">
-                <section className="relative min-h-[230px] overflow-hidden sm:min-h-[270px]">
+                <section className="relative h-[320px] overflow-hidden sm:h-[340px]">
                     <img
                         src={unsplash('photo-1541625602330-2277a4c46182', 1800)}
                         alt="AxeGear cyclist riding through mountain terrain"
                         className="absolute inset-0 h-full w-full object-cover object-[65%_45%]"
                     />
                     <div className="absolute inset-0 bg-gradient-to-r from-white via-white/88 to-white/0" />
-                    <div className="relative mx-auto flex min-h-[230px] max-w-[1640px] items-center px-7 py-9 sm:min-h-[270px] sm:px-11 lg:px-[76px]">
+                    <div className="relative mx-auto flex h-full max-w-[1640px] items-center px-7 py-9 sm:px-11 lg:px-[76px]">
                         <div className="max-w-[390px]">
                             <p className="flex items-center gap-3 text-[13px] font-bold tracking-[0.04em] uppercase">
                                 <span className="h-px w-6 bg-[#F58220]" />
