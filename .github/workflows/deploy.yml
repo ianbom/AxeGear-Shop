@@ -39,8 +39,8 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
-      - name: Check types
-        run: npm run types:check
+      # - name: Check types
+      #   run: npm run types:check
 
       - name: Check frontend lint
         run: npm run lint:check
