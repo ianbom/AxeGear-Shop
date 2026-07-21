@@ -49,7 +49,9 @@ jobs:
         run: npm run build
 
       - name: Create deployment archive
-        run: tar --exclude=.git --exclude=.env --exclude=node_modules --exclude=vendor --exclude=storage --exclude=deploy.tar.gz -czf deploy.tar.gz .
+        run: |
+          mkdir -p .deploy
+          tar --exclude=.git --exclude=.env --exclude=node_modules --exclude=vendor --exclude=storage --exclude=.deploy -czf .deploy/deploy.tar.gz .
 
       - name: Upload deployment archive
         uses: appleboy/scp-action@v1.0.0
@@ -59,9 +61,10 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           password: ${{ secrets.DEPLOY_PASSWORD }}
           fingerprint: ${{ secrets.DEPLOY_HOST_KEY }}
-          source: deploy.tar.gz
+          source: .deploy/deploy.tar.gz
           target: /tmp
           overwrite: true
+          strip_components: 1
 
       - name: Release deployment
         uses: appleboy/ssh-action@v1.2.2
