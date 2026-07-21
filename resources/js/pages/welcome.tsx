@@ -56,9 +56,16 @@ type Props = {
     mostLoved: ProductCard[];
 };
 
-const fallbackImage = 'https://orcapowergear.com/_next/image?url=%2Fasset%2Fbanner%2Fwebbanner-orca.webp&w=3840&q=75';
+const fallbackImage =
+    'https://orcapowergear.com/_next/image?url=%2Fasset%2Fbanner%2Fwebbanner-orca.webp&w=3840&q=75';
 
-function SectionSeparator({ accent = 'red', label }: { accent?: 'red' | 'blue'; label?: string }) {
+function SectionSeparator({
+    accent = 'red',
+    label,
+}: {
+    accent?: 'red' | 'blue';
+    label?: string;
+}) {
     const accentLine = accent === 'red' ? 'bg-[#ff1a00]' : 'bg-[#1d9cff]';
     const accentText = accent === 'red' ? 'text-[#ff1a00]' : 'text-[#69bcff]';
 
@@ -68,7 +75,7 @@ function SectionSeparator({ accent = 'red', label }: { accent?: 'red' | 'blue'; 
                 <div className={`h-px flex-1 ${accentLine}`} />
                 {label ? (
                     <span
-                        className={`shrink-0 text-[11px] font-semibold uppercase tracking-[0.45em] ${accentText}`}
+                        className={`shrink-0 text-[11px] font-semibold tracking-[0.45em] uppercase ${accentText}`}
                     >
                         {label}
                     </span>
@@ -86,13 +93,21 @@ function SectionSeparator({ accent = 'red', label }: { accent?: 'red' | 'blue'; 
     );
 }
 
-export default function Welcome({ heroBanners = [], collectionBanners = [], collections = [] }: Props) {
+export default function Welcome({
+    heroBanners = [],
+    collectionBanners = [],
+    collections = [],
+}: Props) {
     const heroSlides = useMemo(
-        () => heroBanners.filter(Boolean).map((banner) => banner!.image_desktop_url),
+        () =>
+            heroBanners
+                .filter(Boolean)
+                .map((banner) => banner!.image_desktop_url),
         [heroBanners],
     );
-    const performanceImage = collectionBanners.find(Boolean)?.image_desktop_url ?? fallbackImage;
-    const tiles = collections.slice(0, 3);
+    const performanceImage =
+        collectionBanners.find(Boolean)?.image_desktop_url ?? fallbackImage;
+    const tiles = collections.slice(0, 4);
     const slides = heroSlides.length > 0 ? heroSlides : [fallbackImage];
     const [activeSlide, setActiveSlide] = useState(0);
 
@@ -120,10 +135,15 @@ export default function Welcome({ heroBanners = [], collectionBanners = [], coll
                 <section className="relative h-[100svh] overflow-hidden border-b-2 border-[#101010] bg-black sm:h-[105svh] lg:h-[110svh]">
                     <div
                         className="flex h-full transition-transform duration-700 ease-out"
-                        style={{ transform: `translateX(-${activeSlide * 100}%)` }}
+                        style={{
+                            transform: `translateX(-${activeSlide * 100}%)`,
+                        }}
                     >
                         {slides.map((slide, index) => (
-                            <div key={`${slide}-${index}`} className="relative h-full min-w-full">
+                            <div
+                                key={`${slide}-${index}`}
+                                className="relative h-full min-w-full"
+                            >
                                 <img
                                     src={slide}
                                     alt={`AxeGear hero slide ${index + 1}`}
@@ -141,7 +161,7 @@ export default function Welcome({ heroBanners = [], collectionBanners = [], coll
                                 type="button"
                                 aria-label="Previous slide"
                                 onClick={() => goToSlide(activeSlide - 1)}
-                                className="absolute left-3 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-[8px] border border-white/70 bg-black/55 text-xl font-semibold text-white transition-colors hover:bg-white hover:text-black sm:left-5"
+                                className="absolute top-1/2 left-3 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-[8px] border border-white/70 bg-black/55 text-xl font-semibold text-white transition-colors hover:bg-white hover:text-black sm:left-5"
                             >
                                 «
                             </button>
@@ -149,7 +169,7 @@ export default function Welcome({ heroBanners = [], collectionBanners = [], coll
                                 type="button"
                                 aria-label="Next slide"
                                 onClick={() => goToSlide(activeSlide + 1)}
-                                className="absolute right-3 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-[8px] border border-white/70 bg-black/55 text-xl font-semibold text-white transition-colors hover:bg-white hover:text-black sm:right-5"
+                                className="absolute top-1/2 right-3 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-[8px] border border-white/70 bg-black/55 text-xl font-semibold text-white transition-colors hover:bg-white hover:text-black sm:right-5"
                             >
                                 »
                             </button>
@@ -170,26 +190,32 @@ export default function Welcome({ heroBanners = [], collectionBanners = [], coll
                 <SectionSeparator accent="blue" label="SHOP BY CATEGORY" />
 
                 <section className="border-b-2 border-[#1A1A1A] bg-white px-5 py-6 sm:px-8 lg:px-12 xl:px-16">
-                    <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-10 xl:gap-14">
-                        {tiles.length > 0 && tiles.map((tile) => (
-                            <Link
-                                key={tile.slug}
-                                href={list.url({ query: { collection: tile.slug } })}
-                                aria-label={tile.name}
-                                className="group relative block h-[78svh] overflow-hidden bg-white lg:h-[100svh]"
-                            >
-                                <img
-                                    src={tile.banner_mobile_url ?? fallbackImage}
-                                    alt={tile.name}
-                                    className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.02]"
-                                    loading="lazy"
-                                    decoding="async"
-                                />
-                                <div className="absolute right-6 top-5 z-10 text-right text-[28px] italic font-semibold leading-none tracking-[-0.02em] text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)] lg:right-7 lg:top-6 lg:text-[20px]">
-                                    {tile.name}
-                                </div>
-                            </Link>
-                        ))}
+                    <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-6 lg:grid-cols-4 lg:gap-8 xl:gap-10">
+                        {tiles.length > 0 &&
+                            tiles.map((tile) => (
+                                <Link
+                                    key={tile.slug}
+                                    href={list.url({
+                                        query: { collection: tile.slug },
+                                    })}
+                                    aria-label={tile.name}
+                                    className="group relative block h-[78svh] overflow-hidden bg-white lg:h-[100svh]"
+                                >
+                                    <img
+                                        src={
+                                            tile.banner_mobile_url ??
+                                            fallbackImage
+                                        }
+                                        alt={tile.name}
+                                        className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.02]"
+                                        loading="lazy"
+                                        decoding="async"
+                                    />
+                                    <div className="absolute top-5 right-6 z-10 text-right text-[28px] leading-none font-semibold tracking-[-0.02em] text-white italic drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)] lg:top-6 lg:right-7 lg:text-[20px]">
+                                        {tile.name}
+                                    </div>
+                                </Link>
+                            ))}
                     </div>
                 </section>
             </main>
