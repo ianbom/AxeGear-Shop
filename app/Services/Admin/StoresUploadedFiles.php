@@ -14,10 +14,10 @@ trait StoresUploadedFiles
 
     protected function deletePublicFile(?string $url): void
     {
-        if (! filled($url)) {
+        if (! filled($url) || ! str_contains($url, '/storage/')) {
             return;
         }
 
-        Storage::disk('public')->delete(str_replace('/storage/', '', $url));
+        Storage::disk('public')->delete(str($url)->after('/storage/')->toString());
     }
 }

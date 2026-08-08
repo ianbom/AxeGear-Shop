@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PageController;
+use App\Http\Controllers\Admin\NewProductPageController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\PaymentLogController;
 use App\Http\Controllers\Admin\ProductController;
@@ -30,6 +31,7 @@ use App\Http\Controllers\Customer\HomeController as CustomerHomeController;
 use App\Http\Controllers\Customer\MidtransFinishController;
 use App\Http\Controllers\Customer\MidtransWebhookController;
 use App\Http\Controllers\Customer\NotificationController as CustomerNotificationController;
+use App\Http\Controllers\Customer\NewProductController;
 use App\Http\Controllers\Customer\OrderController as CustomerOrderController;
 use App\Http\Controllers\Customer\ProductController as CustomerProductController;
 use App\Http\Controllers\Auth\GoogleAuthController;
@@ -44,6 +46,7 @@ Route::inertia('/about', 'about/index')->name('about');
 Route::inertia('/blog', 'blog/index')->name('blog');
 Route::inertia('/blog/{slug}', 'blog/show')->name('blog.show');
 Route::inertia('/contact', 'contact/index')->name('contact');
+Route::get('/new-product', NewProductController::class)->name('new-product');
 
 Route::middleware('guest')->group(function () {
     Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])->name('auth.google.redirect');
@@ -194,6 +197,9 @@ Route::middleware(['auth', 'admin', 'admin.activity'])->prefix('admin')->name('a
     Route::get('pages/{page}/edit', [PageController::class, 'edit'])->name('pages.edit');
     Route::put('pages/{page}', [PageController::class, 'update'])->name('pages.update');
     Route::delete('pages/{page}', [PageController::class, 'destroy'])->name('pages.destroy');
+
+    Route::get('new-product', [NewProductPageController::class, 'edit'])->name('new-product.edit');
+    Route::put('new-product', [NewProductPageController::class, 'update'])->name('new-product.update');
 
     Route::get('settings', [SettingController::class, 'index'])->defaults('section', 'store')->name('settings.index');
     Route::put('settings', [SettingController::class, 'update'])->name('settings.update');

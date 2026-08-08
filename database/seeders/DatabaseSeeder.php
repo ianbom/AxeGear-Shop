@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             AxeGearSeeder::class,
             BannerSeeder::class,
             PageSeeder::class,
+            NewProductPageSeeder::class,
             SiteSettingSeeder::class,
         ]);
     }

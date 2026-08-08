@@ -1,9 +1,7 @@
 import { Link } from '@inertiajs/react';
 import {
     ChevronDown,
-    Heart,
     Menu,
-    Search,
     ShoppingCart,
     User,
     X,
@@ -25,7 +23,7 @@ const navItems = [
     { label: 'Shop By Product', href: '/list', hasDropdown: true },
     {
         label: 'New Product',
-        href: '/list?type=new_arrival',
+        href: '/new-product',
         hasDropdown: false,
     },
     { label: 'Gallery', href: '/gallery', hasDropdown: false },
@@ -51,16 +49,11 @@ export default function Navbar({
     const [isShopOpen, setIsShopOpen] = useState(false);
     const cartBadge = cartCount > 99 ? '99+' : String(cartCount);
     const accountHref = isAuthenticated ? '/my-profile' : login.url();
-    const [pathname, queryString = ''] = currentUrl.split('?');
-    const query = new URLSearchParams(queryString);
+    const [pathname] = currentUrl.split('?');
 
     const isActive = (href: string): boolean => {
-        if (href === '/list?type=new_arrival') {
-            return pathname === '/list' && query.get('type') === 'new_arrival';
-        }
-
         if (href === '/list') {
-            return pathname === '/list' && query.get('type') !== 'new_arrival';
+            return pathname === '/list';
         }
 
         return pathname === href;

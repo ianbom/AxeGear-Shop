@@ -52,23 +52,23 @@ const storyImage =
 
 const values: ValueCard[] = [
     {
-        title: 'Precision Performance',
-        body: 'Engineered for clarity, accuracy, and peak performance.',
+        title: 'Functionality Products',
+        body: 'Design products that combine functionality with modern aesthetics.',
         icon: Target,
     },
     {
-        title: 'Athlete-Tested Design',
-        body: 'Tested by athletes. Refined by real-world performance.',
+        title: 'Quality Materials',
+        body: 'Deliver reliable quality through carefully selected materials and craftsmanship.',
         icon: ShieldCheck,
     },
     {
-        title: 'Lightweight Protection',
-        body: 'Lightweight materials with serious impact protection.',
+        title: 'Sustainable Practices',
+        body: 'Continuously innovate to meet the evolving needs of our customers.',
         icon: Feather,
     },
     {
-        title: 'Everyday Versatility',
-        body: 'From training to adventure, gear that fits your every moment.',
+        title: 'Customer Trust',
+        body: 'Provide exceptional products and experiences that build long-term trust.',
         icon: Mountain,
     },
 ];
@@ -102,29 +102,29 @@ const disciplines: DisciplineCard[] = [
 
 const timeline: TimelineItem[] = [
     {
-        year: "2010's",
-        title: 'The Beginning',
-        body: 'A small idea born from a passion for speed and the outdoors.',
+        year: "1",
+        title: 'Functionality',
+        body: 'Every feature is designed with a purpose—to make every journey easier and more efficient.',
     },
     {
-        year: "2012's",
-        title: 'First Collection',
-        body: 'Our first line of performance eyewear launched with a focus on clarity and fit.',
+        year: "2",
+        title: 'Quality',
+        body: 'We are committed to delivering products crafted with durable materials and meticulous attention to detail.',
     },
     {
-        year: "2015's",
-        title: 'Built to Perform',
-        body: 'Expanded our range and community with athlete-tested, athlete-approved gear.',
+        year: "3",
+        title: 'Innovation',
+        body: 'We continuously improve our designs and develop solutions that adapt to modern lifestyles.',
     },
     {
-        year: "2018's",
-        title: 'Global Adventure',
-        body: 'AxeGear reached athletes worldwide across every terrain and condition.',
+        year: "4",
+        title: 'Adventure',
+        body: 'We believe great gear should inspire confidence and accompany every journey, from everyday routines to extraordinary adventures.',
     },
     {
-        year: "2022's",
-        title: 'The Future Ahead',
-        body: 'Continuing to innovate for the next generation of athletes.',
+        year: "5",
+        title: 'Trust',
+        body: 'Our commitment is to provide exceptional products and experiences that build lasting trust and empower every adventure.',
     },
 ];
 
@@ -225,9 +225,9 @@ export default function AboutPage() {
                 <ValuesSection />
                 <DisciplinesSection />
                 <JourneySection />
-                <FeaturesSection />
-                <AthletesSection />
-                <CollectionsSection />
+                {/* <FeaturesSection /> */}
+                {/* <AthletesSection /> */}
+                {/* <CollectionsSection /> */}
                
             </div>
         </ShopLayout>
@@ -242,13 +242,13 @@ function HeroSection() {
                     <div className="max-w-[650px]">
                         <SectionTag>About AxeGear Shop</SectionTag>
                         <h1 className="mt-6 text-[52px] leading-[0.9] font-black text-[#1A1A1A] uppercase italic md:text-[74px] xl:text-[92px]">
-                            Built for speed. Designed for clarity.
+                            Built for Every Journey.
                         </h1>
                         <p className="mt-6 max-w-[600px] text-[18px] leading-8 font-medium text-[#2E2E2E]">
-                            At AxeGear Shop, we create premium performance
-                            eyewear and gear for athletes who demand clarity,
-                            durability, and confidence on every ride, run, and
-                            adventure.
+                           AXEGEAR is an Indonesian brand dedicated to creating functional bags and gear for people with active, dynamic, and adventurous lifestyles. We believe that every journey—whether it's commuting to work, riding through new routes, traveling, or exploring the outdoors—deserves reliable gear that keeps up with every move.
+                           Our products are designed with a balance of functionality, durability, and modern aesthetics. Every detail is carefully considered to ensure that each product not only looks great but also delivers practical solutions for everyday carry and outdoor activities.
+                           From sling bags and waist bags to travel accessories and essential gear, AXEGEAR is committed to providing products that offer comfort, organization, and confidence wherever life takes you.
+                           At AXEGEAR, we see every product as more than just a bag or an accessory. We create dependable companions that support your daily adventures, helping you stay prepared for every destination and every challenge.
                         </p>
                         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                             <Link
@@ -289,14 +289,11 @@ function WhoWeAreSection() {
                 <div className="max-w-[560px]">
                     <SectionTag>Who We Are</SectionTag>
                     <h2 className="mt-5 text-[46px] leading-[0.92] font-black text-[#1A1A1A] uppercase italic md:text-[56px]">
-                        Built different.
+                        Our Vision.
                     </h2>
                     <p className="mt-5 text-[17px] leading-8 font-medium text-[#2E2E2E]">
-                        AxeGear Shop was built on a simple belief: athletes
-                        deserve gear that keeps up with their drive. We design
-                        high-performance eyewear and accessories that combine
-                        precision engineering, athlete feedback, and modern
-                        style to help you perform at your best.
+                        To become a trusted Indonesian gear brand by delivering innovative, high-quality, and functional products that empower people to embrace an active lifestyle.
+
                     </p>
                     <p className="mt-8 text-[17px] leading-8 font-black text-[#1A1A1A]">
                         Built Different. Built for You.
@@ -320,7 +317,7 @@ function ValuesSection() {
         <section className="border-b border-[#E5E5E5] bg-white px-6 py-8 md:px-10 lg:px-12 lg:py-10">
             <div className="mx-auto max-w-[1600px]">
                 <div className="mb-8 flex justify-center lg:justify-start">
-                    <SectionTag>What Drives Us</SectionTag>
+                    <SectionTag>Our Missions</SectionTag>
                 </div>
                 <div className="grid grid-cols-1 border-y border-[#E5E5E5] sm:grid-cols-2 lg:grid-cols-4">
                     {values.map((item, index) => {
@@ -383,7 +380,7 @@ function JourneySection() {
     return (
         <section className="border-b border-[#E5E5E5] bg-white px-6 py-9 md:px-10 lg:px-12 lg:py-12">
             <div className="mx-auto max-w-[1600px]">
-                <CenteredTag>Join Journey</CenteredTag>
+                <CenteredTag>Our Values</CenteredTag>
 
                 <div className="mt-9 hidden items-center px-6 lg:flex">
                     <div className="h-[2px] flex-1 bg-[#F58220]" />
