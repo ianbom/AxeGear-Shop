@@ -20,21 +20,11 @@ return new class extends Migration
             $table->string('shop_now_url');
             $table->string('specifications_text', 100)->default('View Specifications');
             $table->string('hero_image_url');
-            $table->string('benefits_heading', 180);
             $table->string('story_eyebrow', 180);
             $table->string('story_title', 255);
             $table->longText('story_body');
             $table->string('story_image_url');
             $table->string('gallery_heading', 180);
-            $table->string('technology_heading', 180);
-            $table->string('technology_image_url');
-            $table->string('final_eyebrow', 100)->nullable();
-            $table->string('final_title', 180)->nullable();
-            $table->string('final_tagline')->nullable();
-            $table->string('final_price_label', 100)->nullable();
-            $table->string('final_cta_text', 100)->nullable();
-            $table->string('final_cta_url')->nullable();
-            $table->string('final_image_url')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 

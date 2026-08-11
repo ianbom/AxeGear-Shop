@@ -13,7 +13,7 @@ class NewProductPageManagementService
     public function page(): NewProductPage
     {
         return NewProductPage::query()
-            ->with(['benefits' => fn ($query) => $query->orderBy('sort_order'), 'galleryImages' => fn ($query) => $query->orderBy('sort_order'), 'technologies' => fn ($query) => $query->orderBy('sort_order')])
+            ->with(['galleryImages' => fn ($query) => $query->orderBy('sort_order')])
             ->latest('updated_at')
             ->firstOrFail();
     }
@@ -22,20 +22,14 @@ class NewProductPageManagementService
     {
         DB::transaction(function () use ($page, $data): void {
             $pageData = collect($data)->except([
-                'benefits',
                 'gallery_images',
-                'technologies',
                 'hero_image',
                 'story_image',
-                'technology_image',
-                'final_image',
             ])->all();
 
             foreach ([
                 'hero_image' => 'hero_image_url',
                 'story_image' => 'story_image_url',
-                'technology_image' => 'technology_image_url',
-                'final_image' => 'final_image_url',
             ] as $fileKey => $urlKey) {
                 if (! isset($data[$fileKey])) {
                     continue;
@@ -60,12 +54,8 @@ class NewProductPageManagementService
             $newGalleryUrls = collect($gallery)->pluck('image_url');
 
             $page->update($pageData);
-            $page->benefits()->delete();
-            $page->benefits()->createMany($data['benefits'] ?? []);
             $page->galleryImages()->delete();
             $page->galleryImages()->createMany($gallery);
-            $page->technologies()->delete();
-            $page->technologies()->createMany($data['technologies'] ?? []);
 
             $currentGalleryUrls
                 ->diff($newGalleryUrls)
@@ -77,12 +67,9 @@ class NewProductPageManagementService
     {
         return [
             'page' => $page->only([
-                'id', 'name', 'hero_eyebrow', 'hero_title', 'product_name', 'hero_description', 'price_label', 'shop_now_text', 'shop_now_url', 'specifications_text', 'hero_image_url', 'benefits_heading', 'story_eyebrow', 'story_title', 'story_body', 'story_image_url', 'gallery_heading', 'technology_heading', 'technology_image_url', 'final_eyebrow', 'final_title', 'final_tagline', 'final_price_label', 'final_cta_text', 'final_cta_url', 'final_image_url', 'is_active',
+                'id', 'name', 'hero_eyebrow', 'hero_title', 'product_name', 'hero_description', 'price_label', 'shop_now_text', 'shop_now_url', 'specifications_text', 'hero_image_url', 'story_eyebrow', 'story_title', 'story_body', 'story_image_url', 'gallery_heading', 'is_active',
             ]),
-            'benefits' => $page->benefits->map(fn ($item) => $item->only(['icon', 'title', 'description', 'sort_order', 'is_active']))->values()->all(),
             'galleryImages' => $page->galleryImages->map(fn ($item) => $item->only(['image_url', 'alt_text', 'sort_order', 'is_active']))->values()->all(),
-            'technologies' => $page->technologies->map(fn ($item) => $item->only(['icon', 'title', 'description', 'sort_order', 'is_active']))->values()->all(),
-            'icons' => ['badge-check', 'crosshair', 'diamond', 'eye', 'feather', 'lock', 'shield', 'sun', 'wind'],
         ];
     }
 }

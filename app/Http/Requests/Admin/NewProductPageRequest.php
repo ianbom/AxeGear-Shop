@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Admin;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class NewProductPageRequest extends FormRequest
 {
@@ -26,43 +25,19 @@ class NewProductPageRequest extends FormRequest
             'specifications_text' => ['required', 'string', 'max:100'],
             'hero_image_url' => ['required', 'string', 'max:2048'],
             'hero_image' => ['nullable', 'file', 'image', 'max:4096'],
-            'benefits_heading' => ['required', 'string', 'max:180'],
             'story_eyebrow' => ['required', 'string', 'max:180'],
             'story_title' => ['required', 'string', 'max:255'],
             'story_body' => ['required', 'string', 'max:10000'],
             'story_image_url' => ['required', 'string', 'max:2048'],
             'story_image' => ['nullable', 'file', 'image', 'max:4096'],
             'gallery_heading' => ['required', 'string', 'max:180'],
-            'technology_heading' => ['required', 'string', 'max:180'],
-            'technology_image_url' => ['required', 'string', 'max:2048'],
-            'technology_image' => ['nullable', 'file', 'image', 'max:4096'],
-            'final_eyebrow' => ['nullable', 'string', 'max:100'],
-            'final_title' => ['nullable', 'string', 'max:180'],
-            'final_tagline' => ['nullable', 'string', 'max:255'],
-            'final_price_label' => ['nullable', 'string', 'max:100'],
-            'final_cta_text' => ['nullable', 'string', 'max:100'],
-            'final_cta_url' => ['nullable', 'string', 'max:255'],
-            'final_image_url' => ['nullable', 'string', 'max:2048'],
-            'final_image' => ['nullable', 'file', 'image', 'max:4096'],
             'is_active' => ['sometimes', 'boolean'],
-            'benefits' => ['nullable', 'array'],
-            'benefits.*.icon' => ['required', Rule::in($this->icons())],
-            'benefits.*.title' => ['required', 'string', 'max:180'],
-            'benefits.*.description' => ['required', 'string', 'max:1000'],
-            'benefits.*.sort_order' => ['required', 'integer', 'min:0'],
-            'benefits.*.is_active' => ['sometimes', 'boolean'],
             'gallery_images' => ['nullable', 'array'],
             'gallery_images.*.image_url' => ['nullable', 'string', 'max:2048'],
             'gallery_images.*.image' => ['nullable', 'file', 'image', 'max:4096'],
             'gallery_images.*.alt_text' => ['nullable', 'string', 'max:255'],
             'gallery_images.*.sort_order' => ['required', 'integer', 'min:0'],
             'gallery_images.*.is_active' => ['sometimes', 'boolean'],
-            'technologies' => ['nullable', 'array'],
-            'technologies.*.icon' => ['required', Rule::in($this->icons())],
-            'technologies.*.title' => ['required', 'string', 'max:180'],
-            'technologies.*.description' => ['required', 'string', 'max:1000'],
-            'technologies.*.sort_order' => ['required', 'integer', 'min:0'],
-            'technologies.*.is_active' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -75,10 +50,5 @@ class NewProductPageRequest extends FormRequest
                 }
             }
         }];
-    }
-
-    public function icons(): array
-    {
-        return ['badge-check', 'crosshair', 'diamond', 'eye', 'feather', 'lock', 'shield', 'sun', 'wind'];
     }
 }
