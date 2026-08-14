@@ -1,0 +1,113 @@
+name: Build, Push to Build Branch, and Deploy to Hostinger
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, bcmath, pdo_mysql, zip
+          tools: composer:v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install PHP Dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Prepare Environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Generate Wayfinder types
+        run: php artisan wayfinder:generate --with-form
+
+      - name: Install NPM Dependencies
+        run: npm ci
+
+      - name: Build Assets
+        run: npm run build:ssr
+
+      - name: Commit and Push to build branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B build
+          git add -f public/build/ resources/js/actions/ resources/js/routes/ resources/js/wayfinder/
+          if [ -d bootstrap/ssr ]; then
+            git add -f bootstrap/ssr/
+          fi
+          git commit -m "Auto-build assets from master ($GITHUB_SHA)" || echo "No changes to commit"
+          git push origin build --force
+
+      - name: Deploy build branch to Hostinger
+        env:
+          HOSTINGER_HOST: 153.92.11.222
+          HOSTINGER_PORT: '65002'
+          HOSTINGER_USER: u654274011
+          HOSTINGER_PATH: /home/u654274011/domains/axegearofficial.com/AxeGear-Shop
+          HOSTINGER_PASSWORD: ${{ secrets.HOSTINGER_PASSWORD }}
+          HOSTINGER_HOST_KEY: ${{ secrets.HOSTINGER_HOST_KEY }}
+          SSHPASS: ${{ secrets.HOSTINGER_PASSWORD }}
+        run: |
+          test -n "$HOSTINGER_PASSWORD"
+          test -n "$HOSTINGER_HOST_KEY"
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sshpass
+          mkdir -p "$RUNNER_TEMP/ssh"
+          chmod 700 "$RUNNER_TEMP/ssh"
+          ssh-keyscan -T 30 -p "$HOSTINGER_PORT" "$HOSTINGER_HOST" > "$RUNNER_TEMP/ssh/known_hosts" 2>/dev/null
+          test -s "$RUNNER_TEMP/ssh/known_hosts"
+          ssh-keygen -lf "$RUNNER_TEMP/ssh/known_hosts" -E sha256 \
+            | awk '{print $2}' \
+            | grep -Fx -- "$HOSTINGER_HOST_KEY"
+
+          sshpass -e ssh -4 -p "$HOSTINGER_PORT" \
+            -o ConnectTimeout=60 \
+            -o ServerAliveInterval=60 \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known_hosts" \
+            "$HOSTINGER_USER@$HOSTINGER_HOST" bash -s -- "$HOSTINGER_PATH" <<'REMOTE'
+          set -eu
+          DEPLOY_PATH="$1"
+          cd "$DEPLOY_PATH"
+          git fetch origin build --depth 1
+          git checkout -B build origin/build
+          git reset --hard origin/build
+          git clean -fd -e .env -e .env.staging -e storage -e public/storage -e .htaccess
+          composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+          php artisan migrate --force --no-interaction
+          php artisan optimize:clear
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+          echo "Hostinger deployment completed successfully"
+          REMOTE
