@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\DB;
 
 class ProductVariantService
 {
-    use StoresUploadedFiles;
     use ResolvesAdminPagination;
+    use StoresUploadedFiles;
 
     public function __construct(private readonly StockLogService $stockLogs) {}
 
@@ -88,7 +88,19 @@ class ProductVariantService
 
     public function productOptions()
     {
-        return Product::query()->orderBy('name')->get(['id', 'name']);
+        return Product::query()
+            ->with('primaryImage:id,product_id,image_url')
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug', 'sku', 'regular_price', 'sale_price'])
+            ->map(fn (Product $product): array => [
+                'id' => $product->id,
+                'name' => $product->name,
+                'slug' => $product->slug,
+                'sku' => $product->sku,
+                'regular_price' => $product->regular_price,
+                'sale_price' => $product->sale_price,
+                'image_url' => $product->primaryImage?->image_url,
+            ]);
     }
 
     public function formData(ProductVariant $variant): array

@@ -147,11 +147,8 @@ export default function Welcome({
                             transform: `translateX(-${activeSlide * 100}%)`,
                         }}
                     >
-                        {slides.map((slide, index) => (
-                            <div
-                                key={`${slide.id}-${index}`}
-                                className="relative h-full min-w-full"
-                            >
+                        {slides.map((slide, index) => {
+                            const slideContent = (
                                 <img
                                     src={slide.image_desktop_url}
                                     alt={slide.title}
@@ -159,16 +156,36 @@ export default function Welcome({
                                     loading={index === 0 ? 'eager' : 'lazy'}
                                     decoding="async"
                                 />
-                                {slide.button_text && slide.button_url && (
-                                    <Link
+                            );
+                            const className = `relative block h-full min-w-full ${slide.button_url ? 'cursor-pointer' : ''}`;
+
+                            return slide.button_url ? (
+                                /^https?:\/\//.test(slide.button_url) ? (
+                                    <a
+                                        key={`${slide.id}-${index}`}
                                         href={slide.button_url}
-                                        className="absolute bottom-7 left-5 z-10 inline-flex min-h-11 items-center justify-center border border-white bg-black/80 px-6 py-3 text-sm font-bold tracking-[0.08em] text-white uppercase backdrop-blur-sm transition-colors hover:bg-white hover:text-black sm:bottom-9 sm:left-8 sm:px-8 sm:text-base lg:bottom-12 lg:left-12"
+                                        className={className}
                                     >
-                                        {slide.button_text}
+                                        {slideContent}
+                                    </a>
+                                ) : (
+                                    <Link
+                                        key={`${slide.id}-${index}`}
+                                        href={slide.button_url}
+                                        className={className}
+                                    >
+                                        {slideContent}
                                     </Link>
-                                )}
-                            </div>
-                        ))}
+                                )
+                            ) : (
+                                <div
+                                    key={`${slide.id}-${index}`}
+                                    className={className}
+                                >
+                                    {slideContent}
+                                </div>
+                            );
+                        })}
                     </div>
 
                     {slides.length > 1 && (

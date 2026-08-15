@@ -26,7 +26,7 @@ return new class extends Migration
             $table->integer('length')->nullable();
             $table->integer('width')->nullable();
             $table->integer('height')->nullable();
-            $table->string('image_url')->nullable();
+            $table->text('image_url')->nullable();
             $table->boolean('is_active')->default(true);
             $table->softDeletes();
             $table->timestamps();

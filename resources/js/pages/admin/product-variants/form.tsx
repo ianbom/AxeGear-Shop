@@ -13,9 +13,24 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { PageHeader } from '@/pages/admin/catalog/shared';
 
-type Product = { id: number; name: string };
+type Product = {
+    id: number;
+    name: string;
+    slug: string;
+    sku: string | null;
+    regular_price: string;
+    sale_price: string | null;
+    image_url: string | null;
+};
 type Variant = {
     id: number;
     product_id: number;
@@ -44,6 +59,15 @@ type Props = {
     products: Product[];
     selectedProductId: number | null;
 };
+
+const formatPrice = (price: string | null) =>
+    price === null
+        ? '—'
+        : new Intl.NumberFormat('id-ID', {
+              style: 'currency',
+              currency: 'IDR',
+              maximumFractionDigits: 0,
+          }).format(Number(price));
 
 export default function ProductVariantForm({
     mode,
@@ -77,6 +101,10 @@ export default function ProductVariantForm({
         image: null as File | null,
         is_active: variant?.is_active ?? true,
     });
+    const selectedProduct =
+        products.find(
+            (product) => String(product.id) === String(data.product_id),
+        ) ?? null;
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0] ?? null;
@@ -113,40 +141,53 @@ export default function ProductVariantForm({
                     title={isEdit ? 'Edit Variant' : 'Create Variant'}
                     description="SKU varian unik, stok tidak negatif, dan reserved stock tidak boleh lebih besar dari stok."
                 />
-                <Card className="max-w-4xl">
-                    <CardHeader>
-                        <CardTitle>Variant Information</CardTitle>
-                        <CardDescription>
-                            Perubahan stok melalui form ini tetap dicatat ke
-                            stock logs.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <form onSubmit={submit} className="flex flex-col gap-5">
+                <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+                    <Card className="min-w-0">
+                        <CardHeader>
+                            <CardTitle>Variant Information</CardTitle>
+                            <CardDescription>
+                                Perubahan stok melalui form ini tetap dicatat ke
+                                stock logs.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <form onSubmit={submit} className="flex flex-col gap-5">
                             <div className="grid gap-5 md:grid-cols-2">
                                 <div className="grid gap-2">
                                     <Label htmlFor="product_id">Product</Label>
-                                    <select
-                                        id="product_id"
-                                        value={data.product_id}
-                                        onChange={(event) =>
-                                            setData(
-                                                'product_id',
-                                                event.target.value,
-                                            )
+                                    <Select
+                                        value={
+                                            data.product_id === ''
+                                                ? undefined
+                                                : String(data.product_id)
                                         }
-                                        className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                                        onValueChange={(value) =>
+                                            setData('product_id', value)
+                                        }
                                     >
-                                        <option value="">Select product</option>
-                                        {products.map((product) => (
-                                            <option
-                                                key={product.id}
-                                                value={product.id}
-                                            >
-                                                {product.name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        <SelectTrigger
+                                            id="product_id"
+                                            className="w-full min-w-0"
+                                            aria-invalid={Boolean(
+                                                errors.product_id,
+                                            )}
+                                        >
+                                            <SelectValue placeholder="Select product" />
+                                        </SelectTrigger>
+                                        <SelectContent className="w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)]">
+                                            {products.map((product) => (
+                                                <SelectItem
+                                                    key={product.id}
+                                                    value={String(product.id)}
+                                                    className="min-w-0"
+                                                >
+                                                    <span className="block max-w-full truncate">
+                                                        {product.name}
+                                                    </span>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                     <InputError message={errors.product_id} />
                                 </div>
                                 <div className="grid gap-2">
@@ -154,7 +195,7 @@ export default function ProductVariantForm({
                                     <Input
                                         id="sku"
                                         value={data.sku}
-                                        placeholder="e.g. GMS-001-BLK-M"
+                                        placeholder="e.g. AXG-HYD-END-BLK-2L"
                                         onChange={(event) =>
                                             setData('sku', event.target.value)
                                         }
@@ -168,7 +209,7 @@ export default function ProductVariantForm({
                                     <Input
                                         id="variant_name"
                                         value={data.variant_name}
-                                        placeholder="Default Title"
+                                        placeholder="Black / 2L"
                                         onChange={(event) =>
                                             setData('variant_name', event.target.value)
                                         }
@@ -182,7 +223,7 @@ export default function ProductVariantForm({
                                     <Input
                                         id="color_name"
                                         value={data.color_name}
-                                        placeholder="e.g. Black, Ivory, Sage"
+                                        placeholder="e.g. Black, Olive, Sand"
                                         onChange={(event) =>
                                             setData(
                                                 'color_name',
@@ -220,7 +261,7 @@ export default function ProductVariantForm({
                                     <Input
                                         id="size"
                                         value={data.size}
-                                        placeholder="e.g. S, M, L, XL"
+                                        placeholder="e.g. 2L, 5L, 10L"
                                         onChange={(event) =>
                                             setData('size', event.target.value)
                                         }
@@ -233,7 +274,7 @@ export default function ProductVariantForm({
                                     <Input
                                         id="package_type"
                                         value={data.package_type}
-                                        placeholder="Bag, Bundle, Apparel"
+                                        placeholder="Hydropack, Sling Bag, Waist Bag"
                                         onChange={(event) =>
                                             setData('package_type', event.target.value)
                                         }
@@ -411,21 +452,97 @@ export default function ProductVariantForm({
                                 </span>
                             </label>
 
-                            <div className="flex justify-end gap-3 border-t pt-5">
-                                <Button asChild type="button" variant="outline">
-                                    <Link href="/admin/product-variants">
-                                        Cancel
-                                    </Link>
-                                </Button>
-                                <Button type="submit" disabled={processing}>
-                                    <Save />
-                                    Save Variant
-                                </Button>
-                            </div>
-                        </form>
-                    </CardContent>
-                </Card>
+                                <div className="flex justify-end gap-3 border-t pt-5">
+                                    <Button asChild type="button" variant="outline">
+                                        <Link href="/admin/product-variants">
+                                            Cancel
+                                        </Link>
+                                    </Button>
+                                    <Button type="submit" disabled={processing}>
+                                        <Save />
+                                        Save Variant
+                                    </Button>
+                                </div>
+                            </form>
+                        </CardContent>
+                    </Card>
+
+                    {selectedProduct && (
+                        <Card className="min-w-0 overflow-hidden xl:sticky xl:top-6">
+                            <CardHeader>
+                                <CardTitle>Product Summary</CardTitle>
+                                <CardDescription>
+                                    Product yang menerima variant ini.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="grid gap-5">
+                                <div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-lg border bg-muted">
+                                    {selectedProduct.image_url ? (
+                                        <img
+                                            src={selectedProduct.image_url}
+                                            alt={selectedProduct.name}
+                                            className="h-full w-full object-cover"
+                                        />
+                                    ) : (
+                                        <ImageIcon className="h-12 w-12 text-muted-foreground/40" />
+                                    )}
+                                </div>
+                                <div className="grid min-w-0 gap-4 text-sm">
+                                    <SummaryItem
+                                        label="Name"
+                                        value={selectedProduct.name}
+                                    />
+                                    <SummaryItem
+                                        label="Slug"
+                                        value={selectedProduct.slug}
+                                        mono
+                                    />
+                                    <SummaryItem
+                                        label="SKU"
+                                        value={selectedProduct.sku ?? '—'}
+                                        mono
+                                    />
+                                    <SummaryItem
+                                        label="Price"
+                                        value={formatPrice(
+                                            selectedProduct.regular_price,
+                                        )}
+                                    />
+                                    <SummaryItem
+                                        label="Sale Price"
+                                        value={formatPrice(
+                                            selectedProduct.sale_price,
+                                        )}
+                                    />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
             </div>
         </>
+    );
+}
+
+function SummaryItem({
+    label,
+    value,
+    mono = false,
+}: {
+    label: string;
+    value: string;
+    mono?: boolean;
+}) {
+    return (
+        <div className="min-w-0 border-b pb-3 last:border-0 last:pb-0">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {label}
+            </p>
+            <p
+                className={`mt-1 break-words font-medium text-foreground ${mono ? 'font-mono text-xs' : ''}`}
+            >
+                {value}
+            </p>
+        </div>
     );
 }

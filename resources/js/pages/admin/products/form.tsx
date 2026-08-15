@@ -188,9 +188,11 @@ function SectionCard({
 function FieldRow({
     children,
     cols = 1,
+    className = '',
 }: {
     children: React.ReactNode;
     cols?: 1 | 2 | 3 | 4;
+    className?: string;
 }) {
     const gridClass = {
         1: 'grid-cols-1',
@@ -199,7 +201,7 @@ function FieldRow({
         4: 'grid-cols-2 sm:grid-cols-4',
     }[cols];
 
-    return <div className={`grid ${gridClass} gap-4`}>{children}</div>;
+    return <div className={`grid ${gridClass} gap-4 ${className}`}>{children}</div>;
 }
 
 function FieldGroup({
@@ -764,7 +766,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                             );
                                                         }
                                                     }}
-                                                    placeholder="e.g. Gamis Syar'i Pita"
+                                                    placeholder="e.g. Axegear Hydropack Enduro 2L"
                                                     className="h-9 border-zinc-200 text-sm focus:border-[#151515] focus:ring-[#151515]"
                                                 />
                                             </FieldGroup>
@@ -782,7 +784,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                             e.target.value,
                                                         )
                                                     }
-                                                    placeholder="e.g. GMS-001"
+                                                    placeholder="e.g. AXG-HYD-END-001"
                                                     className="h-9 border-zinc-200 font-mono text-sm focus:border-[#151515] focus:ring-[#151515]"
                                                 />
                                             </FieldGroup>
@@ -805,7 +807,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                             ),
                                                         )
                                                     }
-                                                    placeholder="e.g. gamis-syari-pita"
+                                                    placeholder="e.g. axegear-hydropack-enduro-2l"
                                                     className="h-9 flex-1 border-zinc-200 font-mono text-sm focus:border-[#151515] focus:ring-[#151515]"
                                                 />
                                                 <Button
@@ -957,7 +959,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                         e.target.value,
                                                     )
                                                 }
-                                                placeholder="Brief product summary for listings"
+                                        placeholder="Lightweight hydropack for trail rides and daily adventures"
                                                 className="h-9 border-zinc-200 text-sm focus:border-[#151515] focus:ring-[#151515]"
                                             />
                                         </FieldGroup>
@@ -2087,7 +2089,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                         }
                     }}
                 >
-                    <div className="w-full max-w-xl overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-2xl">
+                    <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-6xl flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-2xl">
                         <div className="flex items-start justify-between gap-4 border-b border-zinc-100 px-6 py-4">
                             <div>
                                 <h2 className="text-sm font-semibold text-zinc-900">
@@ -2109,8 +2111,8 @@ export default function ProductForm({ mode, product, options }: Props) {
                             </button>
                         </div>
 
-                        <div className="space-y-4 px-6 py-5">
-                            <FieldRow>
+                        <div className="grid max-h-[calc(100vh-11rem)] grid-cols-1 gap-4 overflow-y-auto px-6 py-5 lg:grid-cols-[340px_minmax(0,1fr)] lg:gap-x-6">
+                            <FieldRow className="lg:col-start-2">
                                 <FieldGroup label="Variant SKU" required>
                                     <Input
                                         value={variantDraft.sku}
@@ -2120,13 +2122,13 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                 sku: e.target.value,
                                             })
                                         }
-                                        placeholder="e.g. GMS-001-S"
+                                        placeholder="e.g. AXG-HYD-END-BLK-2L"
                                         className="h-9 border-zinc-200 font-mono text-sm focus:border-[#151515] focus:ring-[#151515]"
                                     />
                                 </FieldGroup>
                             </FieldRow>
 
-                            <FieldRow cols={3}>
+                            <FieldRow cols={3} className="lg:col-start-2">
                                 <FieldGroup label="Variant Name">
                                     <Input
                                         value={variantDraft.variant_name}
@@ -2136,7 +2138,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                 variant_name: e.target.value,
                                             })
                                         }
-                                        placeholder="Default Title"
+                                        placeholder="Black / 2L"
                                         className="h-9 border-zinc-200 text-sm focus:border-[#151515] focus:ring-[#151515]"
                                     />
                                 </FieldGroup>
@@ -2149,7 +2151,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                 size: e.target.value,
                                             })
                                         }
-                                        placeholder="e.g. S, M, L, XL"
+                                        placeholder="e.g. 2L, 5L, 10L"
                                         className="h-9 border-zinc-200 text-sm focus:border-[#151515] focus:ring-[#151515]"
                                     />
                                 </FieldGroup>
@@ -2162,13 +2164,13 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                 package_type: e.target.value,
                                             })
                                         }
-                                        placeholder="Bag, Bundle, Apparel"
+                                        placeholder="Hydropack, Sling Bag, Waist Bag"
                                         className="h-9 border-zinc-200 text-sm focus:border-[#151515] focus:ring-[#151515]"
                                     />
                                 </FieldGroup>
                             </FieldRow>
 
-                            <FieldRow cols={2}>
+                            <FieldRow cols={2} className="lg:col-start-2">
                                 <FieldGroup label="Color Name">
                                     <Input
                                         value={variantDraft.color_name}
@@ -2178,7 +2180,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                 color_name: e.target.value,
                                             })
                                         }
-                                        placeholder="e.g. Black"
+                                        placeholder="e.g. Black, Olive, Sand"
                                         className="h-9 border-zinc-200 text-sm focus:border-[#151515] focus:ring-[#151515]"
                                     />
                                 </FieldGroup>
@@ -2216,7 +2218,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                 </FieldGroup>
                             </FieldRow>
 
-                            <FieldRow cols={4}>
+                            <FieldRow cols={4} className="lg:col-start-2">
                                 <FieldGroup label="Regular Price">
                                     <Input
                                         type="number"
@@ -2275,7 +2277,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                 </FieldGroup>
                             </FieldRow>
 
-                            <FieldRow cols={4}>
+                            <FieldRow cols={4} className="lg:col-start-2">
                                 {(['weight', 'length', 'width', 'height'] as const).map((field) => (
                                     <FieldGroup key={field} label={field === 'weight' ? 'Weight (g)' : `${field[0].toUpperCase()}${field.slice(1)} (cm)`}>
                                         <Input
@@ -2294,12 +2296,15 @@ export default function ProductForm({ mode, product, options }: Props) {
                                 ))}
                             </FieldRow>
 
-                            <FieldGroup
-                                label="Variant Image"
-                                hint="Stored in Laravel public storage. JPG, PNG, WEBP up to 4MB."
-                            >
-                                <div className="flex items-center gap-4 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-                                    <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-zinc-200 bg-white">
+                            <div className="order-first rounded-xl border border-zinc-200 bg-zinc-50/70 p-5 lg:col-start-1 lg:row-span-6 lg:row-start-1 lg:self-start">
+                                <FieldGroup
+                                    label="Variant Image"
+                                    hint="Stored in Laravel public storage. JPG, PNG, WEBP up to 4MB."
+                                >
+                                    <label
+                                        htmlFor="variant-image-input"
+                                        className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-3 overflow-hidden rounded-lg border border-dashed border-zinc-300 bg-white p-5 text-center transition-colors hover:border-primary hover:bg-primary/5"
+                                    >
                                         {variantDraftPreview ? (
                                             <img
                                                 src={variantDraftPreview}
@@ -2307,11 +2312,22 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                 className="h-full w-full object-cover"
                                             />
                                         ) : (
-                                            <ImageIcon className="h-6 w-6 text-zinc-300" />
+                                            <>
+                                                <span className="flex h-16 w-16 items-center justify-center rounded-full bg-zinc-100">
+                                                    <ImageIcon className="h-7 w-7 text-zinc-500" />
+                                                </span>
+                                                <span className="text-sm font-medium text-zinc-700">
+                                                    Drag & drop an image here
+                                                </span>
+                                                <span className="text-xs text-zinc-400">
+                                                    or click to browse
+                                                </span>
+                                            </>
                                         )}
-                                    </div>
-                                    <div className="flex-1 space-y-2">
+                                    </label>
+                                    <div className="space-y-2">
                                         <Input
+                                            id="variant-image-input"
                                             type="file"
                                             accept="image/*"
                                             onChange={(e) => {
@@ -2348,7 +2364,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                               null,
                                                 );
                                             }}
-                                            className="h-9 border-zinc-200 bg-white text-sm file:mr-3 file:rounded file:border-0 file:bg-zinc-100 file:px-3 file:py-1 file:text-xs file:text-zinc-700 hover:file:bg-zinc-200"
+                                            className="h-10 border-zinc-200 bg-white text-sm file:mr-3 file:rounded file:border-0 file:bg-zinc-100 file:px-3 file:py-1.5 file:text-xs file:text-zinc-700 hover:file:bg-zinc-200"
                                         />
                                         {variantDraft.image_url && (
                                             <button
@@ -2377,9 +2393,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                         image: null,
                                                         image_url: '',
                                                     });
-                                                    setVariantDraftPreview(
-                                                        null,
-                                                    );
+                                                    setVariantDraftPreview(null);
                                                 }}
                                                 className="text-xs font-medium text-red-500 hover:text-red-600"
                                             >
@@ -2387,10 +2401,10 @@ export default function ProductForm({ mode, product, options }: Props) {
                                             </button>
                                         )}
                                     </div>
-                                </div>
-                            </FieldGroup>
+                                </FieldGroup>
+                            </div>
 
-                            <div className="flex items-center justify-between rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3">
+                            <div className="flex items-center justify-between rounded-lg border border-zinc-100 bg-zinc-50 px-4 py-3 lg:col-start-2">
                                 <Label className="cursor-pointer text-xs font-medium text-zinc-700">
                                     Active Variant
                                 </Label>
