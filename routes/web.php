@@ -4,9 +4,11 @@ use App\Http\Controllers\Admin\AdminNotificationController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\BannerController;
+use App\Http\Controllers\Admin\BlogArticleController;
 use App\Http\Controllers\Admin\BiteshipWebhookLogController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CollectionController;
+use App\Http\Controllers\Admin\GalleryImageController;
 use App\Http\Controllers\Admin\CustomerAddressController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
@@ -25,6 +27,8 @@ use App\Http\Controllers\Admin\VoucherController;
 use App\Http\Controllers\Admin\WishlistInsightController;
 use App\Http\Controllers\Customer\AddressController;
 use App\Http\Controllers\Customer\BiteshipAreaController;
+use App\Http\Controllers\BlogController;
+use App\Http\Controllers\GalleryController;
 use App\Http\Controllers\Customer\CartController;
 use App\Http\Controllers\Customer\CheckoutController;
 use App\Http\Controllers\Customer\HomeController as CustomerHomeController;
@@ -41,10 +45,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [CustomerHomeController::class, 'index'])->name('home');
-Route::inertia('/gallery', 'gallery/index')->name('gallery');
+Route::get('/gallery', GalleryController::class)->name('gallery');
 Route::inertia('/about', 'about/index')->name('about');
-Route::inertia('/blog', 'blog/index')->name('blog');
-Route::inertia('/blog/{slug}', 'blog/show')->name('blog.show');
+Route::get('/blog', [BlogController::class, 'index'])->name('blog');
+Route::get('/blog/{slug}', [BlogController::class, 'show'])->name('blog.show');
 Route::inertia('/contact', 'contact/index')->name('contact');
 Route::get('/new-product', NewProductController::class)->name('new-product');
 
@@ -190,6 +194,20 @@ Route::middleware(['auth', 'admin', 'admin.activity'])->prefix('admin')->name('a
     Route::get('banners/{banner}/edit', [BannerController::class, 'edit'])->name('banners.edit');
     Route::put('banners/{banner}', [BannerController::class, 'update'])->name('banners.update');
     Route::delete('banners/{banner}', [BannerController::class, 'destroy'])->name('banners.destroy');
+
+    Route::get('blogs', [BlogArticleController::class, 'index'])->name('blogs.index');
+    Route::get('blogs/create', [BlogArticleController::class, 'create'])->name('blogs.create');
+    Route::post('blogs', [BlogArticleController::class, 'store'])->name('blogs.store');
+    Route::get('blogs/{blogArticle}/edit', [BlogArticleController::class, 'edit'])->name('blogs.edit');
+    Route::put('blogs/{blogArticle}', [BlogArticleController::class, 'update'])->name('blogs.update');
+    Route::delete('blogs/{blogArticle}', [BlogArticleController::class, 'destroy'])->name('blogs.destroy');
+
+    Route::get('gallery', [GalleryImageController::class, 'index'])->name('gallery.index');
+    Route::get('gallery/create', [GalleryImageController::class, 'create'])->name('gallery.create');
+    Route::post('gallery', [GalleryImageController::class, 'store'])->name('gallery.store');
+    Route::get('gallery/{galleryImage}/edit', [GalleryImageController::class, 'edit'])->name('gallery.edit');
+    Route::put('gallery/{galleryImage}', [GalleryImageController::class, 'update'])->name('gallery.update');
+    Route::delete('gallery/{galleryImage}', [GalleryImageController::class, 'destroy'])->name('gallery.destroy');
 
     Route::get('pages', [PageController::class, 'index'])->name('pages.index');
     Route::get('pages/create', [PageController::class, 'create'])->name('pages.create');

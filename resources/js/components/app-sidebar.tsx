@@ -9,6 +9,8 @@ import {
     Heart,
     Home,
     Image,
+    Images,
+    Newspaper,
     Layers3,
     LayoutGrid,
     Package,
@@ -22,7 +24,6 @@ import {
     Users,
     WalletCards,
 } from 'lucide-react';
-import AppLogo from '@/components/app-logo';
 import type { NavGroup } from '@/components/nav-main';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -159,6 +160,16 @@ const adminNavGroups: NavGroup[] = [
                 title: 'Banner',
                 href: '/admin/banners',
                 icon: Image,
+            },
+            {
+                title: 'Blog',
+                href: '/admin/blogs',
+                icon: Newspaper,
+            },
+            {
+                title: 'Gallery',
+                href: '/admin/gallery',
+                icon: Images,
             },
             {
                 title: 'Halaman',
