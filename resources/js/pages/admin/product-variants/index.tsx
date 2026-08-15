@@ -38,7 +38,6 @@ interface Variant {
     product_id: number;
     product: string | null;
     sku: string;
-    barcode: string | null;
     variant_name: string | null;
     color_name: string | null;
     color_hex: string | null;

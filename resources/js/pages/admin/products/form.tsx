@@ -1,7 +1,6 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { EditorContent, useEditor } from '@tiptap/react';
-import type { Editor } from '@tiptap/react';
 import Highlight from '@tiptap/extension-highlight';
+import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import {
     Bold,
@@ -23,7 +22,6 @@ import {
     Trash2,
     Undo2,
     X,
-    Info,
     GripVertical,
     AlertTriangle,
     Layers,
@@ -42,7 +40,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
 
 type Option = { id: number; name: string };
 type ProductImagePayload = {
@@ -58,7 +55,6 @@ type ProductImageRow = ProductImagePayload & {
 type ProductVariantPayload = {
     id?: number;
     sku: string;
-    barcode: string;
     variant_name: string;
     color_name: string;
     color_hex: string;
@@ -89,7 +85,6 @@ type ProductFormData = {
     style_name: string;
     short_description: string;
     description: string;
-    stock_status: string;
     regular_price: string | number;
     sale_price: string | number;
     weight: string | number;
@@ -100,8 +95,6 @@ type ProductFormData = {
     is_featured: boolean;
     is_new_arrival: boolean;
     is_best_seller: boolean;
-    meta_title: string;
-    meta_description: string;
     images: ProductImageRow[];
     variants: ProductVariantRow[];
 };
@@ -139,7 +132,6 @@ const blankImage = (): ProductImageRow => ({
 
 const blankVariant = (): ProductVariantRow => ({
     sku: '',
-    barcode: '',
     variant_name: 'Default Title',
     color_name: '',
     color_hex: '',
@@ -500,7 +492,6 @@ export default function ProductForm({ mode, product, options }: Props) {
             style_name: product?.style_name ?? '',
             short_description: product?.short_description ?? '',
             description: product?.description ?? '',
-            stock_status: product?.stock_status ?? 'in_stock',
             regular_price: product?.regular_price ?? '',
             sale_price: product?.sale_price ?? '',
             weight: product?.weight ?? '',
@@ -511,8 +502,6 @@ export default function ProductForm({ mode, product, options }: Props) {
             is_featured: product?.is_featured ?? false,
             is_new_arrival: product?.is_new_arrival ?? false,
             is_best_seller: product?.is_best_seller ?? false,
-            meta_title: product?.meta_title ?? '',
-            meta_description: product?.meta_description ?? '',
             images: product?.images?.length
                 ? product.images.map((image) => ({ ...image, image: null }))
                 : [blankImage()],
@@ -876,6 +865,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                     ) : (
                                                         options.collections.map((c) => {
                                                             const isChecked = data.collection_ids.includes(c.id);
+
                                                             return (
                                                                 <label key={c.id} className="flex items-center gap-2 rounded-md border border-zinc-100 p-2 hover:bg-zinc-50 cursor-pointer">
                                                                     <input
@@ -1667,119 +1657,6 @@ export default function ProductForm({ mode, product, options }: Props) {
                                     )}
                                 </SectionCard>
 
-                                {/* 7. SEO Metadata */}
-                                {/* <SectionCard
-                                    title="SEO Metadata"
-                                    description="Optimize your product for search engines"
-                                    icon={
-                                        <svg
-                                            className="h-4 w-4 text-zinc-500"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth={1.5}
-                                                d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
-                                            />
-                                        </svg>
-                                    }
-                                >
-                                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                                        <div className="space-y-4">
-                                            <FieldGroup
-                                                label="Meta Title"
-                                                error={errors.meta_title}
-                                                hint="Recommended: 50–60 characters"
-                                                charCount={
-                                                    data.meta_title?.length
-                                                }
-                                                maxChar={60}
-                                            >
-                                                <Input
-                                                    value={data.meta_title}
-                                                    onChange={(e) =>
-                                                        setData(
-                                                            'meta_title',
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                    placeholder={
-                                                        data.name ||
-                                                        'Product title for search results'
-                                                    }
-                                                    className="h-9 border-zinc-200 text-sm focus:border-[#151515] focus:ring-[#151515]"
-                                                />
-                                            </FieldGroup>
-                                            <FieldGroup
-                                                label="Meta Description"
-                                                error={errors.meta_description}
-                                                hint="Recommended: 120–160 characters"
-                                                charCount={
-                                                    data.meta_description
-                                                        ?.length
-                                                }
-                                                maxChar={160}
-                                            >
-                                                <Textarea
-                                                    value={
-                                                        data.meta_description
-                                                    }
-                                                    onChange={(e) =>
-                                                        setData(
-                                                            'meta_description',
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                    placeholder={
-                                                        data.short_description ||
-                                                        'Brief description for search results...'
-                                                    }
-                                                    className="min-h-[80px] resize-y border-zinc-200 text-sm focus:border-[#151515] focus:ring-[#151515]"
-                                                />
-                                            </FieldGroup>
-                                        </div>
-
-                                      
-                                        <div>
-                                            <p className="mb-2 text-[11px] font-medium tracking-wider text-zinc-400 uppercase">
-                                                Search Preview
-                                            </p>
-                                            <div className="rounded-lg border border-zinc-200 bg-white p-4">
-                                                <div className="mb-2 flex items-center gap-2">
-                                                    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-100">
-                                                        <svg
-                                                            className="h-3 w-3 text-zinc-400"
-                                                            fill="currentColor"
-                                                            viewBox="0 0 24 24"
-                                                        >
-                                                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
-                                                        </svg>
-                                                    </div>
-                                                    <span className="truncate text-[11px] text-zinc-500">
-                                                        aureasyari.com › product
-                                                        ›{' '}
-                                                        {data.slug ||
-                                                            'product-slug'}
-                                                    </span>
-                                                </div>
-                                                <h3 className="mb-1 line-clamp-1 text-base leading-tight font-medium text-[#1a0dab]">
-                                                    {data.meta_title ||
-                                                        data.name ||
-                                                        'Product Title'}{' '}
-                                                    — Auréa Syar'i
-                                                </h3>
-                                                <p className="line-clamp-2 text-xs leading-relaxed text-[#4d5156]">
-                                                    {data.meta_description ||
-                                                        data.short_description ||
-                                                        'Product description will appear here in search engine results.'}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </SectionCard> */}
 
                                 {/* Form Actions (bottom) */}
                                 <div className="flex items-center justify-between pt-2 pb-8">
@@ -1895,36 +1772,6 @@ export default function ProductForm({ mode, product, options }: Props) {
                                             )}
                                         </div>
 
-                                        <div className="space-y-1.5">
-                                            <Label className="text-xs font-medium text-zinc-700">
-                                                Stock Status
-                                            </Label>
-                                            <select
-                                                value={data.stock_status}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        'stock_status',
-                                                        e.target.value,
-                                                    )
-                                                }
-                                                className="h-9 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-900 shadow-sm focus:border-[#151515] focus:ring-1 focus:ring-[#151515] focus:outline-none"
-                                            >
-                                                <option value="in_stock">
-                                                    In Stock
-                                                </option>
-                                                <option value="out_of_stock">
-                                                    Out of Stock
-                                                </option>
-                                                <option value="preorder">
-                                                    Preorder
-                                                </option>
-                                            </select>
-                                            {errors.stock_status && (
-                                                <p className="text-[11px] text-red-500">
-                                                    {errors.stock_status}
-                                                </p>
-                                            )}
-                                        </div>
 
                                         <div className="space-y-1.5 rounded-lg border border-zinc-100 bg-zinc-50 p-3 text-[11px] text-zinc-500">
                                             <p>
@@ -2263,7 +2110,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                         </div>
 
                         <div className="space-y-4 px-6 py-5">
-                            <FieldRow cols={2}>
+                            <FieldRow>
                                 <FieldGroup label="Variant SKU" required>
                                     <Input
                                         value={variantDraft.sku}
@@ -2275,19 +2122,6 @@ export default function ProductForm({ mode, product, options }: Props) {
                                         }
                                         placeholder="e.g. GMS-001-S"
                                         className="h-9 border-zinc-200 font-mono text-sm focus:border-[#151515] focus:ring-[#151515]"
-                                    />
-                                </FieldGroup>
-                                <FieldGroup label="Barcode">
-                                    <Input
-                                        value={variantDraft.barcode}
-                                        onChange={(e) =>
-                                            setVariantDraft({
-                                                ...variantDraft,
-                                                barcode: e.target.value,
-                                            })
-                                        }
-                                        placeholder="Optional barcode"
-                                        className="h-9 border-zinc-200 text-sm focus:border-[#151515] focus:ring-[#151515]"
                                     />
                                 </FieldGroup>
                             </FieldRow>

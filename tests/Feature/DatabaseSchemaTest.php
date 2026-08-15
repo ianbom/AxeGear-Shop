@@ -20,17 +20,25 @@ it('matches the ecommerce database specification', function () {
         'product_line',
         'style_name',
         'regular_price',
-        'stock_status',
     ]))->toBeTrue();
 
     expect(Schema::hasColumns('product_variants', [
-        'barcode',
         'variant_name',
         'package_type',
         'regular_price',
         'stock',
         'reserved_stock',
     ]))->toBeTrue();
+
+    expect(Schema::hasColumns('banners', ['title', 'is_active']))->toBeTrue()
+        ->and(Schema::hasColumn('banners', 'starts_at'))->toBeFalse()
+        ->and(Schema::hasColumn('banners', 'ends_at'))->toBeFalse()
+        ->and(Schema::hasColumn('products', 'meta_title'))->toBeFalse()
+        ->and(Schema::hasColumn('products', 'meta_description'))->toBeFalse()
+        ->and(Schema::hasColumn('products', 'stock_status'))->toBeFalse()
+        ->and(Schema::hasColumn('products', 'barcode'))->toBeFalse()
+        ->and(Schema::hasColumn('product_variants', 'barcode'))->toBeFalse()
+        ->and(Schema::hasColumn('product_variants', 'reserved_stock'))->toBeTrue();
 
     expect(Schema::hasColumns('orders', [
         'insurance_cost',

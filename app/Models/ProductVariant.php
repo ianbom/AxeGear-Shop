@@ -11,7 +11,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[Fillable([
     'product_id',
     'sku',
-    'barcode',
     'variant_name',
     'color_name',
     'color_hex',

@@ -125,7 +125,7 @@ class AdminPageController extends Controller
             'group' => 'Content Management',
             'table' => 'banners',
             'description' => 'Manage homepage and campaign banner placements.',
-            'columns' => ['title', 'placement', 'sort_order', 'is_active', 'starts_at', 'ends_at'],
+            'columns' => ['title', 'placement', 'sort_order', 'is_active'],
         ],
         'pages' => [
             'title' => 'Pages',

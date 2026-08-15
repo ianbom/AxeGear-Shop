@@ -80,7 +80,7 @@ interface Filters {
     category_id: string;
     collection_id: string;
     status: string;
-    stock_status: string;
+    availability: string;
     is_featured: string;
     is_new_arrival: string;
     is_best_seller: string;
@@ -470,10 +470,10 @@ export default function ProductsIndex({
 
                         <FilterSelect
                             label="Stock"
-                            value={filters.stock_status || 'all'}
+                            value={filters.availability || 'all'}
                             onChange={(v) =>
                                 applyFilter(
-                                    'stock_status',
+                                    'availability',
                                     v === 'all' ? '' : v,
                                 )
                             }

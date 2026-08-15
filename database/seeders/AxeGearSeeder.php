@@ -40,7 +40,6 @@ class AxeGearSeeder extends Seeder
                         'sale_price' => $productData['sale_price'],
                         'short_description' => $productData['short_description'],
                         'description' => $productData['description'],
-                        'stock_status' => $productData['stock_status'],
                         'weight' => $productData['weight'],
                         'length' => $productData['length'],
                         'width' => $productData['width'],
@@ -49,8 +48,6 @@ class AxeGearSeeder extends Seeder
                         'is_featured' => $productData['is_featured'],
                         'is_new_arrival' => $productData['is_new_arrival'],
                         'is_best_seller' => $productData['is_best_seller'],
-                        'meta_title' => $productData['name'].' | AxeGear',
-                        'meta_description' => $productData['short_description'],
                     ],
                 );
 
@@ -152,7 +149,6 @@ class AxeGearSeeder extends Seeder
                 ['sku' => $variant['sku']],
                 [
                     'product_id' => $product->id,
-                    'barcode' => null,
                     'variant_name' => $variant['variant_name'],
                     'color_name' => $variant['color_name'],
                     'color_hex' => $variant['color_hex'],
@@ -223,14 +219,14 @@ class AxeGearSeeder extends Seeder
         $variationCount = self::variationCount($variationText);
         $sku = self::sku($name, $index);
         $dimensions = self::dimensions($categorySlug);
-        $stockStatus = str_contains(Str::lower($notes), 'habis') ? 'out_of_stock' : 'in_stock';
+        $isOutOfStock = str_contains(Str::lower($notes), 'habis');
         $variants = self::variantsForProduct(
             name: $name,
             sku: $sku,
             images: $images,
             categorySlug: $categorySlug,
             variationCount: $variationCount,
-            outOfStock: $stockStatus === 'out_of_stock',
+            outOfStock: $isOutOfStock,
         );
 
         $summary = trim(implode(' ', array_filter([
@@ -251,7 +247,6 @@ class AxeGearSeeder extends Seeder
             'sale_price' => self::salePrice($name, $price),
             'short_description' => Str::limit(self::shortDescription($name, $categoryText, $variationText), 160),
             'description' => self::description($name, $categoryText, $variationText, $summary),
-            'stock_status' => $stockStatus,
             'weight' => $dimensions['weight'],
             'length' => $dimensions['length'],
             'width' => $dimensions['width'],

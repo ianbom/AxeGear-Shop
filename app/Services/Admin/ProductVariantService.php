@@ -96,7 +96,7 @@ class ProductVariantService
         $variant->load('product:id,name');
 
         return [
-            ...$variant->only(['id', 'product_id', 'sku', 'barcode', 'variant_name', 'color_name', 'color_hex', 'size', 'package_type', 'regular_price', 'sale_price', 'stock', 'reserved_stock', 'weight', 'length', 'width', 'height', 'image_url', 'is_active']),
+            ...$variant->only(['id', 'product_id', 'sku', 'variant_name', 'color_name', 'color_hex', 'size', 'package_type', 'regular_price', 'sale_price', 'stock', 'reserved_stock', 'weight', 'length', 'width', 'height', 'image_url', 'is_active']),
             'product' => $variant->product?->name,
         ];
     }
@@ -108,7 +108,6 @@ class ProductVariantService
             'product_id' => $variant->product_id,
             'product' => $variant->product?->name,
             'sku' => $variant->sku,
-            'barcode' => $variant->barcode,
             'variant_name' => $variant->variant_name,
             'color_name' => $variant->color_name,
             'color_hex' => $variant->color_hex,

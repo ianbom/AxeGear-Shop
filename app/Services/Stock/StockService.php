@@ -19,7 +19,7 @@ class StockService
     public function variantsIndex(Request $request): array
     {
         $search = $request->string('search')->toString();
-        $stockStatus = $request->string('stock_status')->toString();
+        $availability = $request->string('availability')->toString();
 
         return [
             'variants' => ProductVariant::query()
@@ -27,14 +27,14 @@ class StockService
                 ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
                     ->where('sku', 'like', "%{$search}%")
                     ->orWhereHas('product', fn ($query) => $query->where('name', 'like', "%{$search}%"))))
-                ->when($stockStatus === 'low_stock', fn ($query) => $query->whereBetween('stock', [1, 5]))
-                ->when($stockStatus === 'sold_out', fn ($query) => $query->where('stock', '<=', 0))
-                ->when($stockStatus === 'in_stock', fn ($query) => $query->where('stock', '>', 5))
+                ->when($availability === 'low_stock', fn ($query) => $query->whereRaw('(stock - reserved_stock) between 1 and 5'))
+                ->when($availability === 'sold_out', fn ($query) => $query->whereRaw('(stock - reserved_stock) <= 0'))
+                ->when($availability === 'in_stock', fn ($query) => $query->whereRaw('(stock - reserved_stock) > 5'))
                 ->orderBy('stock')
                 ->paginate($this->perPage($request))
                 ->withQueryString()
                 ->through(fn (ProductVariant $variant): array => $this->variantRow($variant)),
-            'filters' => ['search' => $search, 'stock_status' => $stockStatus],
+            'filters' => ['search' => $search, 'availability' => $availability],
             'stats' => [
                 'total' => ProductVariant::query()->count(),
                 'in_stock' => ProductVariant::query()->whereRaw('(stock - reserved_stock) > 5')->count(),

@@ -3,10 +3,8 @@ import {
     Bell,
     ChevronDown,
     ChevronUp,
-    Gem,
     Heart,
     Home,
-    MessageCircle,
     Minus,
     Plus,
     Search,
@@ -65,10 +63,10 @@ type ProductCard = {
 };
 
 type ProductDetail = ProductCard & {
+    product_line: string | null;
+    style_name: string | null;
     short_description: string | null;
     description: string | null;
-    material: string | null;
-    care_instruction: string | null;
     weight: number | null;
     dimensions: {
         length: number | null;
@@ -94,14 +92,6 @@ type IconType = ComponentType<{
     size?: number;
     strokeWidth?: number;
 }>;
-
-const fallbackImages = [
-    'https://www.100percent.com/cdn/shop/files/59057-00001-P_1.jpg?v=1764788225&width=1100',
-    'https://www.100percent.com/cdn/shop/files/SP26_SPEEDCRAFT_SL_60008-00025_3Q.jpg?v=1772487312&width=500',
-    'https://www.100percent.com/cdn/shop/files/2000x2000-eComm_20PDP-Casual_Staple_20Tee_0010_Layer_2015.jpg?v=1764633157&width=1200',
-    'https://www.100percent.com/cdn/shop/files/2000x2000-eComm_20PDP-Casual_Region_20Tee_0001_Layer_2030.jpg?v=1764633177&width=1200',
-    'https://www.100percent.com/cdn/shop/files/FA25_LS_OS_TEE_REGION__2020142-10002_F-002.jpg?v=1764633155&width=1100',
-];
 
 const formatPrice = (value: number) =>
     new Intl.NumberFormat('id-ID', {
@@ -154,12 +144,7 @@ function DetailProductContent({
             return images;
         }
 
-        return [
-            {
-                url: product.image ?? fallbackImages[0],
-                alt: product.title,
-            },
-        ];
+        return [];
     }, [product]);
     const colorVariants = useMemo(
         () =>
@@ -181,8 +166,8 @@ function DetailProductContent({
             variants[0],
         [variants],
     );
-    const [mainImage, setMainImage] = useState(
-        gallery[0]?.url ?? fallbackImages[0],
+    const [mainImage, setMainImage] = useState<string | null>(
+        gallery[0]?.url ?? null,
     );
     const [selectedVariantId, setSelectedVariantId] = useState<number | null>(
         initialVariant?.id ?? null,
@@ -380,13 +365,11 @@ function DetailProductContent({
                                         variants={variants}
                                         colorVariants={colorVariants}
                                         selectedColor={selectedColor}
-                                        productImage={product.image}
-                                        galleryImage={gallery[0]?.url}
                                         onSelectVariant={selectVariant}
                                     />
                                 )}
 
-                                {sizes.length > 0 && (
+                                {/* {sizes.length > 0 && (
                                     <SizePicker
                                         sizes={sizes}
                                         variants={variants}
@@ -397,7 +380,7 @@ function DetailProductContent({
                                             setIsSizeGuideOpen(true)
                                         }
                                     />
-                                )}
+                                )} */}
 
                                 <form
                                     onSubmit={addProductVariantToCart}
@@ -464,7 +447,7 @@ function DetailProductContent({
                                     Buy it now
                                 </button>
 
-                                <ServiceStrip isAvailable={isAvailable} />
+                                {/* <ServiceStrip isAvailable={isAvailable} /> */}
                             </section>
                         </FadeInOnScroll>
                     </div>
@@ -512,7 +495,7 @@ function ProductGallery({
     onSelectImage,
 }: {
     gallery: Array<{ url: string; alt: string }>;
-    mainImage: string;
+    mainImage: string | null;
     productTitle: string;
     onSelectImage: (image: string) => void;
 }) {
@@ -521,13 +504,15 @@ function ProductGallery({
     return (
         <section className="grid gap-4 md:grid-cols-[110px_1fr]">
             <div className="order-2 flex gap-3 overflow-x-auto pb-1 md:order-1 md:flex-col md:items-center md:overflow-visible md:pb-0">
-                <button
-                    type="button"
-                    className="hidden h-8 w-8 items-center justify-center md:flex"
-                    aria-label="Previous thumbnails"
-                >
-                    <ChevronUp size={22} strokeWidth={1.8} />
-                </button>
+                {galleryItems.length > 0 && (
+                    <button
+                        type="button"
+                        className="hidden h-8 w-8 items-center justify-center md:flex"
+                        aria-label="Previous thumbnails"
+                    >
+                        <ChevronUp size={22} strokeWidth={1.8} />
+                    </button>
+                )}
                 {galleryItems.map((image, index) => (
                     <button
                         key={`${image.url}-${index}`}
@@ -548,29 +533,39 @@ function ProductGallery({
                         />
                     </button>
                 ))}
-                <button
-                    type="button"
-                    className="hidden h-8 w-8 items-center justify-center md:flex"
-                    aria-label="Next thumbnails"
-                >
-                    <ChevronDown size={22} strokeWidth={1.8} />
-                </button>
+                {galleryItems.length > 0 && (
+                    <button
+                        type="button"
+                        className="hidden h-8 w-8 items-center justify-center md:flex"
+                        aria-label="Next thumbnails"
+                    >
+                        <ChevronDown size={22} strokeWidth={1.8} />
+                    </button>
+                )}
             </div>
 
             <div className="group relative order-1 flex min-h-[420px] items-center justify-center border border-[#D8D8D8] bg-white p-5 md:order-2 lg:min-h-[560px] xl:min-h-[640px]">
-                <img
-                    src={mainImage}
-                    alt={productTitle}
-                    className="h-full max-h-[620px] w-full object-contain transition-transform duration-700 group-hover:scale-[1.02]"
-                    decoding="async"
-                />
-                <button
-                    type="button"
-                    className="absolute top-5 right-5 flex h-12 w-12 items-center justify-center rounded-full border border-[#D8D8D8] bg-white text-[#1A1A1A] transition-colors hover:border-[#F58220] hover:text-[#F58220]"
-                    aria-label="Zoom product image"
-                >
-                    <Search size={24} strokeWidth={1.8} />
-                </button>
+                {mainImage ? (
+                    <img
+                        src={mainImage}
+                        alt={productTitle}
+                        className="h-full max-h-[620px] w-full object-contain transition-transform duration-700 group-hover:scale-[1.02]"
+                        decoding="async"
+                    />
+                ) : (
+                    <p className="text-sm font-bold text-[#707070]">
+                        No product image available.
+                    </p>
+                )}
+                {mainImage && (
+                    <button
+                        type="button"
+                        className="absolute top-5 right-5 flex h-12 w-12 items-center justify-center rounded-full border border-[#D8D8D8] bg-white text-[#1A1A1A] transition-colors hover:border-[#F58220] hover:text-[#F58220]"
+                        aria-label="Zoom product image"
+                    >
+                        <Search size={24} strokeWidth={1.8} />
+                    </button>
+                )}
             </div>
         </section>
     );
@@ -595,12 +590,19 @@ function ProductHeader({
 
     return (
         <header className="relative pr-14">
-            <p className="mb-3 text-xs font-black tracking-[0.08em] text-[#F58220] uppercase">
-                {product.collection ?? product.category ?? 'AxeGear Series'}
-            </p>
+            {(product.collection ?? product.category) && (
+                <p className="mb-3 text-xs font-black tracking-[0.08em] text-[#F58220] uppercase">
+                    {product.collection ?? product.category}
+                </p>
+            )}
             <h1 className="max-w-[720px] text-[30px] leading-[0.98] font-black tracking-normal text-[#1A1A1A] uppercase md:text-[38px]">
                 {product.title}
             </h1>
+            {product.short_description && (
+                <p className="mt-3 max-w-[620px] text-sm leading-6 font-medium text-[#707070]">
+                    {product.short_description}
+                </p>
+            )}
             <button
                 type="button"
                 onClick={onToggleWishlist}
@@ -637,15 +639,11 @@ function StylePicker({
     variants,
     colorVariants,
     selectedColor,
-    productImage,
-    galleryImage,
     onSelectVariant,
 }: {
     variants: Variant[];
     colorVariants: Variant[];
     selectedColor: string;
-    productImage: string | null;
-    galleryImage: string | undefined;
     onSelectVariant: (variantId: number | null) => void;
 }) {
     return (
@@ -661,11 +659,7 @@ function StylePicker({
                     );
                     const isSelected =
                         selectedColor === (variant.color_name ?? '');
-                    const variantImage =
-                        variant.image_url ??
-                        productImage ??
-                        galleryImage ??
-                        fallbackImages[0];
+                    const variantImage = variant.image_url;
 
                     return (
                         <button
@@ -689,19 +683,21 @@ function StylePicker({
                             } ${!colorAvailable ? 'cursor-not-allowed opacity-45' : ''}`}
                         >
                             <span className="block aspect-[1.7] bg-[#F8F8F8] p-1">
-                                <img
-                                    src={variantImage}
-                                    alt={variant.color_name ?? 'Product style'}
-                                    className="h-full w-full object-contain"
-                                    loading="lazy"
-                                    decoding="async"
-                                />
+                                {variantImage && (
+                                    <img
+                                        src={variantImage}
+                                        alt={variant.color_name ?? ''}
+                                        className="h-full w-full object-contain"
+                                        loading="lazy"
+                                        decoding="async"
+                                    />
+                                )}
                             </span>
-                            <span className="mt-2 block truncate text-[11px] font-black uppercase">
-                                {variant.color_name ??
-                                    variant.color_hex ??
-                                    'Style'}
-                            </span>
+                            {(variant.color_name ?? variant.color_hex) && (
+                                <span className="mt-2 block truncate text-[11px] font-black uppercase">
+                                    {variant.color_name ?? variant.color_hex}
+                                </span>
+                            )}
                         </button>
                     );
                 })}
@@ -861,51 +857,55 @@ function ProductSpecs({
     return (
         <section className="py-6">
             <div>
-                <h2 className="text-base font-black uppercase">Product Description</h2>
-                <HTMLRender
-                    html={productDescription}
-                    className="mt-4 text-sm leading-6 font-medium text-[#2E2E2E] [&_a]:text-[#F58220] [&_h1]:text-lg [&_h2]:text-base [&_strong]:font-black [&_strong]:text-[#1A1A1A] [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5"
-                    emptyFallback={
-                        <p>
-                            The {product.title} is engineered for speed and
-                            clarity. Ultra-light, locked-in, and ready for long
-                            sessions.
-                        </p>
-                    }
-                />
-                <ul className="mt-4 list-disc space-y-2 pl-5 text-sm font-medium text-[#2E2E2E]">
-                    <li>
-                        <span className="font-black text-[#1A1A1A]">
-                            Included:
-                        </span>{' '}
-                        Hard Case, Microfiber Bag, Replacement Lens, Extra
-                        Nosepad
-                    </li>
-                    {product.material && (
-                        <li>
-                            <span className="font-black text-[#1A1A1A]">
-                                Material:
-                            </span>{' '}
-                            {product.material}
-                        </li>
-                    )}
-                    {product.care_instruction && (
-                        <li>
-                            <span className="font-black text-[#1A1A1A]">
-                                Care:
-                            </span>{' '}
-                            {product.care_instruction}
-                        </li>
-                    )}
-                    {product.weight !== null && (
-                        <li>
-                            <span className="font-black text-[#1A1A1A]">
-                                Weight:
-                            </span>{' '}
-                            {product.weight} gram
-                        </li>
-                    )}
-                </ul>
+                <h2 className="text-base font-black uppercase">
+                    Product Description
+                </h2>
+                {productDescription && (
+                    <HTMLRender
+                        html={productDescription}
+                        className="mt-4 text-sm leading-6 font-medium text-[#2E2E2E] [&_a]:text-[#F58220] [&_h1]:text-lg [&_h2]:text-base [&_strong]:font-black [&_strong]:text-[#1A1A1A] [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5"
+                    />
+                )}
+                <dl className="mt-5 grid gap-2 text-sm font-medium text-[#2E2E2E] sm:grid-cols-2">
+                    {[
+                        ['Product Line', product.product_line],
+                        ['Style Name', product.style_name],
+                        [
+                            'Weight',
+                            product.weight === null
+                                ? null
+                                : `${product.weight} gram`,
+                        ],
+                        [
+                            'Length',
+                            product.dimensions.length === null
+                                ? null
+                                : `${product.dimensions.length} cm`,
+                        ],
+                        [
+                            'Width',
+                            product.dimensions.width === null
+                                ? null
+                                : `${product.dimensions.width} cm`,
+                        ],
+                        [
+                            'Height',
+                            product.dimensions.height === null
+                                ? null
+                                : `${product.dimensions.height} cm`,
+                        ],
+                    ].map(([label, value]) => (
+                        <div
+                            key={label}
+                            className="flex justify-between gap-4 border-b border-[#E5E5E5] py-2"
+                        >
+                            <dt className="font-black text-[#1A1A1A]">
+                                {label}
+                            </dt>
+                            <dd className="text-right">{value ?? '—'}</dd>
+                        </div>
+                    ))}
+                </dl>
             </div>
         </section>
     );
@@ -922,25 +922,22 @@ function OtherStyles({ products }: { products: ProductCard[] }) {
                 Other Recommendations
             </h2>
             <div className="grid gap-5 md:grid-cols-3 xl:grid-cols-6">
-                {products.slice(0, 6).map((product, index) => (
+                {products.slice(0, 6).map((product) => (
                     <Link
                         key={product.id}
                         href={detail.url({ query: { product: product.slug } })}
                         className="group border border-[#D8D8D8] bg-white p-4 transition-colors hover:border-[#1A1A1A]"
                     >
                         <div className="aspect-[1.7] bg-[#F8F8F8] p-2">
-                            <img
-                                src={
-                                    product.image ??
-                                    fallbackImages[
-                                        index % fallbackImages.length
-                                    ]
-                                }
-                                alt={product.title}
-                                className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
-                                loading="lazy"
-                                decoding="async"
-                            />
+                            {product.image && (
+                                <img
+                                    src={product.image}
+                                    alt={product.title}
+                                    className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
+                                    loading="lazy"
+                                    decoding="async"
+                                />
+                            )}
                         </div>
                         <div className="mt-4 flex items-end justify-between gap-3">
                             <h3 className="line-clamp-2 text-sm leading-tight font-black uppercase">
@@ -958,7 +955,6 @@ function OtherStyles({ products }: { products: ProductCard[] }) {
         </FadeInOnScroll>
     );
 }
-
 
 function SizeGuideModal({ onClose }: { onClose: () => void }) {
     return (

@@ -42,7 +42,6 @@ class ProductSeeder extends Seeder
                         'sale_price' => $product['sale_price'],
                         'short_description' => $product['short_description'],
                         'description' => $product['description'],
-                        'stock_status' => $product['stock_status'],
                         'weight' => $product['weight'],
                         'length' => $product['length'],
                         'width' => $product['width'],
@@ -51,8 +50,6 @@ class ProductSeeder extends Seeder
                         'is_featured' => $product['is_featured'],
                         'is_new_arrival' => $product['is_new_arrival'],
                         'is_best_seller' => $product['is_best_seller'],
-                        'meta_title' => $product['name'].' | AxeGear',
-                        'meta_description' => $product['short_description'],
                     ],
                 );
 
@@ -126,7 +123,6 @@ class ProductSeeder extends Seeder
                 ['sku' => $sku],
                 [
                     'product_id' => $product->id,
-                    'barcode' => null,
                     'variant_name' => $variant['name'],
                     'color_name' => $variant['color_name'],
                     'color_hex' => $variant['color_hex'],
@@ -239,7 +235,6 @@ class ProductSeeder extends Seeder
             'sale_price' => $salePrice < $beforeDiscount ? $salePrice : null,
             'short_description' => Str::limit($description, 150),
             'description' => $description,
-            'stock_status' => $isOutOfStock ? 'out_of_stock' : 'in_stock',
             'weight' => $categorySlug === 'apparel-accessories' ? 200 : 250,
             'length' => $categorySlug === 'apparel-accessories' ? 25 : 18,
             'width' => $categorySlug === 'apparel-accessories' ? 20 : 9,

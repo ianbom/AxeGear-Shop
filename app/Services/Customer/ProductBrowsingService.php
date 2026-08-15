@@ -259,6 +259,8 @@ class ProductBrowsingService
 
         return [
             ...$this->productCard($product),
+            'product_line' => $product->product_line,
+            'style_name' => $product->style_name,
             'short_description' => $product->short_description,
             'description' => $product->description,
             'weight' => $product->weight,
@@ -429,8 +431,6 @@ class ProductBrowsingService
         return Banner::query()
             ->where('is_active', true)
             ->where('placement', $placement)
-            ->where(fn ($query) => $query->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
-            ->where(fn ($query) => $query->whereNull('ends_at')->orWhere('ends_at', '>=', now()))
             ->orderBy('sort_order')
             ->orderByDesc('created_at');
     }

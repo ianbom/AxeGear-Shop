@@ -22,7 +22,6 @@ class ProductVariantRequest extends FormRequest
         return [
             'product_id' => ['required', 'integer', 'exists:products,id'],
             'sku' => ['required', 'string', 'max:100', Rule::unique('product_variants', 'sku')->ignore($variant)],
-            'barcode' => ['nullable', 'string', 'max:100'],
             'variant_name' => ['nullable', 'string', 'max:180'],
             'color_name' => ['nullable', 'string', 'max:100'],
             'color_hex' => ['nullable', 'regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/'],

@@ -50,7 +50,7 @@ interface PaginatedVariants {
 
 interface Filters {
     search?: string;
-    stock_status?: string;
+    availability?: string;
 }
 
 interface Props {
@@ -284,10 +284,10 @@ export default function StockIndex({
 
                         <FilterSelect
                             label="Stock Status"
-                            value={filters.stock_status || 'all'}
+                            value={filters.availability || 'all'}
                             onChange={(v) =>
                                 applyFilter(
-                                    'stock_status',
+                                    'availability',
                                     v === 'all' ? '' : v,
                                 )
                             }

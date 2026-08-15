@@ -37,6 +37,14 @@ it('includes existing cart quantity for each product detail variant', function (
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('customer/products/detail-product')
+            ->where('product.product_line', 'Trail Series')
+            ->where('product.style_name', 'Everyday Carry')
+            ->where('product.short_description', 'Built for daily movement.')
+            ->where('product.description', '<p>Functional gear for every journey.</p>')
+            ->where('product.weight', 500)
+            ->where('product.dimensions.length', 30)
+            ->where('product.dimensions.width', 20)
+            ->where('product.dimensions.height', 10)
             ->where('product.variants.0.id', $variant->id)
             ->where('product.variants.0.available_stock', 5)
             ->where('product.variants.0.cart_quantity', 5));
@@ -55,6 +63,14 @@ function createDetailProduct(array $overrides = []): Product
             'slug' => Str::slug($name).'-'.Str::lower(Str::random(6)),
             'regular_price' => 100000,
             'status' => 'published',
+            'product_line' => 'Trail Series',
+            'style_name' => 'Everyday Carry',
+            'short_description' => 'Built for daily movement.',
+            'description' => '<p>Functional gear for every journey.</p>',
+            'weight' => 500,
+            'length' => 30,
+            'width' => 20,
+            'height' => 10,
         ],
         ...$overrides,
     ]);

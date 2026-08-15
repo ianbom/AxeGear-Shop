@@ -15,18 +15,14 @@ use Illuminate\Database\Eloquent\Model;
     'placement',
     'sort_order',
     'is_active',
-    'starts_at',
-    'ends_at',
 ])]
 class Banner extends Model
 {
     protected function casts(): array
     {
         return [
-            'ends_at' => 'datetime',
             'is_active' => 'boolean',
             'sort_order' => 'integer',
-            'starts_at' => 'datetime',
         ];
     }
 }

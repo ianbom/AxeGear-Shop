@@ -10,7 +10,6 @@ class BannerSeeder extends Seeder
     public function run(): void
     {
         // Data banner dikurasi dari aset produk https://zaskiamecca.com/.
-        $now = now();
         $banners = [
         [
             'title' => 'Home1',
@@ -55,10 +54,6 @@ class BannerSeeder extends Seeder
                 'placement'          => 'collection',
                 'sort_order'         => 1,
                 'is_active'          => true,
-                'starts_at'          => null,
-                'ends_at'            => null,
-                'created_at'         => $now,
-                'updated_at'         => $now,
             ],
             [
                 'title'              => 'Hijab & Khimar Pilihan',
@@ -70,10 +65,6 @@ class BannerSeeder extends Seeder
                 'placement'          => 'collection',
                 'sort_order'         => 2,
                 'is_active'          => true,
-                'starts_at'          => null,
-                'ends_at'            => null,
-                'created_at'         => $now,
-                'updated_at'         => $now,
             ],
                         [
                 'title'              => 'Flash Sale — Up to 30% Off',
@@ -85,16 +76,12 @@ class BannerSeeder extends Seeder
                 'placement'          => 'cta',
                 'sort_order'         => 0,
                 'is_active'          => true,
-                'starts_at'          => null,
-                'ends_at'            => null,
-                'created_at'         => $now,
-                'updated_at'         => $now,
             ],
 
 
         ];
         foreach ($banners as $banner) {
-            Banner::query()->updateOrCreate(['placement' => $banner['placement'], 'sort_order' => $banner['sort_order']], [...$banner, 'starts_at' => $now, 'ends_at' => $now->copy()->addDays(30)]);
+            Banner::query()->updateOrCreate(['placement' => $banner['placement'], 'sort_order' => $banner['sort_order']], $banner);
         }
     }
 }

@@ -22,7 +22,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'sale_price',
     'short_description',
     'description',
-    'stock_status',
     'weight',
     'length',
     'width',
@@ -31,8 +30,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'is_featured',
     'is_new_arrival',
     'is_best_seller',
-    'meta_title',
-    'meta_description',
 ])]
 class Product extends Model
 {

@@ -20,34 +20,12 @@ type Banner = {
     placement: string;
     sort_order: number;
     is_active: boolean;
-    starts_at: string | null;
-    ends_at: string | null;
 };
 
 type Props = {
     banners: Paginated<Banner>;
     filters: Record<string, string>;
     placements: string[];
-};
-
-const formatDateTime = (value: string | null) => {
-    if (!value) {
-        return '-';
-    }
-
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-        return value;
-    }
-
-    return date.toLocaleString('id-ID', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
 };
 
 export default function BannersIndex({ banners, filters, placements }: Props) {
@@ -68,7 +46,7 @@ export default function BannersIndex({ banners, filters, placements }: Props) {
                 <PageHeader
                     eyebrow="Content Management"
                     title="Banners"
-                    description="Atur banner homepage, collection, dan promo yang tampil berdasarkan status dan periode aktif."
+                    description="Atur banner homepage, collection, dan promo berdasarkan status aktif."
                     action={
                         <Button asChild>
                             <Link href="/admin/banners/create">
@@ -142,9 +120,6 @@ export default function BannersIndex({ banners, filters, placements }: Props) {
                                         Sort
                                     </th>
                                     <th className="pr-4 pb-3 font-medium">
-                                        Period
-                                    </th>
-                                    <th className="pr-4 pb-3 font-medium">
                                         Status
                                     </th>
                                     <th className="pb-3 text-right font-medium">
@@ -184,30 +159,6 @@ export default function BannersIndex({ banners, filters, placements }: Props) {
                                         </td>
                                         <td className="py-3 pr-4">
                                             {banner.sort_order}
-                                        </td>
-                                        <td className="py-3 pr-4">
-                                            <div className="flex flex-col gap-1">
-                                                <div className="text-xs">
-                                                    <span className="text-muted-foreground">
-                                                        Mulai:{' '}
-                                                    </span>
-                                                    <span className="font-medium">
-                                                        {formatDateTime(
-                                                            banner.starts_at,
-                                                        )}
-                                                    </span>
-                                                </div>
-                                                <div className="text-xs">
-                                                    <span className="text-muted-foreground">
-                                                        Selesai:{' '}
-                                                    </span>
-                                                    <span className="font-medium">
-                                                        {formatDateTime(
-                                                            banner.ends_at,
-                                                        )}
-                                                    </span>
-                                                </div>
-                                            </div>
                                         </td>
                                         <td className="py-3 pr-4">
                                             <ActiveBadge

@@ -44,7 +44,6 @@ type ProductImage = {
 type ProductVariant = {
     id: number;
     sku: string;
-    barcode: string | null;
     variant_name: string | null;
     color_name: string | null;
     color_hex: string | null;
@@ -89,7 +88,6 @@ type Product = {
     style_name: string | null;
     short_description: string;
     description: string;
-    stock_status: string;
     regular_price: number | string;
     sale_price: number | string;
     weight: number | string;
@@ -100,8 +98,6 @@ type Product = {
     is_featured: boolean;
     is_new_arrival: boolean;
     is_best_seller: boolean;
-    meta_title: string;
-    meta_description: string;
     category: string | null;
     collection: string | null;
     images: ProductImage[];

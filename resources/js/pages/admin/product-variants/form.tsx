@@ -21,7 +21,6 @@ type Variant = {
     product_id: number;
     product: string | null;
     sku: string;
-    barcode: string | null;
     variant_name: string | null;
     color_name: string | null;
     color_hex: string | null;
@@ -62,7 +61,6 @@ export default function ProductVariantForm({
         _method: isEdit ? 'PUT' : 'POST',
         product_id: variant?.product_id ?? selectedProductId ?? '',
         sku: variant?.sku ?? '',
-        barcode: variant?.barcode ?? '',
         variant_name: variant?.variant_name ?? 'Default Title',
         color_name: variant?.color_name ?? '',
         color_hex: variant?.color_hex ?? '',
@@ -162,18 +160,6 @@ export default function ProductVariantForm({
                                         }
                                     />
                                     <InputError message={errors.sku} />
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="barcode">Barcode</Label>
-                                    <Input
-                                        id="barcode"
-                                        value={data.barcode}
-                                        placeholder="Optional barcode"
-                                        onChange={(event) =>
-                                            setData('barcode', event.target.value)
-                                        }
-                                    />
-                                    <InputError message={errors.barcode} />
                                 </div>
                                 <div className="grid gap-2">
                                     <Label htmlFor="variant_name">

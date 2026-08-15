@@ -39,8 +39,6 @@ type CollectionCard = {
     sort_order: number;
     is_featured: boolean;
     is_active: boolean;
-    starts_at: string | null;
-    ends_at: string | null;
     created_at: string | null;
     updated_at: string | null;
 };

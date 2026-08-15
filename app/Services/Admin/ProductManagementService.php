@@ -30,7 +30,7 @@ class ProductManagementService
             'category_id' => $request->string('category_id')->toString(),
             'collection_id' => $request->string('collection_id')->toString(),
             'status' => $request->string('status')->toString(),
-            'stock_status' => $request->string('stock_status')->toString(),
+            'availability' => $request->string('availability')->toString(),
             'is_featured' => $request->string('is_featured')->toString(),
             'is_new_arrival' => $request->string('is_new_arrival')->toString(),
             'is_best_seller' => $request->string('is_best_seller')->toString(),
@@ -56,9 +56,9 @@ class ProductManagementService
                 ->when($filters['is_featured'] !== '', fn ($query) => $query->where('is_featured', $filters['is_featured'] === '1'))
                 ->when($filters['is_new_arrival'] !== '', fn ($query) => $query->where('is_new_arrival', $filters['is_new_arrival'] === '1'))
                 ->when($filters['is_best_seller'] !== '', fn ($query) => $query->where('is_best_seller', $filters['is_best_seller'] === '1'))
-                ->when($filters['stock_status'] === 'in_stock', fn ($query) => $query->whereHas('variants', fn ($query) => $query->where('stock', '>', 5)))
-                ->when($filters['stock_status'] === 'low_stock', fn ($query) => $query->whereHas('variants', fn ($query) => $query->whereBetween('stock', [1, 5])))
-                ->when($filters['stock_status'] === 'sold_out', fn ($query) => $query->whereDoesntHave('variants', fn ($query) => $query->where('stock', '>', 0)))
+                ->when($filters['availability'] === 'in_stock', fn ($query) => $query->whereHas('variants', fn ($query) => $query->whereRaw('(stock - reserved_stock) > 5')))
+                ->when($filters['availability'] === 'low_stock', fn ($query) => $query->whereHas('variants', fn ($query) => $query->whereRaw('(stock - reserved_stock) between 1 and 5')))
+                ->when($filters['availability'] === 'sold_out', fn ($query) => $query->whereDoesntHave('variants', fn ($query) => $query->whereRaw('(stock - reserved_stock) > 0')))
                 ->when($sort === 'product', fn ($query) => $query->orderBy('name', $direction))
                 ->when($sort === 'price', fn ($query) => $query->orderByRaw('COALESCE(sale_price, regular_price) '.$direction))
                 ->when($sort === 'created', fn ($query) => $query->orderBy('created_at', $direction))
@@ -191,12 +191,12 @@ class ProductManagementService
         return [
             ...$product->only([
                 'id', 'category_id', 'name', 'slug', 'sku', 'brand_name', 'product_line', 'style_name', 'regular_price', 'sale_price', 'short_description', 'description',
-                'stock_status', 'weight', 'length', 'width', 'height',
-                'status', 'is_featured', 'is_new_arrival', 'is_best_seller', 'meta_title', 'meta_description',
+                'weight', 'length', 'width', 'height',
+                'status', 'is_featured', 'is_new_arrival', 'is_best_seller',
             ]),
             'collection_ids' => $product->collections->pluck('id')->values()->all(),
             'images' => $product->images->map->only(['id', 'image_url', 'alt_text', 'sort_order', 'is_primary'])->values(),
-            'variants' => $product->variants->map->only(['id', 'sku', 'barcode', 'variant_name', 'color_name', 'color_hex', 'size', 'package_type', 'regular_price', 'sale_price', 'stock', 'reserved_stock', 'weight', 'length', 'width', 'height', 'image_url', 'is_active'])->values(),
+            'variants' => $product->variants->map->only(['id', 'sku', 'variant_name', 'color_name', 'color_hex', 'size', 'package_type', 'regular_price', 'sale_price', 'stock', 'reserved_stock', 'weight', 'length', 'width', 'height', 'image_url', 'is_active'])->values(),
         ];
     }
 
@@ -214,7 +214,6 @@ class ProductManagementService
         return [
             ...collect($validated)->except(['images', 'variants', 'collection_ids'])->all(),
             'brand_name' => $validated['brand_name'] ?? 'Axegear',
-            'stock_status' => $validated['stock_status'] ?? 'in_stock',
             'is_featured' => $request->boolean('is_featured'),
             'is_new_arrival' => $request->boolean('is_new_arrival'),
             'is_best_seller' => $request->boolean('is_best_seller'),
@@ -241,7 +240,6 @@ class ProductManagementService
                 'color_name' => $variant['color_name'] ?? null,
                 'color_hex' => $variant['color_hex'] ?? null,
                 'size' => $variant['size'] ?? null,
-                'barcode' => $variant['barcode'] ?? null,
                 'variant_name' => $variant['variant_name'] ?? 'Default Title',
                 'package_type' => $variant['package_type'] ?? null,
                 'regular_price' => $variant['regular_price'] ?? null,

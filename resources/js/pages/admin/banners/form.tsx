@@ -36,8 +36,6 @@ export default function BannerForm({ mode, banner, placements }: Props) {
         button_url: String(banner?.button_url ?? ''),
         placement: String(banner?.placement ?? 'homepage'),
         sort_order: String(banner?.sort_order ?? 0),
-        starts_at: String(banner?.starts_at ?? ''),
-        ends_at: String(banner?.ends_at ?? ''),
         is_active: Boolean(banner?.is_active ?? true),
     });
     const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -129,24 +127,6 @@ export default function BannerForm({ mode, banner, placements }: Props) {
                                         setData('sort_order', value)
                                     }
                                     error={errors.sort_order}
-                                />
-                                <Field
-                                    label="Starts At"
-                                    type="datetime-local"
-                                    value={data.starts_at}
-                                    onChange={(value) =>
-                                        setData('starts_at', value)
-                                    }
-                                    error={errors.starts_at}
-                                />
-                                <Field
-                                    label="Ends At"
-                                    type="datetime-local"
-                                    value={data.ends_at}
-                                    onChange={(value) =>
-                                        setData('ends_at', value)
-                                    }
-                                    error={errors.ends_at}
                                 />
                             </div>
                             <ImageUpload

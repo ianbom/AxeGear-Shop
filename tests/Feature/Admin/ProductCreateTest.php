@@ -62,9 +62,7 @@ it('creates a product with images, variants, and stock logs from the admin form 
         ->status->toBe('published')
         ->is_featured->toBeTrue()
         ->is_new_arrival->toBeTrue()
-        ->is_best_seller->toBeFalse()
-        ->meta_title->toBe('Gamis Syar\'i Pita Premium')
-        ->meta_description->toBe('Gamis premium nyaman untuk aktivitas harian.');
+        ->is_best_seller->toBeFalse();
 
     expect((float) $product->regular_price)->toBe(350000.00)
         ->and((float) $product->sale_price)->toBe(299000.00)
@@ -114,7 +112,6 @@ it('creates a product with images, variants, and stock logs from the admin form 
 
     expect($variant)
         ->product_id->toBe($product->id)
-        ->barcode->toBe('899900000001')
         ->variant_name->toBe('Black M')
         ->color_name->toBe('Black')
         ->color_hex->toBe('#000000')
@@ -137,7 +134,6 @@ it('creates a product with images, variants, and stock logs from the admin form 
         'id' => $variant->id,
         'product_id' => $product->id,
         'sku' => 'GMS-001-BLK-M',
-        'barcode' => '899900000001',
         'variant_name' => 'Black M',
         'color_name' => 'Black',
         'color_hex' => '#000000',
@@ -189,8 +185,6 @@ function productPayload(Category $category, Collection $collection1, Collection 
         'is_featured' => true,
         'is_new_arrival' => true,
         'is_best_seller' => false,
-        'meta_title' => 'Gamis Syar\'i Pita Premium',
-        'meta_description' => 'Gamis premium nyaman untuk aktivitas harian.',
         'images' => [
             [
                 'image_url' => null,
@@ -203,7 +197,6 @@ function productPayload(Category $category, Collection $collection1, Collection 
         'variants' => [
             [
                 'sku' => 'GMS-001-BLK-M',
-                'barcode' => '899900000001',
                 'variant_name' => 'Black M',
                 'color_name' => 'Black',
                 'color_hex' => '#000000',
