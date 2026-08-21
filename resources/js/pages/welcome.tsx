@@ -113,8 +113,10 @@ export default function Welcome({
             ),
         [heroBanners],
     );
-    const performanceImage =
-        collectionBanners.find(Boolean)?.image_desktop_url ?? fallbackImage;
+    const performanceBanner =
+        collectionBanners.find(
+            (banner): banner is NonNullable<BannerCard> => banner !== null,
+        ) ?? null;
     const tiles = collections.slice(0, 4);
     const slides = heroSlides.length > 0 ? heroSlides : [fallbackSlide];
     const [activeSlide, setActiveSlide] = useState(0);
@@ -140,6 +142,7 @@ export default function Welcome({
             <Head title="AxeGear" />
 
             <main className="bg-white text-[#1A1A1A]">
+                {/* Hero Section */}
                 <section className="relative h-[100svh] overflow-hidden border-b-2 border-[#101010] bg-black sm:h-[105svh] lg:h-[110svh]">
                     <div
                         className="flex h-full transition-transform duration-700 ease-out"
@@ -149,13 +152,26 @@ export default function Welcome({
                     >
                         {slides.map((slide, index) => {
                             const slideContent = (
-                                <img
-                                    src={slide.image_desktop_url}
-                                    alt={slide.title}
-                                    className="h-full w-full object-cover object-center"
-                                    loading={index === 0 ? 'eager' : 'lazy'}
-                                    decoding="async"
-                                />
+                                <picture className="block h-full w-full">
+                                    <source
+                                        media="(max-width: 767px)"
+                                        srcSet={
+                                            slide.image_mobile_url ??
+                                            slide.image_desktop_url
+                                        }
+                                    />
+                                    <img
+                                        src={
+                                            slide.image_desktop_url ??
+                                            slide.image_mobile_url ??
+                                            fallbackImage
+                                        }
+                                        alt={slide.title}
+                                        className="h-full w-full object-cover object-center"
+                                        loading={index === 0 ? 'eager' : 'lazy'}
+                                        decoding="async"
+                                    />
+                                </picture>
                             );
                             const className = `relative block h-full min-w-full ${slide.button_url ? 'cursor-pointer' : ''}`;
 
@@ -210,17 +226,32 @@ export default function Welcome({
                     )}
                 </section>
 
-                <SectionSeparator accent="red" label="RACE READY PERFORMANCE" />
+                {/* <SectionSeparator accent="red" label="RACE READY PERFORMANCE" /> */}
 
+                {/* Performance Section */}
                 <section className="h-[100svh] overflow-hidden border-b-2 border-[#101010] bg-[#8fd6ff] sm:h-[105svh] lg:h-[110svh]">
-                    <img
-                        src={performanceImage}
-                        alt="AxeGear performance campaign"
-                        className="h-full w-full object-cover object-center"
-                    />
+                    <picture className="block h-full w-full">
+                        <source
+                            media="(max-width: 767px)"
+                            srcSet={
+                                performanceBanner?.image_mobile_url ??
+                                performanceBanner?.image_desktop_url ??
+                                fallbackImage
+                            }
+                        />
+                        <img
+                            src={
+                                performanceBanner?.image_desktop_url ??
+                                performanceBanner?.image_mobile_url ??
+                                fallbackImage
+                            }
+                            alt="AxeGear performance campaign"
+                            className="h-full w-full object-cover object-center"
+                        />
+                    </picture>
                 </section>
 
-                <SectionSeparator accent="blue" label="SHOP BY CATEGORY" />
+                {/* <SectionSeparator accent="blue" label="SHOP BY CATEGORY" /> */}
 
                 <section className="border-b-2 border-[#1A1A1A] bg-white px-5 py-6 sm:px-8 lg:px-12 xl:px-16">
                     <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-6 lg:grid-cols-4 lg:gap-8 xl:gap-10">
