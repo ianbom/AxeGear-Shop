@@ -266,15 +266,15 @@ export default function MyCart({
                                             return (
                                                 <article
                                                     key={item.id}
-                                                    className="grid gap-4 border-b border-[#D8D8D8] bg-white p-4 last:border-b-0 lg:grid-cols-[1fr_170px_190px_170px_50px] lg:items-center lg:px-6 lg:py-3"
+                                                    className="relative grid min-w-0 gap-4 border-b border-[#D8D8D8] bg-white p-4 last:border-b-0 lg:grid-cols-[1fr_170px_190px_170px_50px] lg:items-center lg:px-6 lg:py-3"
                                                 >
-                                                    <div className="grid grid-cols-[118px_1fr] items-center gap-4 md:grid-cols-[260px_1fr]">
+                                                    <div className="grid min-w-0 grid-cols-[88px_minmax(0,1fr)] items-center gap-3 pr-12 sm:grid-cols-[118px_minmax(0,1fr)] sm:gap-4 md:grid-cols-[260px_1fr] lg:pr-0">
                                                         {productHref ? (
                                                             <Link
                                                                 href={
                                                                     productHref
                                                                 }
-                                                                className="block h-[110px] bg-[#F8F8F8] p-2 md:h-[118px]"
+                                                                className="block h-[96px] p-2 sm:h-[110px] md:h-[118px]"
                                                             >
                                                                 <img
                                                                     src={image}
@@ -287,7 +287,7 @@ export default function MyCart({
                                                                 />
                                                             </Link>
                                                         ) : (
-                                                            <div className="h-[110px] bg-[#F8F8F8] p-2 md:h-[118px]">
+                                                            <div className="h-[96px] p-2 sm:h-[110px] md:h-[118px]">
                                                                 <img
                                                                     src={image}
                                                                     alt={
@@ -391,7 +391,7 @@ export default function MyCart({
                                                             removeItem(item)
                                                         }
                                                         disabled={itemDisabled}
-                                                        className="flex h-10 w-10 items-center justify-center justify-self-end text-[#1A1A1A] transition-colors hover:text-[#F58220] disabled:opacity-40"
+                                                        className="absolute top-4 right-4 flex h-10 w-10 items-center justify-center text-[#1A1A1A] transition-colors hover:text-[#F58220] disabled:opacity-40 lg:static lg:justify-self-end"
                                                         aria-label="Remove item"
                                                     >
                                                         <Trash2
@@ -602,7 +602,7 @@ function SuggestedProducts({ products }: { products: SuggestedProduct[] }) {
                                 {formatPrice(product.price)}
                             </p>
                             <span className="mt-auto flex h-8 items-center justify-center border border-[#F58220] text-xs font-black tracking-[0.05em] text-[#F58220] uppercase hover:bg-[#F58220] hover:text-white">
-                                {index === 2 ? 'View Product' : 'Quick Add'}
+                                View Product
                             </span>
                         </div>
                     </Link>
