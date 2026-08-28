@@ -1,0 +1,547 @@
+{
+  "resources/js/actions/App/Http/Controllers/Admin/OrderController.ts": [
+    "/build/assets/show-DlFUeOoY.js"
+  ],
+  "resources/js/actions/App/Http/Controllers/Customer/AddressController.ts": [
+    "/build/assets/manage-address-BwktobZv.js"
+  ],
+  "resources/js/actions/App/Http/Controllers/Customer/BiteshipAreaController.ts": [
+    "/build/assets/manage-address-BwktobZv.js"
+  ],
+  "resources/js/actions/App/Http/Controllers/Customer/CartController.ts": [
+    "/build/assets/CartController-BSN3yJE9.js"
+  ],
+  "resources/js/actions/App/Http/Controllers/Customer/NotificationController.ts": [
+    "/build/assets/list-notification-BP7xC6Jh.js"
+  ],
+  "resources/js/actions/App/Http/Controllers/Customer/OrderController.ts": [
+    "/build/assets/OrderController-g0c5stvv.js"
+  ],
+  "resources/js/actions/App/Http/Controllers/Customer/ProductController.ts": [
+    "/build/assets/detail-order-CrefcVND.js"
+  ],
+  "resources/js/actions/App/Http/Controllers/Customer/WishlistController.ts": [
+    "/build/assets/WishlistController-DHNxYZQ_.js"
+  ],
+  "resources/js/actions/App/Http/Controllers/Settings/ProfileController.ts": [
+    "/build/assets/ProfileController-BnYxdFC1.js"
+  ],
+  "resources/js/actions/App/Http/Controllers/Settings/SecurityController.ts": [
+    "/build/assets/SecurityController-D1wGCFsz.js"
+  ],
+  "resources/js/app.tsx": [],
+  "resources/js/components/Footer.tsx": [
+    "/build/assets/shop-layout-CsqyMCOU.js"
+  ],
+  "resources/js/components/HTMLRender.tsx": [
+    "/build/assets/HTMLRender-COKIm72z.js"
+  ],
+  "resources/js/components/Navbar.tsx": [
+    "/build/assets/shop-layout-CsqyMCOU.js"
+  ],
+  "resources/js/components/alert-error.tsx": [
+    "/build/assets/security-CFZnLLPF.js"
+  ],
+  "resources/js/components/app-content.tsx": [],
+  "resources/js/components/app-shell.tsx": [],
+  "resources/js/components/app-sidebar-header.tsx": [],
+  "resources/js/components/app-sidebar.tsx": [],
+  "resources/js/components/breadcrumbs.tsx": [],
+  "resources/js/components/delete-user.tsx": [
+    "/build/assets/profile-DLdj7AmI.js"
+  ],
+  "resources/js/components/heading.tsx": [
+    "/build/assets/heading-COoAH6p0.js"
+  ],
+  "resources/js/components/input-error.tsx": [
+    "/build/assets/input-error-NrpA4cu1.js"
+  ],
+  "resources/js/components/nav-main.tsx": [],
+  "resources/js/components/nav-user.tsx": [],
+  "resources/js/components/password-input.tsx": [
+    "/build/assets/password-input-BX5lEUa-.js"
+  ],
+  "resources/js/components/text-link.tsx": [
+    "/build/assets/text-link-Dxbs4vvP.js"
+  ],
+  "resources/js/components/two-factor-recovery-codes.tsx": [
+    "/build/assets/security-CFZnLLPF.js"
+  ],
+  "resources/js/components/two-factor-setup-modal.tsx": [
+    "/build/assets/security-CFZnLLPF.js"
+  ],
+  "resources/js/components/ui/alert.tsx": [
+    "/build/assets/security-CFZnLLPF.js"
+  ],
+  "resources/js/components/ui/avatar.tsx": [],
+  "resources/js/components/ui/badge.tsx": [
+    "/build/assets/badge-CJFf2u6W.js"
+  ],
+  "resources/js/components/ui/breadcrumb.tsx": [],
+  "resources/js/components/ui/button.tsx": [
+    "/build/assets/button-D_r5eKEZ.js"
+  ],
+  "resources/js/components/ui/card.tsx": [
+    "/build/assets/card-D4LqnWpI.js"
+  ],
+  "resources/js/components/ui/checkbox.tsx": [
+    "/build/assets/login-FUT5fJVU.js"
+  ],
+  "resources/js/components/ui/dialog.tsx": [
+    "/build/assets/dialog-CK7BMMcU.js"
+  ],
+  "resources/js/components/ui/dropdown-menu.tsx": [
+    "/build/assets/dropdown-menu-DttT2oSg.js"
+  ],
+  "resources/js/components/ui/input-otp.tsx": [
+    "/build/assets/use-two-factor-auth-DDHSrTuw.js"
+  ],
+  "resources/js/components/ui/input.tsx": [
+    "/build/assets/input-DDYt-tEh.js"
+  ],
+  "resources/js/components/ui/label.tsx": [
+    "/build/assets/label-C9yoF3Ap.js"
+  ],
+  "resources/js/components/ui/placeholder-pattern.tsx": [
+    "/build/assets/dashboard-DcNF8fmD.js"
+  ],
+  "resources/js/components/ui/select.tsx": [
+    "/build/assets/select-CtTsjyTX.js"
+  ],
+  "resources/js/components/ui/separator.tsx": [],
+  "resources/js/components/ui/sheet.tsx": [],
+  "resources/js/components/ui/sidebar.tsx": [],
+  "resources/js/components/ui/skeleton.tsx": [],
+  "resources/js/components/ui/sonner.tsx": [
+    "/build/assets/sonner-D1SF8OoB.js"
+  ],
+  "resources/js/components/ui/spinner.tsx": [
+    "/build/assets/spinner-DkICJePw.js"
+  ],
+  "resources/js/components/ui/switch.tsx": [
+    "/build/assets/form-N3ytG-kR.js"
+  ],
+  "resources/js/components/ui/tooltip.tsx": [],
+  "resources/js/components/user-info.tsx": [],
+  "resources/js/components/user-menu-content.tsx": [],
+  "resources/js/contexts/checkout-context.tsx": [
+    "/build/assets/checkout-Dn9vfrGa.js"
+  ],
+  "resources/js/hooks/use-appearance.tsx": [],
+  "resources/js/hooks/use-clipboard.ts": [
+    "/build/assets/security-CFZnLLPF.js"
+  ],
+  "resources/js/hooks/use-current-url.ts": [],
+  "resources/js/hooks/use-flash-toast.ts": [
+    "/build/assets/sonner-D1SF8OoB.js"
+  ],
+  "resources/js/hooks/use-initials.tsx": [],
+  "resources/js/hooks/use-mobile-navigation.ts": [],
+  "resources/js/hooks/use-mobile.tsx": [],
+  "resources/js/hooks/use-two-factor-auth.ts": [
+    "/build/assets/use-two-factor-auth-DDHSrTuw.js"
+  ],
+  "resources/js/layouts/app-layout.tsx": [],
+  "resources/js/layouts/app/app-sidebar-layout.tsx": [],
+  "resources/js/layouts/auth-layout.tsx": [],
+  "resources/js/layouts/profile-layout.tsx": [
+    "/build/assets/profile-layout-CknzRhQx.js"
+  ],
+  "resources/js/layouts/settings/layout.tsx": [],
+  "resources/js/layouts/shop-layout.tsx": [
+    "/build/assets/shop-layout-CsqyMCOU.js"
+  ],
+  "resources/js/lib/slug.ts": [
+    "/build/assets/slug-COlP2TeS.js"
+  ],
+  "resources/js/lib/utils.ts": [
+    "/build/assets/utils-DJjaB2Tv.js"
+  ],
+  "resources/js/pages/about/index.tsx": [
+    "/build/assets/about-BU9tEJo7.js"
+  ],
+  "resources/js/pages/admin/admin-users/form.tsx": [
+    "/build/assets/form-BbWhCnw4.js"
+  ],
+  "resources/js/pages/admin/admin-users/index.tsx": [
+    "/build/assets/admin-users-BIIQOgUy.js"
+  ],
+  "resources/js/pages/admin/audit-logs/index.tsx": [
+    "/build/assets/audit-logs-C20OFE0L.js"
+  ],
+  "resources/js/pages/admin/banners/form.tsx": [
+    "/build/assets/form-CQcIJsql.js"
+  ],
+  "resources/js/pages/admin/banners/index.tsx": [
+    "/build/assets/banners-Dds4xBtA.js"
+  ],
+  "resources/js/pages/admin/biteship-webhook-logs/index.tsx": [
+    "/build/assets/biteship-webhook-logs-DYLRk-I_.js"
+  ],
+  "resources/js/pages/admin/biteship-webhook-logs/show.tsx": [
+    "/build/assets/show-BYd1ffjU.js"
+  ],
+  "resources/js/pages/admin/blogs/form.tsx": [
+    "/build/assets/form-BloZhIZq.js"
+  ],
+  "resources/js/pages/admin/blogs/index.tsx": [
+    "/build/assets/blogs-D45BQQIQ.js"
+  ],
+  "resources/js/pages/admin/catalog/shared.tsx": [
+    "/build/assets/shared-BHhPoPN8.js"
+  ],
+  "resources/js/pages/admin/categories/form.tsx": [
+    "/build/assets/form-DIr2l4Wu.js"
+  ],
+  "resources/js/pages/admin/categories/index.tsx": [
+    "/build/assets/categories-DG7pvzuk.js"
+  ],
+  "resources/js/pages/admin/collections/form.tsx": [
+    "/build/assets/form-4Y7IOjZg.js"
+  ],
+  "resources/js/pages/admin/collections/index.tsx": [
+    "/build/assets/collections-Cb-W6SOC.js"
+  ],
+  "resources/js/pages/admin/customer-addresses/form.tsx": [
+    "/build/assets/form-CZee06o-.js"
+  ],
+  "resources/js/pages/admin/customer-addresses/index.tsx": [
+    "/build/assets/customer-addresses-TrDlQgiH.js"
+  ],
+  "resources/js/pages/admin/customer-addresses/show.tsx": [
+    "/build/assets/show-Dd7zRjCK.js"
+  ],
+  "resources/js/pages/admin/customers/index.tsx": [
+    "/build/assets/customers-C_bXWqQY.js"
+  ],
+  "resources/js/pages/admin/customers/show.tsx": [
+    "/build/assets/show-DVXeC9gV.js"
+  ],
+  "resources/js/pages/admin/dashboard.tsx": [
+    "/build/assets/dashboard-B21BveuZ.js"
+  ],
+  "resources/js/pages/admin/gallery/form.tsx": [
+    "/build/assets/form-CfgfYX9l.js"
+  ],
+  "resources/js/pages/admin/gallery/index.tsx": [
+    "/build/assets/gallery-0pX8_7jj.js"
+  ],
+  "resources/js/pages/admin/marketing/shared.tsx": [
+    "/build/assets/shared-CZeQyB1e.js"
+  ],
+  "resources/js/pages/admin/new-product/form.tsx": [
+    "/build/assets/form-BLhlDfHM.js"
+  ],
+  "resources/js/pages/admin/notifications/form.tsx": [
+    "/build/assets/form-DKLWZ70K.js"
+  ],
+  "resources/js/pages/admin/notifications/index.tsx": [
+    "/build/assets/notifications-DkdgPSts.js"
+  ],
+  "resources/js/pages/admin/orders/index.tsx": [
+    "/build/assets/orders-wcC18ddp.js"
+  ],
+  "resources/js/pages/admin/orders/show.tsx": [
+    "/build/assets/show-DlFUeOoY.js"
+  ],
+  "resources/js/pages/admin/pages/form.tsx": [
+    "/build/assets/form-Dm8Ofd9J2.js"
+  ],
+  "resources/js/pages/admin/pages/index.tsx": [
+    "/build/assets/pages-CB1Ny2bP.js"
+  ],
+  "resources/js/pages/admin/pagination.tsx": [
+    "/build/assets/pagination-e7PNUKKI.js"
+  ],
+  "resources/js/pages/admin/payment-logs/index.tsx": [
+    "/build/assets/payment-logs-B0geBAtg.js"
+  ],
+  "resources/js/pages/admin/payment-logs/show.tsx": [
+    "/build/assets/show-DW2Hm7TK.js"
+  ],
+  "resources/js/pages/admin/payments/index.tsx": [
+    "/build/assets/payments-c96kHXfJ.js"
+  ],
+  "resources/js/pages/admin/payments/show.tsx": [
+    "/build/assets/show-DKPHW3qY2.js"
+  ],
+  "resources/js/pages/admin/product-variants/form.tsx": [
+    "/build/assets/form-o02OOGcm2.js"
+  ],
+  "resources/js/pages/admin/product-variants/index.tsx": [
+    "/build/assets/product-variants-DpmEWvV2.js"
+  ],
+  "resources/js/pages/admin/products/form.tsx": [
+    "/build/assets/form-N3ytG-kR.js"
+  ],
+  "resources/js/pages/admin/products/index.tsx": [
+    "/build/assets/products-CfyEy2p7.js"
+  ],
+  "resources/js/pages/admin/products/show.tsx": [
+    "/build/assets/show-KsXC6vgg.js"
+  ],
+  "resources/js/pages/admin/reports/index.tsx": [
+    "/build/assets/reports-CvTcUyZ1.js"
+  ],
+  "resources/js/pages/admin/resource-form.tsx": [
+    "/build/assets/resource-form-CM8s7eF7.js"
+  ],
+  "resources/js/pages/admin/resource-index.tsx": [
+    "/build/assets/resource-index-_AD2mug3.js"
+  ],
+  "resources/js/pages/admin/resource-show.tsx": [
+    "/build/assets/resource-show-CIQq5GPJ.js"
+  ],
+  "resources/js/pages/admin/sales/shared.tsx": [
+    "/build/assets/shared-CHrI43eL.js"
+  ],
+  "resources/js/pages/admin/settings/index.tsx": [
+    "/build/assets/settings-BxveiaTf.js"
+  ],
+  "resources/js/pages/admin/shipments/index.tsx": [
+    "/build/assets/shipments-DMcXNXlP.js"
+  ],
+  "resources/js/pages/admin/shipments/show.tsx": [
+    "/build/assets/show-B3X6lvJA.js"
+  ],
+  "resources/js/pages/admin/stock/adjustment.tsx": [
+    "/build/assets/adjustment-C-3rdGhg.js"
+  ],
+  "resources/js/pages/admin/stock/index.tsx": [
+    "/build/assets/stock-CFLhyI_e.js"
+  ],
+  "resources/js/pages/admin/stock/logs.tsx": [
+    "/build/assets/logs-H-Fa7wJL.js"
+  ],
+  "resources/js/pages/admin/vouchers/form.tsx": [
+    "/build/assets/form-BkBa69fX.js"
+  ],
+  "resources/js/pages/admin/vouchers/index.tsx": [
+    "/build/assets/vouchers-DVA8iYWj.js"
+  ],
+  "resources/js/pages/admin/wishlists/index.tsx": [
+    "/build/assets/wishlists-5jM_cbB1.js"
+  ],
+  "resources/js/pages/auth/confirm-password.tsx": [
+    "/build/assets/confirm-password-BJF4RJeS.js"
+  ],
+  "resources/js/pages/auth/forgot-password.tsx": [
+    "/build/assets/forgot-password-D7C0xP6l.js"
+  ],
+  "resources/js/pages/auth/login.tsx": [
+    "/build/assets/login-FUT5fJVU.js"
+  ],
+  "resources/js/pages/auth/register.tsx": [
+    "/build/assets/register-QKAhYFMY.js"
+  ],
+  "resources/js/pages/auth/reset-password.tsx": [
+    "/build/assets/reset-password-5wjZrbRD.js"
+  ],
+  "resources/js/pages/auth/two-factor-challenge.tsx": [
+    "/build/assets/two-factor-challenge-Bc_0sGYz.js"
+  ],
+  "resources/js/pages/auth/verify-email.tsx": [
+    "/build/assets/verify-email-DeLDWCgd.js"
+  ],
+  "resources/js/pages/blog/index.tsx": [
+    "/build/assets/blog-33oL8Qx4.js"
+  ],
+  "resources/js/pages/blog/show.tsx": [
+    "/build/assets/show-C58XfQGI.js"
+  ],
+  "resources/js/pages/contact/index.tsx": [
+    "/build/assets/contact-DF0uU34u.js"
+  ],
+  "resources/js/pages/customer/cart/my-cart.tsx": [
+    "/build/assets/my-cart-BNf2U2PB.js"
+  ],
+  "resources/js/pages/customer/checkout/checkout.tsx": [
+    "/build/assets/checkout-Dn9vfrGa.js"
+  ],
+  "resources/js/pages/customer/manage-address/manage-address.tsx": [
+    "/build/assets/manage-address-BwktobZv.js"
+  ],
+  "resources/js/pages/customer/notification/list-notification.tsx": [
+    "/build/assets/list-notification-BP7xC6Jh.js"
+  ],
+  "resources/js/pages/customer/order/detail-order.tsx": [
+    "/build/assets/detail-order-CrefcVND.js"
+  ],
+  "resources/js/pages/customer/order/my-order.tsx": [
+    "/build/assets/my-order-CuFR4GC1.js"
+  ],
+  "resources/js/pages/customer/policy/no-return-policy.tsx": [
+    "/build/assets/no-return-policy-C8x_3k2B.js"
+  ],
+  "resources/js/pages/customer/policy/privacy-policy.tsx": [
+    "/build/assets/privacy-policy-DdH7lGo7.js"
+  ],
+  "resources/js/pages/customer/policy/shipping-policy.tsx": [
+    "/build/assets/shipping-policy-BDNBec1G.js"
+  ],
+  "resources/js/pages/customer/policy/term-condition.tsx": [
+    "/build/assets/term-condition-B2gyA2LV.js"
+  ],
+  "resources/js/pages/customer/products/detail-product.tsx": [
+    "/build/assets/detail-product-72ovQ_k3.js"
+  ],
+  "resources/js/pages/customer/products/list-product.tsx": [
+    "/build/assets/list-product-BoS6CkGn.js"
+  ],
+  "resources/js/pages/customer/profile/my-profile.tsx": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/pages/customer/wishlist/my-wishlist.tsx": [
+    "/build/assets/my-wishlist-aPj3qHyG.js"
+  ],
+  "resources/js/pages/dashboard.tsx": [
+    "/build/assets/dashboard-DcNF8fmD.js"
+  ],
+  "resources/js/pages/gallery/index.tsx": [
+    "/build/assets/gallery-i3i94f2j.js"
+  ],
+  "resources/js/pages/new-product/index.tsx": [
+    "/build/assets/new-product-CSeRkBiw.js"
+  ],
+  "resources/js/pages/settings/appearance.tsx": [
+    "/build/assets/appearance-BTBhwzQK.js"
+  ],
+  "resources/js/pages/settings/profile.tsx": [
+    "/build/assets/profile-DLdj7AmI.js"
+  ],
+  "resources/js/pages/settings/security.tsx": [
+    "/build/assets/security-CFZnLLPF.js"
+  ],
+  "resources/js/pages/welcome.tsx": [
+    "/build/assets/welcome-CNJwZLlI.js"
+  ],
+  "resources/js/routes/admin/admin-users/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/audit-logs/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/banners/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/biteship-webhook-logs/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/blogs/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/categories/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/collections/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/customer-addresses/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/customers/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/gallery/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/new-product/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/notifications/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/orders/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/orders/shipments/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/pages/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/payment-logs/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/payments/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/product-variants/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/product-variants/stock-adjustment/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/products/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/products/variants/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/reports/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/settings/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/shipments/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/stock/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/vouchers/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/admin/wishlists/index.ts": [
+    "/build/assets/my-profile-Du_SM1WA.js"
+  ],
+  "resources/js/routes/appearance/index.ts": [
+    "/build/assets/appearance-BTBhwzQK.js"
+  ],
+  "resources/js/routes/auth/google/index.ts": [
+    "/build/assets/login-FUT5fJVU.js"
+  ],
+  "resources/js/routes/checkout/index.ts": [
+    "/build/assets/checkout-Dn9vfrGa.js"
+  ],
+  "resources/js/routes/checkout/voucher/index.ts": [
+    "/build/assets/checkout-Dn9vfrGa.js"
+  ],
+  "resources/js/routes/index.ts": [
+    "/build/assets/routes-EPw8WZ-p.js"
+  ],
+  "resources/js/routes/login/index.ts": [
+    "/build/assets/login-FUT5fJVU.js"
+  ],
+  "resources/js/routes/password/confirm/index.ts": [
+    "/build/assets/confirm-DVUCJTS3.js"
+  ],
+  "resources/js/routes/password/index.ts": [
+    "/build/assets/password-Cj7-bejK.js"
+  ],
+  "resources/js/routes/profile/index.ts": [
+    "/build/assets/profile-BIxHBbMP.js"
+  ],
+  "resources/js/routes/register/index.ts": [
+    "/build/assets/register-QKAhYFMY.js"
+  ],
+  "resources/js/routes/security/index.ts": [
+    "/build/assets/security-v_B6Kg-C.js"
+  ],
+  "resources/js/routes/two-factor/index.ts": [
+    "/build/assets/use-two-factor-auth-DDHSrTuw.js"
+  ],
+  "resources/js/routes/two-factor/login/index.ts": [
+    "/build/assets/use-two-factor-auth-DDHSrTuw.js"
+  ],
+  "resources/js/routes/verification/index.ts": [
+    "/build/assets/verification-DFWUXW6K.js"
+  ],
+  "resources/js/wayfinder/index.ts": [
+    "/build/assets/wayfinder-Bgbpuenu.js"
+  ]
+}
