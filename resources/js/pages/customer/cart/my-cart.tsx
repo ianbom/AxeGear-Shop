@@ -2,14 +2,11 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     BadgeCheck,
     ChevronLeft,
-    FileText,
-    Info,
     Minus,
     Plus,
     RotateCcw,
     ShieldCheck,
     Trash2,
-    Truck,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -192,7 +189,7 @@ export default function MyCart({
 
                     {!isEmpty ? (
                         <>
-                            <div className="mb-8 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,430px)] lg:items-end">
+                            <div className="mb-8 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,380px)] xl:items-end">
                                 <div>
                                     <h1 className="text-[36px] leading-none font-black tracking-normal md:text-[46px]">
                                         My Cart
@@ -220,14 +217,20 @@ export default function MyCart({
                                 </div>
                             )}
 
-                            <div className="mb-12 grid gap-9 lg:grid-cols-[minmax(0,1fr)_minmax(320px,430px)] lg:items-start">
+                            <div className="mb-12 grid gap-9 xl:grid-cols-[minmax(0,1fr)_minmax(320px,380px)] xl:items-start">
                                 <section className="min-w-0">
-                                    <div className="overflow-hidden border border-[#CFCFCF]">
-                                        <div className="hidden grid-cols-[1fr_170px_190px_170px_50px] border-b border-[#CFCFCF] bg-white px-6 py-4 text-xs font-black tracking-[0.04em] uppercase lg:grid">
+                                    <div className="@container min-w-0 border border-[#CFCFCF]">
+                                        <div className="hidden grid-cols-[minmax(0,3fr)_minmax(112px,1fr)_128px_minmax(112px,1fr)_40px] gap-4 border-b border-[#CFCFCF] bg-white px-6 py-4 text-xs font-black tracking-[0.04em] uppercase @min-[720px]:grid">
                                             <span>Product</span>
-                                            <span>Price</span>
-                                            <span>Quantity</span>
-                                            <span>Subtotal</span>
+                                            <span className="text-center">
+                                                Price
+                                            </span>
+                                            <span className="text-center">
+                                                Quantity
+                                            </span>
+                                            <span className="text-center">
+                                                Subtotal
+                                            </span>
                                             <span />
                                         </div>
 
@@ -266,15 +269,15 @@ export default function MyCart({
                                             return (
                                                 <article
                                                     key={item.id}
-                                                    className="relative grid min-w-0 gap-4 border-b border-[#D8D8D8] bg-white p-4 last:border-b-0 lg:grid-cols-[1fr_170px_190px_170px_50px] lg:items-center lg:px-6 lg:py-3"
+                                                    className="grid min-w-0 gap-4 border-b border-[#D8D8D8] bg-white p-4 last:border-b-0 @min-[720px]:grid-cols-[minmax(0,3fr)_minmax(112px,1fr)_128px_minmax(112px,1fr)_40px] @min-[720px]:items-center @min-[720px]:px-6 @min-[720px]:py-3"
                                                 >
-                                                    <div className="grid min-w-0 grid-cols-[88px_minmax(0,1fr)] items-center gap-3 pr-12 sm:grid-cols-[118px_minmax(0,1fr)] sm:gap-4 md:grid-cols-[260px_1fr] lg:pr-0">
+                                                    <div className="flex min-w-0 flex-col items-start gap-3">
                                                         {productHref ? (
                                                             <Link
                                                                 href={
                                                                     productHref
                                                                 }
-                                                                className="block h-[96px] p-2 sm:h-[110px] md:h-[118px]"
+                                                                className="flex h-24 w-40 max-w-full shrink-0 items-center justify-center bg-[#F8F8F8] p-2 sm:h-32 sm:w-52"
                                                             >
                                                                 <img
                                                                     src={image}
@@ -287,31 +290,39 @@ export default function MyCart({
                                                                 />
                                                             </Link>
                                                         ) : (
-                                                            <div className="h-[96px] p-2 sm:h-[110px] md:h-[118px]">
+                                                            <div className="h-24 w-40 max-w-full shrink-0 bg-[#F8F8F8] p-2 sm:h-32 sm:w-52">
                                                                 <img
                                                                     src={image}
                                                                     alt={
                                                                         item.title
                                                                     }
-                                                                    className="h-full w-full object-contain"
+                                                                    className="h-full w-full"
                                                                     loading="lazy"
                                                                     decoding="async"
                                                                 />
                                                             </div>
                                                         )}
-                                                        <div>
+                                                        <div className="w-full min-w-0 [overflow-wrap:anywhere]">
                                                             {productHref ? (
                                                                 <Link
                                                                     href={
                                                                         productHref
                                                                     }
-                                                                    className="text-base font-black tracking-normal uppercase hover:text-[#F58220]"
+                                                                    title={
+                                                                        item.title
+                                                                    }
+                                                                    className="block w-full truncate text-base font-black tracking-normal uppercase hover:text-[#F58220]"
                                                                 >
-                                                                    {item.title}
+                                                                    {item.title.length > 23 ? `${item.title.slice(0, 23)}...` : item.title}
                                                                 </Link>
                                                             ) : (
-                                                                <h2 className="text-base font-black tracking-normal uppercase">
-                                                                    {item.title}
+                                                                <h2
+                                                                    title={
+                                                                        item.title
+                                                                    }
+                                                                    className="w-full truncate text-base font-black tracking-normal uppercase"
+                                                                >
+                                                                    {item.title.length > 23 ? `${item.title.slice(0, 23)}...` : item.title}
                                                                 </h2>
                                                             )}
                                                             <p className="mt-2 text-sm font-medium text-[#2E2E2E]">
@@ -332,19 +343,19 @@ export default function MyCart({
                                                         </div>
                                                     </div>
 
-                                                    <div className="flex items-center justify-between lg:block">
-                                                        <span className="text-xs font-black text-[#707070] uppercase lg:hidden">
+                                                    <div className="flex min-w-0 items-center justify-between gap-2 @min-[720px]:justify-center">
+                                                        <span className="text-xs font-black text-[#707070] uppercase @min-[720px]:hidden">
                                                             Price
                                                         </span>
-                                                        <span className="font-black tabular-nums">
+                                                        <span className="min-w-0 text-right font-black [overflow-wrap:anywhere] tabular-nums @min-[720px]:text-center">
                                                             {formatPrice(
                                                                 item.price,
                                                             )}
                                                         </span>
                                                     </div>
 
-                                                    <div className="flex items-center justify-between lg:block">
-                                                        <span className="text-xs font-black text-[#707070] uppercase lg:hidden">
+                                                    <div className="flex items-center justify-between gap-2 @min-[720px]:justify-center">
+                                                        <span className="text-xs font-black text-[#707070] uppercase @min-[720px]:hidden">
                                                             Quantity
                                                         </span>
                                                         <QuantityControl
@@ -374,11 +385,11 @@ export default function MyCart({
                                                         />
                                                     </div>
 
-                                                    <div className="flex items-center justify-between lg:block">
-                                                        <span className="text-xs font-black text-[#707070] uppercase lg:hidden">
+                                                    <div className="flex min-w-0 items-center justify-between gap-2 @min-[720px]:justify-center">
+                                                        <span className="text-xs font-black text-[#707070] uppercase @min-[720px]:hidden">
                                                             Subtotal
                                                         </span>
-                                                        <span className="font-black tabular-nums">
+                                                        <span className="min-w-0 text-right font-black [overflow-wrap:anywhere] tabular-nums @min-[720px]:text-center">
                                                             {formatPrice(
                                                                 item.subtotal,
                                                             )}
@@ -391,7 +402,7 @@ export default function MyCart({
                                                             removeItem(item)
                                                         }
                                                         disabled={itemDisabled}
-                                                        className="absolute top-4 right-4 flex h-10 w-10 items-center justify-center text-[#1A1A1A] transition-colors hover:text-[#F58220] disabled:opacity-40 lg:static lg:justify-self-end"
+                                                        className="flex h-10 w-10 items-center justify-center justify-self-end text-[#1A1A1A] transition-colors hover:text-[#F58220] disabled:opacity-40"
                                                         aria-label="Remove item"
                                                     >
                                                         <Trash2
@@ -467,7 +478,6 @@ function QuantityControl({
     );
 }
 
-
 function OrderSummary({
     summary,
     hasStockIssues,
@@ -487,21 +497,11 @@ function OrderSummary({
                     label={`Subtotal (${summary.item_count} items)`}
                     value={formatPrice(summary.subtotal)}
                 />
-                <SummaryRow
-                    label="Estimated Shipping"
-                    value={formatPrice(summary.shipping)}
-                    icon={<Info size={17} strokeWidth={1.8} />}
-                />
-                <SummaryRow
-                    label="Discount"
-                    value={`-${formatPrice(summary.discount)}`}
-                    accent
-                />
             </div>
             <div className="my-6 border-t border-[#CFCFCF]" />
-            <div className="mb-3 flex items-end justify-between gap-4">
+            <div className="mb-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
                 <span className="text-2xl font-black uppercase">Total</span>
-                <span className="text-[30px] leading-none font-black text-[#F58220] tabular-nums">
+                <span className="max-w-full text-2xl leading-none font-black break-words text-[#F58220] tabular-nums sm:text-[30px]">
                     {formatPrice(summary.total)}
                 </span>
             </div>
@@ -575,9 +575,9 @@ function SuggestedProducts({ products }: { products: SuggestedProduct[] }) {
                     <Link
                         key={product.id}
                         href={detail.url({ query: { product: product.slug } })}
-                        className="grid min-h-[132px] grid-cols-[180px_1fr] border border-[#E5E5E5] bg-white p-4 transition-colors hover:border-[#1A1A1A]"
+                        className="flex min-w-0 flex-col gap-3 border border-[#E5E5E5] bg-white p-4 transition-colors hover:border-[#1A1A1A]"
                     >
-                        <div className="bg-[#F8F8F8] p-2">
+                        <div className="flex h-48 w-full items-center justify-center bg-[#F8F8F8] p-2 sm:h-56">
                             <img
                                 src={
                                     product.image ??
@@ -591,8 +591,11 @@ function SuggestedProducts({ products }: { products: SuggestedProduct[] }) {
                                 decoding="async"
                             />
                         </div>
-                        <div className="flex flex-col pl-4">
-                            <h3 className="text-base leading-tight font-black uppercase">
+                        <div className="flex min-w-0 flex-col">
+                            <h3
+                                title={product.title}
+                                className="truncate text-base leading-tight font-black uppercase"
+                            >
                                 {product.title}
                             </h3>
                             <p className="mt-1 text-sm font-medium text-[#2E2E2E]">

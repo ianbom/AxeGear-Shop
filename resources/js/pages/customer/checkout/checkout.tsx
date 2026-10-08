@@ -252,8 +252,8 @@ function CheckoutScreen() {
                             Checkout
                         </h1>
                         <p className="mt-3 max-w-[560px] text-sm leading-6 font-medium text-[#707070] md:text-base">
-                            Pilih alamat tersimpan, ongkir Biteship, voucher,
-                            lalu bayar via Midtrans.
+                            Pilih alamat, ongkir , voucher,
+                            lalu bayar sesuai harga.
                         </p>
                     </div>
                 </div>
@@ -605,8 +605,7 @@ function CheckoutScreen() {
                                                 strokeWidth={1.5}
                                             />
                                             <p>
-                                                Pembayaran aman didukung
-                                                Midtrans
+                                                Pembayaran aman dan terpercaya
                                             </p>
                                         </div>
                                     </div>
@@ -617,7 +616,7 @@ function CheckoutScreen() {
                                                 className="mt-0.5 shrink-0 text-[#F58220]"
                                                 strokeWidth={1.5}
                                             />
-                                            <p>Ongkir dihitung oleh Biteship</p>
+                                            <p>Pengiriman cepat dan akurat</p>
                                         </div>
                                     </div>
                                 </div>

@@ -135,7 +135,6 @@ class CheckoutService
         $discount = $this->discountAmount($voucher, (float) $items->sum('subtotal'));
 
         session(['checkout.voucher_code' => $voucher->code]);
-        session()->forget(['checkout.shipping_rates', 'checkout.shipping_rate_id', 'checkout.selected_rate_binding']);
 
         return [
             'voucher' => $this->voucherPayload($voucher, $discount),
@@ -145,8 +144,8 @@ class CheckoutService
 
     public function removeVoucher(User $user): array
     {
+        $this->forgetExpiredCheckoutSession();
         session()->forget('checkout.voucher_code');
-        session()->forget(['checkout.shipping_rates', 'checkout.shipping_rate_id', 'checkout.selected_rate_binding']);
         $items = $this->cartItems($user);
 
         return [
