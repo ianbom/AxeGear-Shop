@@ -145,7 +145,7 @@ class ShipmentManagementService
     public function createFromOrder(Request $request, Order $order): Shipment
     {
         $payload = $request->validated();
-        $labelUrl = $request->hasFile('label_photo')
+        $labelUrl = ($payload['source'] ?? null) !== 'order_detail' && $request->hasFile('label_photo')
             ? $this->storePublicFile($request->file('label_photo'), 'shipment-labels')
             : null;
 
@@ -160,15 +160,29 @@ class ShipmentManagementService
                 throw ValidationException::withMessages(['shipment' => 'Tandai pesanan siap dikirim sebelum membuat pengiriman.']);
             }
 
-            $shipment = Shipment::query()->where('order_id', $order->id)->lockForUpdate()->first()
-                ?: $order->shipment()->create([
-                    'shipping_provider' => 'biteship',
-                    'courier_company' => Str::lower($payload['courier_company']),
-                    'courier_type' => Str::lower($payload['courier_type']),
-                    'courier_service_name' => $payload['courier_service_name'] ?? null,
-                    'shipping_cost' => $order->shipping_cost,
-                    'shipping_status' => ShippingStatus::NotCreated->value,
-                ]);
+            $shipment = Shipment::query()->where('order_id', $order->id)->lockForUpdate()->first();
+
+            if (($payload['source'] ?? null) === 'order_detail') {
+                if (! $shipment || blank($shipment->courier_company) || blank($shipment->courier_type)) {
+                    throw ValidationException::withMessages(['shipment' => 'Pilihan kurir customer tidak tersedia atau tidak lengkap. Periksa data pengiriman pesanan.']);
+                }
+
+                $payload = [
+                    'courier_company' => $shipment->courier_company,
+                    'courier_type' => $shipment->courier_type,
+                    'courier_service_name' => $shipment->courier_service_name,
+                    'estimated_delivery' => $shipment->estimated_delivery,
+                ];
+            }
+
+            $shipment ??= $order->shipment()->create([
+                'shipping_provider' => 'biteship',
+                'courier_company' => Str::lower($payload['courier_company']),
+                'courier_type' => Str::lower($payload['courier_type']),
+                'courier_service_name' => $payload['courier_service_name'] ?? null,
+                'shipping_cost' => $order->shipping_cost,
+                'shipping_status' => ShippingStatus::NotCreated->value,
+            ]);
 
             if (! $this->canCreateShipment($order, $shipment)) {
                 throw ValidationException::withMessages(['shipment' => "Shipment sedang {$shipment->shipping_status}."]);

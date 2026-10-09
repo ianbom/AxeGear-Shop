@@ -1,9 +1,5 @@
 import { Head, InfiniteScroll, Link, router, usePage } from '@inertiajs/react';
-import {
-    ChevronDown,
-    Heart,
-    Search,
-} from 'lucide-react';
+import { ChevronDown, Heart, Search } from 'lucide-react';
 import type { FormEvent, MouseEvent, ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -90,7 +86,7 @@ type Props = {
         colors: FilterOption[];
         sizes: string[];
         priceRanges: Array<{ value: string; label: string }>;
-        sorts: Array<{ value: string; label: string }>;
+        sorts: Array<{ value: string; order: string; label: string }>;
     };
 };
 
@@ -109,7 +105,7 @@ const defaultFilters: FilterState = {
     price: 'all',
     color: '',
     size: '',
-    sort: 'featured',
+    sort: 'latest',
     order: 'desc',
     per_page: '12',
 };
@@ -192,6 +188,7 @@ export default function ListProduct({
     const visit = (nextFilters: FilterState) => {
         setForm(nextFilters);
         router.get(list.url(), cleanQuery(nextFilters), {
+            reset: ['products'],
             preserveScroll: true,
             preserveState: true,
             replace: true,
@@ -209,6 +206,11 @@ export default function ListProduct({
     const resetFilters = () => {
         visit(defaultFilters);
     };
+
+    const selectedSort =
+        options.sorts.find(
+            (sort) => sort.value === form.sort && sort.order === form.order,
+        ) ?? options.sorts.find((sort) => sort.value === form.sort);
 
     const submitSearch = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -263,7 +265,10 @@ export default function ListProduct({
                             setForm((current) => ({
                                 ...current,
                                 search: value,
-                                collection: value.trim() === '' ? current.collection : '',
+                                collection:
+                                    value.trim() === ''
+                                        ? current.collection
+                                        : '',
                             }))
                         }
                         compact
@@ -365,14 +370,29 @@ export default function ListProduct({
                         <label className="flex items-center gap-3 text-[17px] text-ink">
                             <span>Sort by:</span>
                             <select
-                                value={form.sort}
-                                onChange={(event) =>
-                                    setFilter('sort', event.target.value)
-                                }
+                                value={`${selectedSort?.value}:${selectedSort?.order}`}
+                                onChange={(event) => {
+                                    const selected = options.sorts.find(
+                                        (sort) =>
+                                            `${sort.value}:${sort.order}` ===
+                                            event.target.value,
+                                    );
+
+                                    if (selected) {
+                                        visit({
+                                            ...form,
+                                            sort: selected.value,
+                                            order: selected.order,
+                                        });
+                                    }
+                                }}
                                 className="border-0 bg-transparent py-0 pr-8 pl-0 text-[17px] font-medium text-ink focus:ring-0"
                             >
                                 {options.sorts.map((sort) => (
-                                    <option key={sort.value} value={sort.value}>
+                                    <option
+                                        key={`${sort.value}:${sort.order}`}
+                                        value={`${sort.value}:${sort.order}`}
+                                    >
                                         {sort.label}
                                     </option>
                                 ))}
@@ -396,7 +416,10 @@ export default function ListProduct({
                                 setForm((current) => ({
                                     ...current,
                                     search: value,
-                                    collection: value.trim() === '' ? current.collection : '',
+                                    collection:
+                                        value.trim() === ''
+                                            ? current.collection
+                                            : '',
                                 }))
                             }
                         />
@@ -526,7 +549,6 @@ function FilterPanel({
                     />
                 ))}
             </FilterSection>
-
         </div>
     );
 }
@@ -717,14 +739,14 @@ const ProductTile = memo(function ProductTile({
                         }`}
                     />
                     {!isSoldOut && product.badge && (
-                        <span className="absolute top-4 left-0 z-10 flex min-h-26 w-9 items-center justify-center bg-primary px-1 py-2 text-[11px] font-extrabold tracking-[0.08em] text-white uppercase [writing-mode:vertical-rl] [text-orientation:mixed] [transform:rotate(180deg)] sm:w-10 sm:text-[12px]">
+                        <span className="absolute top-4 left-0 z-10 flex min-h-26 w-9 [transform:rotate(180deg)] items-center justify-center bg-primary px-1 py-2 text-[11px] font-extrabold tracking-[0.08em] text-white uppercase [text-orientation:mixed] [writing-mode:vertical-rl] sm:w-10 sm:text-[12px]">
                             {product.badge === 'DISCOUNT'
                                 ? 'SALE'
                                 : product.badge}
                         </span>
                     )}
                     {isSoldOut && (
-                        <span className="absolute top-4 left-0 z-10 flex min-h-26 w-9 items-center justify-center bg-ink px-1 py-2 text-[10px] font-extrabold tracking-[0.08em] text-white uppercase [writing-mode:vertical-rl] [text-orientation:mixed] [transform:rotate(180deg)] sm:w-10 sm:text-[11px]">
+                        <span className="absolute top-4 left-0 z-10 flex min-h-26 w-9 [transform:rotate(180deg)] items-center justify-center bg-ink px-1 py-2 text-[10px] font-extrabold tracking-[0.08em] text-white uppercase [text-orientation:mixed] [writing-mode:vertical-rl] sm:w-10 sm:text-[11px]">
                             Sold Out
                         </span>
                     )}
@@ -794,4 +816,3 @@ const ProductTile = memo(function ProductTile({
         </article>
     );
 });
-

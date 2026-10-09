@@ -6,6 +6,8 @@ import {
     Check,
     Mail,
     MapPin,
+    PackagePlus,
+    RefreshCw,
     TriangleAlert,
     UserRound,
 } from 'lucide-react';
@@ -16,12 +18,24 @@ import {
     updateStatus,
 } from '@/actions/App/Http/Controllers/Admin/OrderController';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { getOrderWorkflow } from '@/lib/order-workflow';
+import { store as createShipment } from '@/routes/admin/orders/shipments';
 import {
     show as paymentShow,
     sync as syncPayment,
 } from '@/routes/admin/payments';
-import { show as shipmentShow } from '@/routes/admin/shipments';
+import {
+    refreshTracking,
+    show as shipmentShow,
+} from '@/routes/admin/shipments';
 
 interface OrderItem {
     id: number;
@@ -35,6 +49,13 @@ interface OrderItem {
     quantity: number;
     subtotal: string | number;
     product_image_url: string | null;
+    stock_movements: {
+        id: number;
+        quantity: number;
+        stock_before: number;
+        stock_after: number;
+        created_at: string | null;
+    }[];
 }
 
 interface Address {
@@ -92,6 +113,8 @@ interface Order {
     payment_status: string;
     order_status: string;
     allowedStatuses: string[];
+    can_create_shipment: boolean;
+    booking_uncertain: boolean;
     status_history: {
         id: number;
         status: string | null;
@@ -131,13 +154,7 @@ interface Props {
     order: Order;
 }
 
-type Tab =
-    | 'overview'
-    | 'products'
-    | 'customer'
-    | 'payment'
-    | 'shipping'
-    | 'activity';
+type Tab = 'overview' | 'products' | 'customer' | 'payment' | 'shipping';
 
 const tabs: { value: Tab; label: string }[] = [
     { value: 'overview', label: 'Overview' },
@@ -145,7 +162,6 @@ const tabs: { value: Tab; label: string }[] = [
     { value: 'customer', label: 'Customer' },
     { value: 'payment', label: 'Payment' },
     { value: 'shipping', label: 'Shipping' },
-    { value: 'activity', label: 'Activity' },
 ];
 
 const actionLabels: Record<string, string> = {
@@ -190,7 +206,69 @@ export default function OrderShow({ order }: Props) {
     const [tab, setTab] = useState<Tab>('overview');
     const [processing, setProcessing] = useState(false);
     const [statusError, setStatusError] = useState('');
+    const [bookingOpen, setBookingOpen] = useState(false);
+    const [shipmentProcessing, setShipmentProcessing] = useState(false);
+    const [shipmentError, setShipmentError] = useState('');
     const availableStatuses = order.allowedStatuses;
+
+    const openBooking = () => {
+        setShipmentError('');
+        setBookingOpen(true);
+    };
+
+    const confirmBooking = () => {
+        if (processing || shipmentProcessing || !order.can_create_shipment) {
+            return;
+        }
+
+        setShipmentProcessing(true);
+        setShipmentError('');
+        router.post(
+            createShipment.url(order.id),
+            { source: 'order_detail' },
+            {
+                preserveScroll: true,
+                onSuccess: () => setBookingOpen(false),
+                onError: (errors) =>
+                    setShipmentError(
+                        errors.shipment ??
+                            errors.biteship ??
+                            Object.values(errors)[0] ??
+                            'Booking Biteship gagal.',
+                    ),
+                onFinish: () => setShipmentProcessing(false),
+            },
+        );
+    };
+
+    const syncTracking = () => {
+        if (
+            processing ||
+            shipmentProcessing ||
+            !order.shipment?.id ||
+            !order.shipment.biteship_order_id
+        ) {
+            return;
+        }
+
+        setShipmentProcessing(true);
+        setShipmentError('');
+        router.post(
+            refreshTracking.url(order.shipment.id),
+            {},
+            {
+                preserveScroll: true,
+                onError: (errors) =>
+                    setShipmentError(
+                        errors.shipment ??
+                            errors.biteship ??
+                            Object.values(errors)[0] ??
+                            'Sinkronisasi tracking gagal.',
+                    ),
+                onFinish: () => setShipmentProcessing(false),
+            },
+        );
+    };
 
     const activities = useMemo(
         () =>
@@ -226,12 +304,14 @@ export default function OrderShow({ order }: Props) {
     return (
         <>
             <Head title={`Order Detail - ${order.order_number}`} />
-            <main className="flex-1 bg-[#fafafa] px-4 py-5 text-[#171717] sm:px-6 lg:px-7">
+            <main className="min-w-0 flex-1 bg-[#fafafa] px-4 py-5 text-[#171717] sm:px-6 lg:px-7">
                 <div className="mx-auto flex max-w-[1440px] flex-col gap-5">
                     <PageHeader
                         order={order}
                         availableStatuses={availableStatuses}
-                        processing={processing}
+                        processing={processing || shipmentProcessing}
+                        onBookShipment={openBooking}
+                        onRefreshTracking={syncTracking}
                         onStatusChange={(nextStatus) => {
                             setProcessing(true);
                             setStatusError('');
@@ -253,6 +333,21 @@ export default function OrderShow({ order }: Props) {
                     {statusError && (
                         <p role="alert" className="text-sm text-destructive">
                             {statusError}
+                        </p>
+                    )}
+                    {shipmentError && !bookingOpen && (
+                        <p role="alert" className="text-sm text-destructive">
+                            {shipmentError}
+                        </p>
+                    )}
+                    {order.booking_uncertain && (
+                        <p
+                            role="alert"
+                            className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+                        >
+                            Hasil booking belum pasti. Periksa dashboard
+                            Biteship sebelum mencoba kembali agar tidak membuat
+                            pengiriman ganda.
                         </p>
                     )}
                     <OrderBanner order={order} />
@@ -287,12 +382,28 @@ export default function OrderShow({ order }: Props) {
                     {tab === 'products' && <Products order={order} />}
                     {tab === 'customer' && <Customer order={order} />}
                     {tab === 'payment' && <PaymentTab order={order} />}
-                    {tab === 'shipping' && <ShippingTab order={order} />}
-                    {tab === 'activity' && (
-                        <ActivityList activities={activities} expanded />
+                    {tab === 'shipping' && (
+                        <ShippingTab
+                            order={order}
+                            processing={processing || shipmentProcessing}
+                            onBookShipment={openBooking}
+                            onRefreshTracking={syncTracking}
+                        />
                     )}
                 </div>
             </main>
+            <BookingConfirmation
+                order={order}
+                open={bookingOpen}
+                processing={shipmentProcessing}
+                error={shipmentError}
+                onOpenChange={(open) => {
+                    if (!shipmentProcessing) {
+                        setBookingOpen(open);
+                    }
+                }}
+                onConfirm={confirmBooking}
+            />
         </>
     );
 }
@@ -302,11 +413,15 @@ function PageHeader({
     availableStatuses,
     processing,
     onStatusChange,
+    onBookShipment,
+    onRefreshTracking,
 }: {
     order: Order;
     availableStatuses: string[];
     processing: boolean;
     onStatusChange: (status: string) => void;
+    onBookShipment: () => void;
+    onRefreshTracking: () => void;
 }) {
     const nextStatus = availableStatuses[0];
 
@@ -365,23 +480,210 @@ function PageHeader({
                             </Link>
                         </Button>
                     )}
-                {!nextStatus &&
-                    order.payment_status === 'paid' &&
-                    order.shipment?.id &&
-                    !['completed', 'cancelled', 'refunded'].includes(
-                        order.order_status,
-                    ) && (
-                        <Button asChild>
-                            <Link href={shipmentShow.url(order.shipment.id)}>
-                                {order.order_status === 'ready_to_ship' &&
-                                !order.shipment.biteship_order_id
-                                    ? 'Booking kurir'
-                                    : 'Pantau / tangani pengiriman'}
-                            </Link>
-                        </Button>
-                    )}
+                <ShippingActions
+                    order={order}
+                    processing={processing}
+                    onBookShipment={onBookShipment}
+                    onRefreshTracking={onRefreshTracking}
+                />
             </div>
         </header>
+    );
+}
+
+function ShippingActions({
+    order,
+    processing,
+    onBookShipment,
+    onRefreshTracking,
+}: {
+    order: Order;
+    processing: boolean;
+    onBookShipment: () => void;
+    onRefreshTracking: () => void;
+}) {
+    if (
+        order.payment_status !== 'paid' ||
+        ['completed', 'cancelled', 'refunded'].includes(order.order_status)
+    ) {
+        return null;
+    }
+
+    if (order.can_create_shipment) {
+        return (
+            <Button
+                type="button"
+                disabled={processing}
+                onClick={onBookShipment}
+                className="h-auto min-h-10 whitespace-normal"
+            >
+                <PackagePlus className="size-4" /> Buat Order Biteship
+            </Button>
+        );
+    }
+
+    if (order.shipment?.id && order.shipment.biteship_order_id) {
+        return (
+            <Button
+                type="button"
+                variant="outline"
+                disabled={processing}
+                onClick={onRefreshTracking}
+                className="h-auto min-h-10 whitespace-normal"
+            >
+                <RefreshCw
+                    className={processing ? 'size-4 animate-spin' : 'size-4'}
+                />
+                {processing ? 'Memproses...' : 'Perbarui Tracking'}
+            </Button>
+        );
+    }
+
+    return null;
+}
+
+function BookingConfirmation({
+    order,
+    open,
+    processing,
+    error,
+    onOpenChange,
+    onConfirm,
+}: {
+    order: Order;
+    open: boolean;
+    processing: boolean;
+    error: string;
+    onOpenChange: (open: boolean) => void;
+    onConfirm: () => void;
+}) {
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="flex max-h-[85dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+                <DialogHeader className="shrink-0 border-b p-5 pr-12">
+                    <DialogTitle>Buat Order Biteship</DialogTitle>
+                    <DialogDescription>
+                        Pesanan {order.order_number}. Konfirmasi ini membuat
+                        booking nyata di Biteship menggunakan kurir pilihan
+                        customer.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="min-h-0 overflow-y-auto p-5">
+                    <ul className="divide-y">
+                        {order.items.map((item) => (
+                            <li
+                                key={item.id}
+                                className="flex items-start gap-3 py-3 first:pt-0"
+                            >
+                                {item.product_image_url && (
+                                    <img
+                                        src={item.product_image_url}
+                                        alt=""
+                                        className="size-10 shrink-0 rounded-md object-cover"
+                                    />
+                                )}
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-medium [overflow-wrap:anywhere]">
+                                        {item.product_name}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {[item.color_name, item.size]
+                                            .filter(Boolean)
+                                            .join(' / ')}
+                                    </p>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                        {money(item.price)} / produk
+                                    </p>
+                                </div>
+                                <div className="shrink-0 text-right text-sm">
+                                    <p>Qty: {item.quantity}</p>
+                                    <p className="mt-1 font-medium">
+                                        {money(item.subtotal)}
+                                    </p>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                    <div className="mt-4 grid gap-3 border-t pt-4 text-sm">
+                        <SummaryRow
+                            label="Kurir"
+                            value={[
+                                order.shipment?.courier_company?.toUpperCase(),
+                                order.shipment?.courier_type?.toUpperCase(),
+                            ]
+                                .filter(Boolean)
+                                .join(' ')}
+                        />
+                        <SummaryRow
+                            label="Layanan"
+                            value={order.shipment?.courier_service_name ?? '—'}
+                        />
+                        <SummaryRow
+                            label="Voucher"
+                            value={
+                                order.voucher_code ??
+                                'Tidak menggunakan voucher'
+                            }
+                        />
+                        <SummaryRow
+                            label="Subtotal produk"
+                            value={money(order.subtotal)}
+                        />
+                        <SummaryRow
+                            label="Diskon"
+                            value={'- ' + money(order.discount_amount)}
+                            danger
+                        />
+                        <SummaryRow
+                            label="Ongkir"
+                            value={money(order.shipping_cost)}
+                        />
+                        <SummaryRow
+                            label="Biaya layanan"
+                            value={money(order.service_fee)}
+                        />
+                        <div className="border-t pt-3">
+                            <SummaryRow
+                                label="Total pembayaran"
+                                value={money(order.grand_total)}
+                                strong
+                            />
+                        </div>
+                    </div>
+                    {error && (
+                        <p
+                            role="alert"
+                            className="mt-4 text-sm text-destructive"
+                        >
+                            {error}
+                        </p>
+                    )}
+                    {order.booking_uncertain && (
+                        <p role="alert" className="mt-4 text-sm text-amber-900">
+                            Hasil booking belum pasti. Periksa dashboard
+                            Biteship sebelum mencoba kembali.
+                        </p>
+                    )}
+                </div>
+                <DialogFooter className="shrink-0 border-t p-5">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        disabled={processing}
+                        onClick={() => onOpenChange(false)}
+                    >
+                        Batal
+                    </Button>
+                    <Button
+                        type="button"
+                        disabled={processing || !order.can_create_shipment}
+                        onClick={onConfirm}
+                    >
+                        {processing ? 'Membuat order...' : 'Ya, Buat Order'}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }
 
@@ -650,15 +952,9 @@ function Overview({
                         {order.notes || 'Customer did not leave a note.'}
                     </p>
                     <div className="my-4 border-t border-[#e2e2e2]" />
-                    <PanelTitle>Return & Refund Agreement</PanelTitle>
-                    <p className="mt-3 text-sm">
-                        {order.no_return_refund_agreed
-                            ? 'No Return & Refund'
-                            : 'Agreement not recorded'}
-                    </p>
                 </Panel>
 
-                <ActivityList activities={activities.slice(0, 5)} />
+                <ActivityList activities={activities} />
             </div>
 
             <aside className="grid gap-4">
@@ -726,12 +1022,14 @@ function AddressCard({ order }: { order: Order }) {
             <PanelTitle>Customer & Shipping Address</PanelTitle>
             <div className="mt-5 flex items-start gap-3">
                 <MapPin className="mt-0.5 size-5 shrink-0" />
-                <div className="text-sm leading-6">
+                <div className="min-w-0 text-sm leading-6 wrap-anywhere">
                     <p className="mb-3 text-xs text-[#555]">Shipping Address</p>
                     <p className="font-medium">
-                        {address?.recipient_name ?? order.customer_name}
+                        {address?.recipient_name || order.customer_name || '—'}
                     </p>
-                    <p>{address?.full_address ?? 'Address unavailable'}</p>
+                    <p>{address?.full_address || '—'}</p>
+                    <p>Kelurahan/Desa: {address?.subdistrict || '—'}</p>
+                    <p>Kecamatan: {address?.district || '—'}</p>
                     <p>
                         {[
                             address?.city,
@@ -739,9 +1037,19 @@ function AddressCard({ order }: { order: Order }) {
                             address?.postal_code,
                         ]
                             .filter(Boolean)
-                            .join(', ')}
+                            .join(', ') || '—'}
                     </p>
-                    <p>{order.customer_phone}</p>
+                    <p>
+                        {address?.recipient_phone ||
+                            order.customer_phone ||
+                            '—'}
+                    </p>
+                    <div className="mt-3 border-t border-[#e2e2e2] pt-3">
+                        <p className="text-xs text-[#555]">Catatan Alamat</p>
+                        <p className="whitespace-pre-wrap">
+                            {address?.note || '—'}
+                        </p>
+                    </div>
                 </div>
             </div>
         </Panel>
@@ -757,14 +1065,20 @@ function Products({ order }: { order: Order }) {
                     {order.items.length} product lines in this order.
                 </p>
             </div>
-            <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px] text-sm">
+            <div className="max-w-full min-w-0 overflow-x-auto">
+                <table className="w-full min-w-[960px] text-sm">
                     <thead className="border-b bg-[#fafafa] text-left text-xs text-[#555]">
                         <tr>
                             <th className="px-5 py-3">Product</th>
                             <th className="px-5 py-3">Variant</th>
                             <th className="px-5 py-3 text-right">Price</th>
                             <th className="px-5 py-3 text-center">Qty</th>
+                            <th className="px-5 py-3 text-center">
+                                Stock Before
+                            </th>
+                            <th className="px-5 py-3 text-center">
+                                Stock After
+                            </th>
                             <th className="px-5 py-3 text-right">Subtotal</th>
                         </tr>
                     </thead>
@@ -809,6 +1123,43 @@ function Products({ order }: { order: Order }) {
                                 <td className="px-5 py-4 text-center font-mono">
                                     {item.quantity}
                                 </td>
+                                {(['stock_before', 'stock_after'] as const).map(
+                                    (field) => (
+                                        <td
+                                            key={field}
+                                            className="px-5 py-4 text-center"
+                                        >
+                                            {item.stock_movements.length ? (
+                                                <div className="grid gap-3">
+                                                    {item.stock_movements.map(
+                                                        (movement) => (
+                                                            <div
+                                                                key={
+                                                                    movement.id
+                                                                }
+                                                            >
+                                                                <p className="font-mono">
+                                                                    {
+                                                                        movement[
+                                                                            field
+                                                                        ]
+                                                                    }
+                                                                </p>
+                                                                <time className="text-xs whitespace-nowrap text-[#666]">
+                                                                    {date(
+                                                                        movement.created_at,
+                                                                    )}
+                                                                </time>
+                                                            </div>
+                                                        ),
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                '—'
+                                            )}
+                                        </td>
+                                    ),
+                                )}
                                 <td className="px-5 py-4 text-right font-mono font-semibold">
                                     {money(item.subtotal)}
                                 </td>
@@ -941,19 +1292,37 @@ function PaymentTab({ order }: { order: Order }) {
     );
 }
 
-function ShippingTab({ order }: { order: Order }) {
+function ShippingTab({
+    order,
+    processing,
+    onBookShipment,
+    onRefreshTracking,
+}: {
+    order: Order;
+    processing: boolean;
+    onBookShipment: () => void;
+    onRefreshTracking: () => void;
+}) {
     const shipment = order.shipment;
 
     return (
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
             <Panel className="p-5">
                 <PanelTitle>Shipping Information</PanelTitle>
+                <div className="mt-4 flex flex-wrap gap-2">
+                    <ShippingActions
+                        order={order}
+                        processing={processing}
+                        onBookShipment={onBookShipment}
+                        onRefreshTracking={onRefreshTracking}
+                    />
+                </div>
                 {shipment?.id && (
                     <Link
                         href={shipmentShow.url(shipment.id)}
                         className="mt-4 inline-flex text-sm font-medium text-[#d93a08] underline"
                     >
-                        Kelola pengiriman, booking kurir, dan label
+                        Label dan pengelolaan lanjutan
                     </Link>
                 )}
                 {shipment ? (
@@ -1009,11 +1378,9 @@ function ShippingTab({ order }: { order: Order }) {
 
 function ActivityList({
     activities,
-    expanded = false,
     embedded = false,
 }: {
     activities: Activity[];
-    expanded?: boolean;
     embedded?: boolean;
 }) {
     const content = activities.length ? (
@@ -1050,7 +1417,7 @@ function ActivityList({
 
     return (
         <Panel className="p-5">
-            <PanelTitle>Order Activity {expanded ? '' : '(Latest)'}</PanelTitle>
+            <PanelTitle>Order Activity</PanelTitle>
             <div className="mt-5">{content}</div>
         </Panel>
     );
@@ -1115,9 +1482,9 @@ function SummaryRow({
         <div
             className={`flex items-center justify-between gap-4 ${strong ? 'text-base font-bold' : ''}`}
         >
-            <span>{title}</span>
+            <span className="shrink-0">{title}</span>
             <span
-                className={`${danger ? 'text-red-600' : ''} ${strong ? 'font-mono text-lg' : ''}`}
+                className={`min-w-0 text-right [overflow-wrap:anywhere] ${danger ? 'text-red-600' : ''} ${strong ? 'font-mono text-lg' : ''}`}
             >
                 {value}
             </span>

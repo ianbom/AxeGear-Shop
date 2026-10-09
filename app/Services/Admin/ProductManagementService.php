@@ -231,7 +231,7 @@ class ProductManagementService
 
         foreach ($variants as $index => $variant) {
             if ((int) ($variant['reserved_stock'] ?? 0) > (int) ($variant['stock'] ?? 0)) {
-                throw ValidationException::withMessages(["variants.{$variant['_index']}.reserved_stock" => 'Reserved stock tidak boleh lebih besar dari stock.']);
+                throw ValidationException::withMessages(["variants.{$variant['_index']}.reserved_stock" => 'Stok yang dicadangkan tidak boleh melebihi stok total.']);
             }
 
             $uploadedImage = $request->file("variants.{$variant['_index']}.image");
@@ -304,18 +304,25 @@ class ProductManagementService
     {
         $incoming = collect($variants)->pluck('sku')->filter()->values();
 
-        if ($incoming->duplicates()->isNotEmpty()) {
-            throw ValidationException::withMessages(['variants' => 'SKU varian tidak boleh duplikat dalam satu produk.']);
-        }
-
+        $duplicates = $incoming->duplicates()->all();
         $query = ProductVariant::query()->whereIn('sku', $incoming);
 
         if ($product) {
             $query->where('product_id', '!=', $product->id);
         }
 
-        if ($query->exists()) {
-            throw ValidationException::withMessages(['variants' => 'Salah satu SKU varian sudah digunakan produk lain.']);
+        $taken = $query->pluck('sku')->all();
+        $errors = [];
+        foreach ($variants as $index => $variant) {
+            $sku = $variant['sku'] ?? null;
+            if (in_array($sku, $duplicates)) {
+                $errors["variants.{$index}.sku"] = 'SKU varian ini sama dengan varian lain dalam produk ini. Gunakan SKU yang berbeda.';
+            } elseif (in_array($sku, $taken, true)) {
+                $errors["variants.{$index}.sku"] = 'SKU varian ini sudah digunakan produk lain. Gunakan SKU yang berbeda.';
+            }
+        }
+        if ($errors !== []) {
+            throw ValidationException::withMessages(['variants' => 'Perbaiki SKU varian yang ditandai. Setiap varian harus memiliki SKU yang berbeda.', ...$errors]);
         }
     }
 

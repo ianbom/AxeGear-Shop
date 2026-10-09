@@ -79,9 +79,50 @@ class ProductRequest extends FormRequest
         ];
     }
 
-    /**
-     * @return array<int, callable>
-     */
+    public function messages(): array
+    {
+        return [
+            'required' => ':attribute wajib diisi.',
+            'string' => ':attribute harus berupa teks.',
+            'numeric' => ':attribute harus berupa angka.',
+            'integer' => ':attribute harus berupa bilangan bulat.',
+            'min' => ':attribute minimal :min.',
+            'max' => ':attribute maksimal :max karakter.',
+            'array' => ':attribute harus berupa daftar yang valid.',
+            'boolean' => ':attribute harus berupa pilihan aktif atau tidak aktif.',
+            'exists' => ':attribute tidak tersedia atau tidak sesuai dengan produk ini. Pilih ulang data.',
+            'unique' => ':attribute sudah digunakan. Gunakan nilai yang berbeda.',
+            'in' => ':attribute tidak valid. Pilih salah satu pilihan yang tersedia.',
+            'file' => ':attribute harus berupa file yang dapat diunggah.',
+            'uploaded' => ':attribute gagal diunggah. Coba lagi dengan file gambar maksimal 4 MB.',
+            'image' => ':attribute harus berupa file gambar, misalnya JPG, PNG, atau WEBP.',
+            'not_regex' => ':attribute belum tersimpan. Unggah ulang file gambar.',
+            'sale_price.lte' => 'Harga diskon tidak boleh melebihi harga normal.',
+            'images.*.image.max' => 'Gambar produk maksimal 4 MB. Pilih file yang lebih kecil.',
+            'variants.*.image.max' => 'Gambar varian maksimal 4 MB. Pilih file yang lebih kecil.',
+        ];
+    }
+
+    public function attributes(): array
+    {
+        $attributes = [
+            'category_id' => 'Kategori', 'collection_ids' => 'Koleksi', 'collection_ids.*' => 'Koleksi',
+            'name' => 'Nama produk', 'slug' => 'URL slug', 'sku' => 'SKU produk', 'brand_name' => 'Merek',
+            'product_line' => 'Lini produk', 'style_name' => 'Nama model', 'short_description' => 'Deskripsi singkat',
+            'description' => 'Deskripsi', 'regular_price' => 'Harga normal', 'sale_price' => 'Harga diskon',
+            'weight' => 'Berat', 'length' => 'Panjang', 'width' => 'Lebar', 'height' => 'Tinggi', 'status' => 'Status produk',
+            'is_featured' => 'Produk unggulan', 'is_new_arrival' => 'Produk baru', 'is_best_seller' => 'Produk terlaris',
+            'images' => 'Gambar produk', 'images.*.id' => 'Gambar produk', 'images.*.image_url' => 'Alamat gambar produk',
+            'images.*.image' => 'Gambar produk', 'images.*.alt_text' => 'Keterangan gambar', 'images.*.sort_order' => 'Urutan gambar',
+            'images.*.is_primary' => 'Gambar utama', 'variants' => 'Varian produk',
+        ];
+        foreach (['id' => 'Data', 'sku' => 'SKU', 'variant_name' => 'Nama', 'color_name' => 'Nama warna', 'color_hex' => 'Kode warna', 'size' => 'Ukuran', 'package_type' => 'Jenis kemasan', 'regular_price' => 'Harga normal', 'sale_price' => 'Harga diskon', 'stock' => 'Stok', 'reserved_stock' => 'Stok yang dicadangkan', 'weight' => 'Berat', 'length' => 'Panjang', 'width' => 'Lebar', 'height' => 'Tinggi', 'image_url' => 'Alamat gambar', 'image' => 'Gambar', 'is_active' => 'Status aktif'] as $field => $label) {
+            $attributes["variants.*.{$field}"] = "{$label} varian :position";
+        }
+
+        return $attributes;
+    }
+
     public function after(): array
     {
         return [
@@ -91,18 +132,18 @@ class ProductRequest extends FormRequest
                 }
 
                 if ((int) $this->input('weight', 0) < 1) {
-                    $validator->errors()->add('weight', 'Weight minimal 1 gram untuk produk published.');
+                    $validator->errors()->add('weight', 'Produk yang dipublikasikan harus memiliki berat minimal 1 gram.');
                 }
 
                 $images = collect($this->input('images', []))
                     ->filter(fn (array $image, int $index): bool => $this->hasStoredImageUrl($image['image_url'] ?? null) || $this->hasFile("images.{$index}.image"));
 
                 if ($images->isEmpty()) {
-                    $validator->errors()->add('images', 'Produk published minimal memiliki satu gambar.');
+                    $validator->errors()->add('images', 'Tambahkan minimal satu gambar produk sebelum dipublikasikan.');
                 }
 
-                if (! $images->contains(fn (array $image): bool => (bool) ($image['is_primary'] ?? false))) {
-                    $validator->errors()->add('images', 'Produk published membutuhkan satu gambar utama.');
+                if ($images->isNotEmpty() && ! $images->contains(fn (array $image): bool => (bool) ($image['is_primary'] ?? false))) {
+                    $validator->errors()->add('images', 'Pilih satu gambar utama sebelum produk dipublikasikan.');
                 }
 
                 $variants = collect($this->input('variants', []))
@@ -110,12 +151,12 @@ class ProductRequest extends FormRequest
 
                 $variants->each(function (array $variant, int $index) use ($validator): void {
                     if ((int) ($variant['reserved_stock'] ?? 0) > (int) ($variant['stock'] ?? 0)) {
-                        $validator->errors()->add("variants.{$index}.reserved_stock", 'Reserved stock tidak boleh lebih besar dari stock.');
+                        $validator->errors()->add("variants.{$index}.reserved_stock", 'Stok yang dicadangkan tidak boleh melebihi stok total.');
                     }
                 });
 
                 if (! $variants->contains(fn (array $variant): bool => (bool) ($variant['is_active'] ?? false) && (int) ($variant['stock'] ?? 0) > 0)) {
-                    $validator->errors()->add('variants', 'Produk published membutuhkan satu varian aktif dengan stok tersedia.');
+                    $validator->errors()->add('variants', 'Aktifkan minimal satu varian dengan stok lebih dari 0 sebelum produk dipublikasikan.');
                 }
             },
         ];

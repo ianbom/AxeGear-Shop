@@ -1,18 +1,22 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
-    Bell,
+    ArrowUpRight,
     ChevronDown,
     ChevronUp,
+    Headphones,
     Heart,
-    Home,
+    MessageCircle,
     Minus,
+    Package,
+    PackageCheck,
     Plus,
     Search,
-    Store,
+    ShieldCheck,
+    Truck,
     X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ComponentType, FormEvent, ReactNode } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import { toast } from 'sonner';
 
 import { addProductVariantToCart as addProductVariantToCartRoute } from '@/actions/App/Http/Controllers/Customer/CartController';
@@ -21,8 +25,13 @@ import {
     store as addWishlistItem,
 } from '@/actions/App/Http/Controllers/Customer/WishlistController';
 import HTMLRender from '@/components/HTMLRender';
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import ShopLayout from '@/layouts/shop-layout';
-import { cart, detail, list } from '@/routes';
+import { cart, contact, detail, list } from '@/routes';
 
 type Variant = {
     id: number;
@@ -67,12 +76,6 @@ type ProductDetail = ProductCard & {
     style_name: string | null;
     short_description: string | null;
     description: string | null;
-    weight: number | null;
-    dimensions: {
-        length: number | null;
-        width: number | null;
-        height: number | null;
-    };
     images: Array<{
         url: string;
         alt: string;
@@ -86,12 +89,6 @@ type Props = {
     relatedProducts: ProductCard[];
     recentProducts: ProductCard[];
 };
-
-type IconType = ComponentType<{
-    className?: string;
-    size?: number;
-    strokeWidth?: number;
-}>;
 
 const formatPrice = (value: number) =>
     new Intl.NumberFormat('id-ID', {
@@ -441,19 +438,19 @@ function DetailProductContent({
                                     Buy it now
                                 </button>
 
-                                {/* <ServiceStrip isAvailable={isAvailable} /> */}
+                                <div className="hidden lg:block">
+                                    <ProductShoppingInformation />
+                                </div>
                             </section>
                         </FadeInOnScroll>
 
-                        <FadeInOnScroll
-                            className="lg:col-start-1 lg:row-start-2"
-                            delay={40}
-                        >
-                            <ProductSpecs
-                                product={product}
-                                productDescription={productDescription}
-                            />
-                        </FadeInOnScroll>
+                        <ProductSpecs
+                            product={product}
+                            productDescription={productDescription}
+                        />
+                        <div className="lg:hidden">
+                            <ProductShoppingInformation />
+                        </div>
                     </div>
 
                     <OtherStyles products={railProducts} />
@@ -503,47 +500,94 @@ function ProductGallery({
     productTitle: string;
     onSelectImage: (image: string) => void;
 }) {
-    const galleryItems = gallery.slice(0, 6);
+    const thumbnailRef = useRef<HTMLDivElement>(null);
+    const activeIndex = gallery.findIndex((image) => image.url === mainImage);
+
+    useEffect(() => {
+        const container = thumbnailRef.current;
+        const activeThumbnail = container?.querySelector<HTMLButtonElement>(
+            '[aria-pressed="true"]',
+        );
+
+        if (!container || !activeThumbnail) {
+            return;
+        }
+
+        container.scrollTo({
+            left:
+                activeThumbnail.offsetLeft -
+                (container.clientWidth - activeThumbnail.offsetWidth) / 2,
+            top:
+                activeThumbnail.offsetTop -
+                (container.clientHeight - activeThumbnail.offsetHeight) / 2,
+            behavior: 'smooth',
+        });
+    }, [gallery, mainImage]);
 
     return (
-        <section className="grid gap-4 md:grid-cols-[110px_1fr]">
-            <div className="order-2 flex gap-3 overflow-x-auto pb-1 md:order-1 md:flex-col md:items-center md:overflow-visible md:pb-0">
-                {galleryItems.length > 0 && (
+        <section className="grid min-w-0 gap-4 md:grid-cols-[110px_1fr]">
+            <div className="order-2 flex min-w-0 items-center gap-3 md:order-1 md:flex-col">
+                {gallery.length > 0 && (
                     <button
                         type="button"
-                        className="hidden h-8 w-8 items-center justify-center md:flex"
-                        aria-label="Previous thumbnails"
+                        onClick={() =>
+                            onSelectImage(gallery[activeIndex - 1].url)
+                        }
+                        disabled={activeIndex <= 0}
+                        className="flex h-11 w-11 shrink-0 items-center justify-center transition-colors hover:text-[#F58220] disabled:cursor-not-allowed disabled:text-[#CFCFCF]"
+                        aria-label="Previous product image"
                     >
-                        <ChevronUp size={22} strokeWidth={1.8} />
-                    </button>
-                )}
-                {galleryItems.map((image, index) => (
-                    <button
-                        key={`${image.url}-${index}`}
-                        type="button"
-                        onClick={() => onSelectImage(image.url)}
-                        className={`h-[84px] w-[100px] shrink-0 border bg-white p-2 transition-colors md:h-[90px] md:w-[104px] ${
-                            mainImage === image.url
-                                ? 'border-[#F58220]'
-                                : 'border-[#D8D8D8] hover:border-[#1A1A1A]'
-                        }`}
-                    >
-                        <img
-                            src={image.url}
-                            alt={image.alt}
-                            className="h-full w-full object-contain"
-                            loading="lazy"
-                            decoding="async"
+                        <ChevronUp
+                            className="-rotate-90 md:rotate-0"
+                            size={22}
+                            strokeWidth={1.8}
                         />
                     </button>
-                ))}
-                {galleryItems.length > 0 && (
+                )}
+                <div
+                    ref={thumbnailRef}
+                    className="relative flex min-w-0 flex-1 gap-3 overflow-x-auto pb-1 md:max-h-[540px] md:w-full md:flex-none md:flex-col md:items-center md:overflow-x-hidden md:overflow-y-auto md:pb-0"
+                >
+                    {gallery.map((image, index) => (
+                        <button
+                            key={`${image.url}-${index}`}
+                            type="button"
+                            onClick={() => onSelectImage(image.url)}
+                            aria-label={`View ${image.alt || productTitle}, image ${index + 1}`}
+                            aria-pressed={mainImage === image.url}
+                            className={`h-[84px] w-[100px] shrink-0 border bg-white p-2 transition-colors md:h-[90px] md:w-full md:max-w-[104px] ${
+                                mainImage === image.url
+                                    ? 'border-[#F58220]'
+                                    : 'border-[#D8D8D8] hover:border-[#1A1A1A]'
+                            }`}
+                        >
+                            <img
+                                src={image.url}
+                                alt={image.alt}
+                                className="h-full w-full object-contain"
+                                loading="lazy"
+                                decoding="async"
+                            />
+                        </button>
+                    ))}
+                </div>
+                {gallery.length > 0 && (
                     <button
                         type="button"
-                        className="hidden h-8 w-8 items-center justify-center md:flex"
-                        aria-label="Next thumbnails"
+                        onClick={() =>
+                            onSelectImage(gallery[activeIndex + 1].url)
+                        }
+                        disabled={
+                            activeIndex < 0 || activeIndex >= gallery.length - 1
+                        }
+                        className="flex h-11 w-11 shrink-0 items-center justify-center transition-colors hover:text-[#F58220] disabled:cursor-not-allowed disabled:text-[#CFCFCF]"
+                        aria-label="Next product image"
                     >
-                        <ChevronDown size={22} strokeWidth={1.8} />
+                        <ChevronDown
+                            className="-rotate-90 md:rotate-0"
+                            size={22}
+                            strokeWidth={1.8}
+                        />
                     </button>
                 )}
             </div>
@@ -817,37 +861,170 @@ function QuantityControl({
     );
 }
 
-function ServiceStrip({ isAvailable }: { isAvailable: boolean }) {
-    const items: Array<{ title: string; body: string; icon: IconType }> = [
+function ProductShoppingInformation() {
+    const [openSection, setOpenSection] = useState<string | null>(null);
+    const benefits = [
+        { title: 'Secure Shopping', icon: ShieldCheck },
+        { title: 'Careful Packaging', icon: PackageCheck },
+        { title: 'Customer Support', icon: Headphones },
+    ];
+    const shippingInformation = [
         {
-            title: isAvailable ? 'In Stock' : 'Out of Stock',
-            body: isAvailable
-                ? 'Ships within 24 hours'
-                : 'Choose another style',
-            icon: Home,
+            title: 'Shipping Information',
+            body: 'Shipping options and delivery costs are calculated during checkout.',
+            icon: Truck,
         },
-        { title: 'Pick Up In Store', body: 'Check availability', icon: Store },
-        { title: 'Notify Me', body: 'When back in stock', icon: Bell },
+        {
+            title: 'Order Processing',
+            body: 'Orders are prepared for shipment after payment confirmation.',
+            icon: Package,
+        },
+    ];
+    const sections = [
+        {
+            title: 'Product Care Guide',
+            content: [
+                'Clean the product gently using appropriate cleaning materials.',
+                'Avoid prolonged exposure to excessive moisture and direct heat.',
+                'Store in a clean, dry environment when not in use.',
+            ],
+        },
+        {
+            title: 'Shipping & Delivery',
+            content: [
+                'Shipping options are displayed during checkout.',
+                'Delivery costs depend on the destination and selected shipping service.',
+                'Order details can be reviewed before completing checkout.',
+            ],
+        },
+        {
+            title: 'Returns & Exchanges',
+            content:
+                'For questions about returns, exchanges, or order issues, please contact our customer support team.',
+        },
     ];
 
     return (
-        <div className="grid grid-cols-1 gap-4 border-b border-[#CFCFCF] py-4 sm:grid-cols-3">
-            {items.map((item) => {
-                const Icon = item.icon;
+        <section aria-label="Shopping information" className="mt-5 space-y-4">
+            <ul className="grid grid-cols-3 divide-x divide-[#E5E5E5] py-3">
+                {benefits.map(({ title, icon: Icon }) => (
+                    <li
+                        key={title}
+                        className="flex min-w-0 flex-col items-center gap-2 px-2 text-center"
+                    >
+                        <Icon
+                            aria-hidden="true"
+                            className="h-5 w-5 text-[#F58220]"
+                            strokeWidth={1.7}
+                        />
+                        <span className="text-xs leading-4 font-semibold">
+                            {title}
+                        </span>
+                    </li>
+                ))}
+            </ul>
 
-                return (
-                    <div key={item.title} className="flex items-start gap-3">
-                        <Icon className="mt-0.5 h-7 w-7" strokeWidth={1.7} />
-                        <div>
-                            <p className="text-sm font-black">{item.title}</p>
-                            <p className="mt-1 text-sm font-medium text-[#2E2E2E]">
-                                {item.body}
+            <section
+                aria-label="Shipping and order information"
+                className="divide-y divide-[#E5E5E5] rounded-lg border border-[#E5E5E5] bg-white"
+            >
+                {shippingInformation.map(({ title, body, icon: Icon }) => (
+                    <div key={title} className="flex items-start gap-3 p-4">
+                        <Icon
+                            aria-hidden="true"
+                            className="mt-0.5 h-5 w-5 shrink-0 text-[#F58220]"
+                            strokeWidth={1.7}
+                        />
+                        <div className="min-w-0">
+                            <h3 className="text-sm font-semibold">{title}</h3>
+                            <p className="mt-1 text-xs leading-5 text-[#707070]">
+                                {body}
                             </p>
                         </div>
                     </div>
-                );
-            })}
-        </div>
+                ))}
+            </section>
+
+            <section
+                aria-label="Product information"
+                className="border-t border-[#E5E5E5]"
+            >
+                {sections.map((item) => {
+                    const isOpen = openSection === item.title;
+
+                    return (
+                        <Collapsible
+                            key={item.title}
+                            open={isOpen}
+                            onOpenChange={(nextOpen) =>
+                                setOpenSection(nextOpen ? item.title : null)
+                            }
+                            className="border-b border-[#E5E5E5]"
+                        >
+                            <h3>
+                                <CollapsibleTrigger className="flex min-h-12 w-full items-center justify-between gap-3 py-4 text-left text-sm font-semibold transition-colors hover:text-[#707070] focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1A1A1A]">
+                                    {item.title}
+                                    {isOpen ? (
+                                        <Minus
+                                            aria-hidden="true"
+                                            className="h-4 w-4 shrink-0"
+                                        />
+                                    ) : (
+                                        <Plus
+                                            aria-hidden="true"
+                                            className="h-4 w-4 shrink-0"
+                                        />
+                                    )}
+                                </CollapsibleTrigger>
+                            </h3>
+                            <CollapsibleContent className="overflow-hidden duration-200 motion-safe:data-[state=closed]:animate-collapsible-up motion-safe:data-[state=open]:animate-collapsible-down">
+                                <div className="pb-4 text-xs leading-5 text-[#707070]">
+                                    {Array.isArray(item.content) ? (
+                                        <ul className="list-disc space-y-2 pl-4">
+                                            {item.content.map((text) => (
+                                                <li key={text}>{text}</li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p>{item.content}</p>
+                                    )}
+                                </div>
+                            </CollapsibleContent>
+                        </Collapsible>
+                    );
+                })}
+            </section>
+
+            <section
+                aria-label="Customer support"
+                className="rounded-lg border border-[#E5E5E5] bg-white p-4"
+            >
+                <div className="flex items-start gap-3">
+                    <MessageCircle
+                        aria-hidden="true"
+                        className="mt-0.5 h-5 w-5 shrink-0 text-[#F58220]"
+                        strokeWidth={1.7}
+                    />
+                    <div className="min-w-0">
+                        <h3 className="text-sm font-semibold">Need Help?</h3>
+                        <p className="mt-1 text-xs leading-5 text-[#707070]">
+                            Have questions about this product? Our team is here
+                            to help.
+                        </p>
+                        <Link
+                            href={contact.url()}
+                            className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-md border border-[#E5E5E5] bg-[#FAFAFA] px-3 text-xs font-semibold transition-colors hover:border-[#F58220] hover:bg-[#FFF7F0] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1A1A1A]"
+                        >
+                            Chat With Us
+                            <ArrowUpRight
+                                aria-hidden="true"
+                                className="h-4 w-4"
+                            />
+                        </Link>
+                    </div>
+                </div>
+            </section>
+        </section>
     );
 }
 
@@ -858,60 +1035,44 @@ function ProductSpecs({
     product: ProductDetail;
     productDescription: string | null;
 }) {
+    const description = productDescription?.trim();
+    const metadata = [
+        ['Product Line', product.product_line],
+        ['Style Name', product.style_name],
+    ].filter(([, value]) => value?.trim());
+
+    if (!description && metadata.length === 0) {
+        return null;
+    }
+
     return (
-        <section className="py-6">
-            <div>
-                <h2 className="text-base font-black uppercase">
+        <FadeInOnScroll className="lg:col-start-1 lg:row-start-2" delay={40}>
+            <section className="border-t border-[#E5E5E5] py-6 sm:py-8">
+                <h2 className="text-lg font-black uppercase sm:text-xl">
                     Product Description
                 </h2>
-                {productDescription && (
+                {description && (
                     <HTMLRender
-                        html={productDescription}
-                        className="mt-4 text-sm leading-6 font-medium text-[#2E2E2E] [&_a]:text-[#F58220] [&_h1]:text-lg [&_h2]:text-base [&_strong]:font-black [&_strong]:text-[#1A1A1A] [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5"
+                        html={description}
+                        className="mt-4 text-sm leading-7 font-medium break-words text-[#2E2E2E] sm:text-base [&_a]:text-[#F58220] [&_h1]:text-xl [&_h2]:text-lg [&_ol]:mt-3 [&_p+p]:mt-3 [&_strong]:font-black [&_strong]:text-[#1A1A1A] [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5"
                     />
                 )}
-                <dl className="mt-5 grid gap-2 text-sm font-medium text-[#2E2E2E] sm:grid-cols-2">
-                    {[
-                        ['Product Line', product.product_line],
-                        ['Style Name', product.style_name],
-                        [
-                            'Weight',
-                            product.weight === null
-                                ? null
-                                : `${product.weight} gram`,
-                        ],
-                        [
-                            'Length',
-                            product.dimensions.length === null
-                                ? null
-                                : `${product.dimensions.length} cm`,
-                        ],
-                        [
-                            'Width',
-                            product.dimensions.width === null
-                                ? null
-                                : `${product.dimensions.width} cm`,
-                        ],
-                        [
-                            'Height',
-                            product.dimensions.height === null
-                                ? null
-                                : `${product.dimensions.height} cm`,
-                        ],
-                    ].map(([label, value]) => (
-                        <div
-                            key={label}
-                            className="flex justify-between gap-4 border-b border-[#E5E5E5] py-2"
-                        >
-                            <dt className="font-black text-[#1A1A1A]">
-                                {label}
-                            </dt>
-                            <dd className="text-right">{value ?? '—'}</dd>
-                        </div>
-                    ))}
-                </dl>
-            </div>
-        </section>
+                {metadata.length > 0 && (
+                    <dl className="mt-6 grid gap-4 border-t border-[#E5E5E5] pt-5 sm:grid-cols-2 sm:gap-6">
+                        {metadata.map(([label, value]) => (
+                            <div key={label}>
+                                <dt className="text-xs font-bold tracking-wide text-[#707070] uppercase">
+                                    {label}
+                                </dt>
+                                <dd className="mt-1 text-sm font-bold break-words text-[#1A1A1A] sm:text-base">
+                                    {value}
+                                </dd>
+                            </div>
+                        ))}
+                    </dl>
+                )}
+            </section>
+        </FadeInOnScroll>
     );
 }
 

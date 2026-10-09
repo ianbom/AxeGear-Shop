@@ -28,6 +28,7 @@ use App\Http\Controllers\Admin\WishlistInsightController;
 use App\Http\Controllers\Customer\AddressController;
 use App\Http\Controllers\Customer\BiteshipAreaController;
 use App\Http\Controllers\BlogController;
+use App\Http\Controllers\ContactController;
 use App\Http\Controllers\GalleryController;
 use App\Http\Controllers\Customer\CartController;
 use App\Http\Controllers\Customer\CheckoutController;
@@ -49,7 +50,7 @@ Route::get('/gallery', GalleryController::class)->name('gallery');
 Route::inertia('/about', 'about/index')->name('about');
 Route::get('/blog', [BlogController::class, 'index'])->name('blog');
 Route::get('/blog/{slug}', [BlogController::class, 'show'])->name('blog.show');
-Route::inertia('/contact', 'contact/index')->name('contact');
+Route::get('/contact', ContactController::class)->name('contact');
 Route::get('/new-product', NewProductController::class)->name('new-product');
 
 Route::middleware('guest')->group(function () {
@@ -240,4 +241,3 @@ Route::middleware(['auth', 'admin', 'admin.activity'])->prefix('admin')->name('a
 // Route::post('/payments/midtrans/notification', MidtransWebhookController::class)->name('payments.midtrans.notification');
 
 require __DIR__.'/settings.php';
-

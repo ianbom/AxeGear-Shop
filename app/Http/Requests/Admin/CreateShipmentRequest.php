@@ -17,8 +17,9 @@ class CreateShipmentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'courier_company' => ['required', 'string', 'max:100'],
-            'courier_type' => ['required', 'string', 'max:100'],
+            'source' => ['nullable', 'string', 'in:order_detail'],
+            'courier_company' => ['required_unless:source,order_detail', 'string', 'max:100'],
+            'courier_type' => ['required_unless:source,order_detail', 'string', 'max:100'],
             'courier_service_name' => ['nullable', 'string', 'max:150'],
             'waybill_id' => ['nullable', 'string', 'max:150'],
             'estimated_delivery' => ['nullable', 'string', 'max:100'],

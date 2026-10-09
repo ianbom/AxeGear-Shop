@@ -50,6 +50,41 @@ it('includes existing cart quantity for each product detail variant', function (
             ->where('product.variants.0.cart_quantity', 5));
 });
 
+it('includes all product and active variant photos without duplicates', function () {
+    $product = createDetailProduct();
+    $expectedUrls = [];
+
+    for ($position = 0; $position < 7; $position++) {
+        $imageUrl = "/storage/product/photo-{$position}.jpg";
+        $expectedUrls[] = $imageUrl;
+        $product->images()->create([
+            'image_url' => $imageUrl,
+            'alt_text' => "Photo {$position}",
+            'sort_order' => $position,
+        ]);
+    }
+
+    $variantUrl = '/storage/product/variant-photo.jpg';
+    foreach ([$expectedUrls[0], $variantUrl, $variantUrl, '/storage/product/inactive-photo.jpg'] as $position => $imageUrl) {
+        $product->variants()->create([
+            'sku' => 'SKU-'.Str::upper(Str::random(8)),
+            'color_name' => "Color {$position}",
+            'stock' => 5,
+            'reserved_stock' => 0,
+            'image_url' => $imageUrl,
+            'is_active' => $position < 3,
+        ]);
+    }
+    $expectedUrls[] = $variantUrl;
+
+    $this->get(route('detail', ['product' => $product->slug]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('customer/products/detail-product')
+            ->has('product.images', 8)
+            ->where('product.images', fn ($images) => collect($images)->pluck('url')->all() === $expectedUrls));
+});
+
 /**
  * @param  array<string, mixed>  $overrides
  */

@@ -31,6 +31,10 @@ class ShipmentController extends Controller
         try {
             $shipment = $shipments->createFromOrder($request, $order);
 
+            if ($request->input('source') === 'order_detail') {
+                return redirect()->route('admin.orders.show', $order)->with('success', 'Order Biteship berhasil dibuat.');
+            }
+
             return redirect()->route('admin.shipments.show', $shipment)->with('success', 'Shipment berhasil dibuat.');
         } catch (ValidationException $exception) {
             throw $exception;
@@ -50,8 +54,14 @@ class ShipmentController extends Controller
 
     public function refreshTracking(Shipment $shipment, ShipmentManagementService $shipments): RedirectResponse
     {
-        $shipments->refreshTracking($shipment);
+        try {
+            $shipments->refreshTracking($shipment);
 
-        return back()->with('success', 'Tracking berhasil direfresh.');
+            return back()->with('success', 'Tracking berhasil direfresh.');
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (Throwable $exception) {
+            return back()->withErrors(['shipment' => $exception->getMessage()]);
+        }
     }
 }

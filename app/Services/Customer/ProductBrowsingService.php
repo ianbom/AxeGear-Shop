@@ -3,10 +3,10 @@
 namespace App\Services\Customer;
 
 use App\Models\Banner;
+use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\Collection;
 use App\Models\Page;
-use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -316,7 +316,7 @@ class ProductBrowsingService
             'price' => $this->option($request, 'price', ['all', 'under_410', '410_830', '830_1200', 'above_1200'], 'all'),
             'color' => (string) $request->query('color', ''),
             'size' => (string) $request->query('size', ''),
-            'sort' => $this->option($request, 'sort', ['featured', 'latest', 'name', 'price', 'best_seller'], 'featured'),
+            'sort' => $this->option($request, 'sort', ['featured', 'latest', 'name', 'price', 'best_seller'], 'latest'),
             'order' => $this->option($request, 'order', ['asc', 'desc'], 'desc'),
             'per_page' => min(max((int) $request->query('per_page', 12), 8), 32),
         ];
@@ -338,6 +338,8 @@ class ProductBrowsingService
             'best_seller' => $query->orderByDesc('is_best_seller')->orderByDesc('created_at'),
             default => $query->orderByDesc('is_featured')->orderByDesc('is_new_arrival')->orderByDesc('created_at'),
         };
+
+        $query->orderBy('id', $order);
     }
 
     private function filterOptions(): array
@@ -354,11 +356,14 @@ class ProductBrowsingService
                 ['value' => 'above_1200', 'label' => 'Rp 1.200.000 +'],
             ],
             'sorts' => [
-                ['value' => 'featured', 'label' => 'Featured'],
-                ['value' => 'latest', 'label' => 'Newest'],
-                ['value' => 'name', 'label' => 'Name'],
-                ['value' => 'price', 'label' => 'Price'],
-                ['value' => 'best_seller', 'label' => 'Best Seller'],
+                ['value' => 'latest', 'order' => 'desc', 'label' => 'Newest to Oldest'],
+                ['value' => 'latest', 'order' => 'asc', 'label' => 'Oldest to Newest'],
+                ['value' => 'name', 'order' => 'asc', 'label' => 'Name: A–Z'],
+                ['value' => 'name', 'order' => 'desc', 'label' => 'Name: Z–A'],
+                ['value' => 'price', 'order' => 'asc', 'label' => 'Price: Low to High'],
+                ['value' => 'price', 'order' => 'desc', 'label' => 'Price: High to Low'],
+                ['value' => 'featured', 'order' => 'desc', 'label' => 'Featured'],
+                ['value' => 'best_seller', 'order' => 'desc', 'label' => 'Best Seller'],
             ],
         ];
     }

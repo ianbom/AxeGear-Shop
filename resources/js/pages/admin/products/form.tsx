@@ -33,15 +33,135 @@ import {
     TrendingUp,
     LayoutGrid,
 } from 'lucide-react';
-import { useState, useEffect, useMemo } from 'react';
-import type { FormEvent, MouseEvent } from 'react';
+import { useState, useEffect, useMemo, useRef, useId } from 'react';
+import type { FormEvent } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogTitle,
+    DialogDescription,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { store, update } from '@/routes/admin/products';
 
 type Option = { id: number; name: string };
+const productFieldLabels: Record<string, string> = {
+    name: 'Nama produk',
+    slug: 'URL slug',
+    sku: 'SKU',
+    category_id: 'Kategori',
+    collection_ids: 'Koleksi',
+    brand_name: 'Merek',
+    product_line: 'Lini produk',
+    style_name: 'Nama model',
+    short_description: 'Deskripsi singkat',
+    description: 'Deskripsi',
+    regular_price: 'Harga normal',
+    sale_price: 'Harga diskon',
+    stock: 'Stok',
+    reserved_stock: 'Stok yang dicadangkan',
+    weight: 'Berat',
+    length: 'Panjang',
+    width: 'Lebar',
+    height: 'Tinggi',
+    status: 'Status produk',
+    images: 'Gambar produk',
+    image: 'Gambar',
+    image_url: 'Alamat gambar',
+    alt_text: 'Keterangan gambar',
+    sort_order: 'Urutan gambar',
+    is_primary: 'Gambar utama',
+    variants: 'Varian produk',
+    variant_name: 'Nama varian',
+    color_name: 'Nama warna',
+    color_hex: 'Kode warna',
+    size: 'Ukuran',
+    package_type: 'Jenis kemasan',
+    is_active: 'Status aktif',
+    is_featured: 'Produk unggulan',
+    is_new_arrival: 'Produk baru',
+    is_best_seller: 'Produk terlaris',
+    id: 'Data tersimpan',
+};
+
+function productErrorLabel(key: string, variants: ProductVariantRow[]): string {
+    const [group, position, field] = key.split('.');
+
+    if (group === 'variants' && /^\d+$/.test(position ?? '')) {
+        const index = Number(position);
+        const identity = variants[index]?.sku || variants[index]?.variant_name;
+
+        return (
+            'Varian ' +
+            (index + 1) +
+            (identity ? ' (' + identity + ')' : '') +
+            (field ? ' — ' + (productFieldLabels[field] ?? 'Data varian') : '')
+        );
+    }
+
+    if (group === 'images' && /^\d+$/.test(position ?? '')) {
+        return (
+            'Gambar ' +
+            (Number(position) + 1) +
+            (field ? ' — ' + (productFieldLabels[field] ?? 'Data gambar') : '')
+        );
+    }
+
+    return productFieldLabels[group] ?? 'Data produk';
+}
+
+function variantIndexesWithErrors(
+    errors: Record<string, string | undefined>,
+): number[] {
+    return [
+        ...new Set(
+            Object.keys(errors)
+                .filter((key) => errors[key])
+                .flatMap((key) => {
+                    const match = /^variants\.(\d+)(?:\.|$)/.exec(key);
+
+                    return match ? [Number(match[1])] : [];
+                }),
+        ),
+    ].sort((first, second) => first - second);
+}
+
+function focusProductField(key: string, root: ParentNode = document): void {
+    const target = Array.from(
+        root.querySelectorAll<HTMLElement>('[data-error-field]'),
+    )
+        .filter(
+            (element) =>
+                key === element.dataset.errorField ||
+                key.replace(/\.image_url$/, '.image') ===
+                    element.dataset.errorField ||
+                key.startsWith(element.dataset.errorField + '.'),
+        )
+        .sort(
+            (first, second) =>
+                (second.dataset.errorField?.length ?? 0) -
+                (first.dataset.errorField?.length ?? 0),
+        )[0];
+
+    if (!target) {
+        return;
+    }
+
+    const control = target.querySelector<HTMLElement>(
+        'input:not([type="hidden"]), textarea, select, [contenteditable="true"], button',
+    );
+    (control ?? target).focus({ preventScroll: true });
+
+    if (control && document.activeElement !== control) {
+        target.focus({ preventScroll: true });
+    }
+
+    target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
 type ProductImagePayload = {
     id?: number;
     image_url: string | null;
@@ -155,14 +275,20 @@ function SectionCard({
     description,
     children,
     icon,
+    field,
 }: {
     title: string;
     description?: string;
     children: React.ReactNode;
     icon?: React.ReactNode;
+    field?: string;
 }) {
     return (
-        <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+        <div
+            data-error-field={field}
+            tabIndex={field ? -1 : undefined}
+            className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm"
+        >
             <div className="flex items-start gap-3 border-b border-zinc-100 px-6 py-4">
                 {icon && (
                     <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-zinc-100 bg-zinc-50">
@@ -201,7 +327,9 @@ function FieldRow({
         4: 'grid-cols-2 sm:grid-cols-4',
     }[cols];
 
-    return <div className={`grid ${gridClass} gap-4 ${className}`}>{children}</div>;
+    return (
+        <div className={`grid ${gridClass} gap-4 ${className}`}>{children}</div>
+    );
 }
 
 function FieldGroup({
@@ -209,6 +337,7 @@ function FieldGroup({
     hint,
     required,
     error,
+    field,
     children,
     charCount,
     maxChar,
@@ -217,12 +346,64 @@ function FieldGroup({
     hint?: string;
     required?: boolean;
     error?: string;
+    field?: string;
     children: React.ReactNode;
     charCount?: number;
     maxChar?: number;
 }) {
+    const groupRef = useRef<HTMLDivElement>(null);
+    const errorId = useId();
+    useEffect(() => {
+        const control = groupRef.current?.querySelector<HTMLElement>(
+            'input:not([type="hidden"]), textarea, select, [contenteditable="true"], button',
+        );
+
+        if (!control) {
+            return;
+        }
+
+        control.id ||= errorId + '-input';
+        const label = groupRef.current?.querySelector('label');
+
+        if (label) {
+            label.htmlFor = control.id;
+        }
+
+        control.setAttribute('aria-invalid', String(Boolean(error)));
+        const descriptions = new Set(
+            (control.getAttribute('aria-describedby') ?? '')
+                .split(' ')
+                .filter(Boolean),
+        );
+
+        if (error) {
+            descriptions.add(errorId);
+        } else {
+            descriptions.delete(errorId);
+        }
+
+        if (descriptions.size) {
+            control.setAttribute(
+                'aria-describedby',
+                [...descriptions].join(' '),
+            );
+        } else {
+            control.removeAttribute('aria-describedby');
+        }
+    }, [error, errorId, children]);
+
     return (
-        <div className="space-y-1.5">
+        <div
+            ref={groupRef}
+            data-error-field={field}
+            tabIndex={-1}
+            className={
+                'space-y-1.5 ' +
+                (error
+                    ? 'rounded-md ring-1 ring-red-500 ring-offset-4 [&_input]:border-red-500 [&_select]:border-red-500 [&_textarea]:border-red-500'
+                    : '')
+            }
+        >
             <div className="flex items-center justify-between">
                 <Label className="text-xs font-medium text-zinc-700">
                     {label}
@@ -238,7 +419,11 @@ function FieldGroup({
             </div>
             {children}
             {error && (
-                <p className="flex items-center gap-1 text-[11px] text-red-500">
+                <p
+                    id={errorId}
+                    role="alert"
+                    className="flex items-center gap-1 text-[11px] text-red-600"
+                >
                     <AlertTriangle className="h-3 w-3" />
                     {error}
                 </p>
@@ -525,6 +710,15 @@ export default function ProductForm({ mode, product, options }: Props) {
         ),
     );
     const [variantModalOpen, setVariantModalOpen] = useState(false);
+    const [requestedField, setRequestedField] = useState<string | null>(null);
+    const variantModalRef = useRef<HTMLDivElement>(null);
+    const returnFocusRef = useRef<HTMLElement | null>(null);
+    const invalidVariantIndexes = variantIndexesWithErrors(
+        errors as Record<string, string>,
+    );
+    const errorEntries = Object.entries(
+        errors as Record<string, string>,
+    ).filter(([, message]) => Boolean(message));
     const [editingVariantIndex, setEditingVariantIndex] = useState<
         number | null
     >(null);
@@ -576,7 +770,16 @@ export default function ProductForm({ mode, product, options }: Props) {
         setData('variants', next);
     };
 
-    const openVariantModal = (index: number | null = null) => {
+    const openVariantModal = (
+        index: number | null = null,
+        field: string | null = null,
+    ) => {
+        if (!variantModalOpen) {
+            returnFocusRef.current =
+                document.activeElement as HTMLElement | null;
+        }
+
+        setRequestedField(field);
         setEditingVariantIndex(index);
         const draft =
             index === null ? blankVariant() : { ...data.variants[index] };
@@ -597,12 +800,13 @@ export default function ProductForm({ mode, product, options }: Props) {
         }
 
         setVariantModalOpen(false);
+        setRequestedField(null);
         setEditingVariantIndex(null);
         setVariantDraft(blankVariant());
         setVariantDraftPreview(null);
     };
 
-    const saveVariantDraft = () => {
+    const saveVariantDraft = (close = true) => {
         const draft = { ...variantDraft };
 
         if (editingVariantIndex === null) {
@@ -626,7 +830,12 @@ export default function ProductForm({ mode, product, options }: Props) {
             setVariantPreviews(nextPreviews);
         }
 
+        if (!close) {
+            return;
+        }
+
         setVariantModalOpen(false);
+        setRequestedField(null);
         setEditingVariantIndex(null);
         setVariantDraft(blankVariant());
         setVariantDraftPreview(null);
@@ -642,18 +851,87 @@ export default function ProductForm({ mode, product, options }: Props) {
         );
     };
 
+    const variantError = (field: string) =>
+        editingVariantIndex === null
+            ? undefined
+            : fieldError('variants.' + editingVariantIndex + '.' + field);
+    const variantField = (field: string) =>
+        'variants.' + (editingVariantIndex ?? 'new') + '.' + field;
+    const focusValidationError = (key: string) => {
+        if (key === 'variants' || key.startsWith('variants.')) {
+            const match = /^variants\.(\d+)/.exec(key);
+            const candidate = match
+                ? Number(match[1])
+                : (invalidVariantIndexes[0] ?? 0);
+            openVariantModal(
+                data.variants[candidate]
+                    ? candidate
+                    : data.variants.length
+                      ? 0
+                      : null,
+                key,
+            );
+
+            return;
+        }
+
+        setRequestedField(key);
+        focusProductField(key);
+    };
+    const onValidationError = (validationErrors: Record<string, string>) => {
+        const firstVariantIndex = variantIndexesWithErrors(
+            validationErrors,
+        ).find((index) => data.variants[index]);
+        const keys = Object.keys(validationErrors);
+        const key =
+            firstVariantIndex !== undefined
+                ? keys.find((field) =>
+                      field.startsWith('variants.' + firstVariantIndex + '.'),
+                  )
+                : keys.find(
+                      (field) =>
+                          field === 'variants' || field.startsWith('variants.'),
+                  );
+        const target = key ?? keys[0];
+
+        if (target === 'variants') {
+            openVariantModal(data.variants.length ? 0 : null, target);
+        } else if (target) {
+            focusValidationError(target);
+        }
+    };
+    useEffect(() => {
+        if (!requestedField) {
+            return;
+        }
+
+        const frame = requestAnimationFrame(() => {
+            focusProductField(
+                requestedField,
+                variantModalOpen
+                    ? (variantModalRef.current ?? document)
+                    : document,
+            );
+        });
+
+        return () => cancelAnimationFrame(frame);
+    }, [requestedField, variantModalOpen, editingVariantIndex, errors]);
+
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
         if (isEdit) {
             transform((data) => ({ ...data, _method: 'put' }));
-            post(`/admin/products/${product.id}`, { forceFormData: true });
+            post(update.url(product.id), {
+                forceFormData: true,
+                onError: onValidationError,
+            });
 
             return;
         }
 
         transform((data) => data);
-        post('/admin/products', { forceFormData: true });
+        post(store.url(), { forceFormData: true, onError: onValidationError });
     };
 
     const variantsCount = data.variants.filter((v) => v.sku).length;
@@ -729,6 +1007,35 @@ export default function ProductForm({ mode, product, options }: Props) {
                 </div>
 
                 <form onSubmit={submit}>
+                    {errorEntries.length > 0 && (
+                        <div
+                            role="alert"
+                            className="mb-6 rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800"
+                        >
+                            <p className="font-semibold">
+                                Produk belum tersimpan. Perbaiki bagian berikut.
+                            </p>
+                            <ul className="mt-2 list-disc space-y-1 pl-5">
+                                {errorEntries.map(([key, message]) => (
+                                    <li key={key}>
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                focusValidationError(key)
+                                            }
+                                            className="text-left underline underline-offset-2"
+                                        >
+                                            {productErrorLabel(
+                                                key,
+                                                data.variants,
+                                            )}
+                                            : {message}
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                     <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8">
                         <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[1fr_320px]">
                             {/* ── Main Column ── */}
@@ -744,6 +1051,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                     <div className="space-y-4">
                                         <FieldRow cols={2}>
                                             <FieldGroup
+                                                field="name"
                                                 label="Product Name"
                                                 required
                                                 error={errors.name}
@@ -771,6 +1079,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                 />
                                             </FieldGroup>
                                             <FieldGroup
+                                                field="sku"
                                                 label="SKU"
                                                 required
                                                 error={errors.sku}
@@ -791,6 +1100,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                         </FieldRow>
 
                                         <FieldGroup
+                                            field="slug"
                                             label="URL Slug"
                                             required
                                             error={errors.slug}
@@ -829,6 +1139,7 @@ export default function ProductForm({ mode, product, options }: Props) {
 
                                         <FieldRow cols={2}>
                                             <FieldGroup
+                                                field="category_id"
                                                 label="Category"
                                                 error={errors.category_id}
                                             >
@@ -858,34 +1169,89 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                 </select>
                                             </FieldGroup>
                                             <FieldGroup
+                                                field="collection_ids"
                                                 label="Collections"
-                                                error={errors.collection_ids || (errors as any)['collection_ids.0']}
+                                                error={errorEntries
+                                                    .filter(
+                                                        ([key]) =>
+                                                            key ===
+                                                                'collection_ids' ||
+                                                            key.startsWith(
+                                                                'collection_ids.',
+                                                            ),
+                                                    )
+                                                    .map(
+                                                        ([, message]) =>
+                                                            message,
+                                                    )
+                                                    .join(' ')}
                                             >
                                                 <div className="grid max-h-48 grid-cols-2 gap-2 overflow-y-auto rounded-md border border-zinc-200 bg-white p-3">
-                                                    {options.collections.length === 0 ? (
-                                                        <span className="col-span-2 text-sm text-zinc-400">No collections available</span>
+                                                    {options.collections
+                                                        .length === 0 ? (
+                                                        <span className="col-span-2 text-sm text-zinc-400">
+                                                            No collections
+                                                            available
+                                                        </span>
                                                     ) : (
-                                                        options.collections.map((c) => {
-                                                            const isChecked = data.collection_ids.includes(c.id);
+                                                        options.collections.map(
+                                                            (c) => {
+                                                                const isChecked =
+                                                                    data.collection_ids.includes(
+                                                                        c.id,
+                                                                    );
 
-                                                            return (
-                                                                <label key={c.id} className="flex items-center gap-2 rounded-md border border-zinc-100 p-2 hover:bg-zinc-50 cursor-pointer">
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={isChecked}
-                                                                        onChange={(e) => {
-                                                                            if (e.target.checked) {
-                                                                                setData('collection_ids', [...data.collection_ids, c.id]);
-                                                                            } else {
-                                                                                setData('collection_ids', data.collection_ids.filter(id => id !== c.id));
+                                                                return (
+                                                                    <label
+                                                                        key={
+                                                                            c.id
+                                                                        }
+                                                                        className="flex cursor-pointer items-center gap-2 rounded-md border border-zinc-100 p-2 hover:bg-zinc-50"
+                                                                    >
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={
+                                                                                isChecked
                                                                             }
-                                                                        }}
-                                                                        className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-[#151515]"
-                                                                    />
-                                                                    <span className="text-sm text-zinc-700">{c.name}</span>
-                                                                </label>
-                                                            );
-                                                        })
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) => {
+                                                                                if (
+                                                                                    e
+                                                                                        .target
+                                                                                        .checked
+                                                                                ) {
+                                                                                    setData(
+                                                                                        'collection_ids',
+                                                                                        [
+                                                                                            ...data.collection_ids,
+                                                                                            c.id,
+                                                                                        ],
+                                                                                    );
+                                                                                } else {
+                                                                                    setData(
+                                                                                        'collection_ids',
+                                                                                        data.collection_ids.filter(
+                                                                                            (
+                                                                                                id,
+                                                                                            ) =>
+                                                                                                id !==
+                                                                                                c.id,
+                                                                                        ),
+                                                                                    );
+                                                                                }
+                                                                            }}
+                                                                            className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-[#151515]"
+                                                                        />
+                                                                        <span className="text-sm text-zinc-700">
+                                                                            {
+                                                                                c.name
+                                                                            }
+                                                                        </span>
+                                                                    </label>
+                                                                );
+                                                            },
+                                                        )
                                                     )}
                                                 </div>
                                             </FieldGroup>
@@ -893,6 +1259,7 @@ export default function ProductForm({ mode, product, options }: Props) {
 
                                         <FieldRow cols={3}>
                                             <FieldGroup
+                                                field="brand_name"
                                                 label="Brand"
                                                 error={errors.brand_name}
                                             >
@@ -909,6 +1276,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                 />
                                             </FieldGroup>
                                             <FieldGroup
+                                                field="product_line"
                                                 label="Product Line"
                                                 error={errors.product_line}
                                             >
@@ -925,6 +1293,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                 />
                                             </FieldGroup>
                                             <FieldGroup
+                                                field="style_name"
                                                 label="Style Name"
                                                 error={errors.style_name}
                                             >
@@ -943,6 +1312,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                         </FieldRow>
 
                                         <FieldGroup
+                                            field="short_description"
                                             label="Short Description"
                                             required
                                             error={errors.short_description}
@@ -959,12 +1329,13 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                         e.target.value,
                                                     )
                                                 }
-                                        placeholder="Lightweight hydropack for trail rides and daily adventures"
+                                                placeholder="Lightweight hydropack for trail rides and daily adventures"
                                                 className="h-9 border-zinc-200 text-sm focus:border-[#151515] focus:ring-[#151515]"
                                             />
                                         </FieldGroup>
 
                                         <FieldGroup
+                                            field="description"
                                             label="Description"
                                             required
                                             error={errors.description}
@@ -994,6 +1365,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                                         <div className="space-y-4">
                                             <FieldGroup
+                                                field="regular_price"
                                                 label="Regular Price (IDR)"
                                                 required
                                                 error={errors.regular_price}
@@ -1013,6 +1385,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                 />
                                             </FieldGroup>
                                             <FieldGroup
+                                                field="sale_price"
                                                 label="Sale Price (IDR)"
                                                 error={errors.sale_price}
                                                 hint="Must be lower than or equal to regular price"
@@ -1120,6 +1493,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                 >
                                     <FieldRow cols={4}>
                                         <FieldGroup
+                                            field="weight"
                                             label="Weight (g)"
                                             required
                                             error={errors.weight}
@@ -1139,6 +1513,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                             />
                                         </FieldGroup>
                                         <FieldGroup
+                                            field="length"
                                             label="Length (cm)"
                                             required
                                             error={errors.length}
@@ -1158,6 +1533,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                             />
                                         </FieldGroup>
                                         <FieldGroup
+                                            field="width"
                                             label="Width (cm)"
                                             required
                                             error={errors.width}
@@ -1177,6 +1553,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                             />
                                         </FieldGroup>
                                         <FieldGroup
+                                            field="height"
                                             label="Height (cm)"
                                             required
                                             error={errors.height}
@@ -1200,6 +1577,7 @@ export default function ProductForm({ mode, product, options }: Props) {
 
                                 {/* 5. Product Images */}
                                 <SectionCard
+                                    field="images"
                                     title="Product Images"
                                     description="Upload high-quality product photos (recommended: 800×1067px)"
                                     icon={
@@ -1209,8 +1587,20 @@ export default function ProductForm({ mode, product, options }: Props) {
                                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                                         {data.images.map((image, index) => (
                                             <div
+                                                data-error-field={
+                                                    'images.' + index
+                                                }
+                                                tabIndex={-1}
+                                                data-invalid={errorEntries.some(
+                                                    ([key]) =>
+                                                        key.startsWith(
+                                                            'images.' +
+                                                                index +
+                                                                '.',
+                                                        ),
+                                                )}
                                                 key={index}
-                                                className={`group relative overflow-hidden rounded-lg border-2 transition-all ${
+                                                className={`group relative overflow-hidden rounded-lg border-2 transition-all data-[invalid=true]:border-red-500 ${
                                                     image.is_primary
                                                         ? 'border-[#151515] ring-2 ring-[#151515]/20'
                                                         : 'border-zinc-200 hover:border-zinc-300'
@@ -1237,6 +1627,42 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                         </div>
                                                     )}
                                                     <input
+                                                        data-error-field={
+                                                            'images.' +
+                                                            index +
+                                                            '.image'
+                                                        }
+                                                        aria-invalid={Boolean(
+                                                            fieldError(
+                                                                'images.' +
+                                                                    index +
+                                                                    '.image',
+                                                            ) ||
+                                                            fieldError(
+                                                                'images.' +
+                                                                    index +
+                                                                    '.image_url',
+                                                            ),
+                                                        )}
+                                                        aria-describedby={
+                                                            fieldError(
+                                                                'images.' +
+                                                                    index +
+                                                                    '.image',
+                                                            )
+                                                                ? 'image-' +
+                                                                  index +
+                                                                  '-image-error'
+                                                                : fieldError(
+                                                                        'images.' +
+                                                                            index +
+                                                                            '.image_url',
+                                                                    )
+                                                                  ? 'image-' +
+                                                                    index +
+                                                                    '-image_url-error'
+                                                                  : undefined
+                                                        }
                                                         type="file"
                                                         accept="image/*"
                                                         className="absolute inset-0 cursor-pointer opacity-0"
@@ -1328,6 +1754,29 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                 {/* Controls */}
                                                 <div className="space-y-1 border-t border-zinc-100 bg-white px-2 py-1.5">
                                                     <input
+                                                        data-error-field={
+                                                            'images.' +
+                                                            index +
+                                                            '.alt_text'
+                                                        }
+                                                        aria-invalid={Boolean(
+                                                            fieldError(
+                                                                'images.' +
+                                                                    index +
+                                                                    '.alt_text',
+                                                            ),
+                                                        )}
+                                                        aria-describedby={
+                                                            fieldError(
+                                                                'images.' +
+                                                                    index +
+                                                                    '.alt_text',
+                                                            )
+                                                                ? 'image-' +
+                                                                  index +
+                                                                  '-alt_text-error'
+                                                                : undefined
+                                                        }
                                                         type="text"
                                                         value={image.alt_text}
                                                         onChange={(e) =>
@@ -1343,6 +1792,29 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                     <div className="flex items-center justify-between">
                                                         <label className="flex cursor-pointer items-center gap-1">
                                                             <input
+                                                                data-error-field={
+                                                                    'images.' +
+                                                                    index +
+                                                                    '.is_primary'
+                                                                }
+                                                                aria-invalid={Boolean(
+                                                                    fieldError(
+                                                                        'images.' +
+                                                                            index +
+                                                                            '.is_primary',
+                                                                    ),
+                                                                )}
+                                                                aria-describedby={
+                                                                    fieldError(
+                                                                        'images.' +
+                                                                            index +
+                                                                            '.is_primary',
+                                                                    )
+                                                                        ? 'image-' +
+                                                                          index +
+                                                                          '-is_primary-error'
+                                                                        : undefined
+                                                                }
                                                                 type="radio"
                                                                 checked={
                                                                     image.is_primary
@@ -1363,6 +1835,29 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                                 Order:
                                                             </span>
                                                             <input
+                                                                data-error-field={
+                                                                    'images.' +
+                                                                    index +
+                                                                    '.sort_order'
+                                                                }
+                                                                aria-invalid={Boolean(
+                                                                    fieldError(
+                                                                        'images.' +
+                                                                            index +
+                                                                            '.sort_order',
+                                                                    ),
+                                                                )}
+                                                                aria-describedby={
+                                                                    fieldError(
+                                                                        'images.' +
+                                                                            index +
+                                                                            '.sort_order',
+                                                                    )
+                                                                        ? 'image-' +
+                                                                          index +
+                                                                          '-sort_order-error'
+                                                                        : undefined
+                                                                }
                                                                 type="number"
                                                                 value={
                                                                     image.sort_order
@@ -1383,6 +1878,36 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                         </div>
                                                     </div>
                                                 </div>
+                                                {errorEntries
+                                                    .filter(([key]) =>
+                                                        key.startsWith(
+                                                            'images.' +
+                                                                index +
+                                                                '.',
+                                                        ),
+                                                    )
+                                                    .map(([key, message]) => (
+                                                        <p
+                                                            key={key}
+                                                            id={
+                                                                'image-' +
+                                                                index +
+                                                                '-' +
+                                                                key
+                                                                    .split('.')
+                                                                    .at(-1) +
+                                                                '-error'
+                                                            }
+                                                            role="alert"
+                                                            className="px-2 py-1 text-xs text-red-600"
+                                                        >
+                                                            {productErrorLabel(
+                                                                key,
+                                                                data.variants,
+                                                            )}
+                                                            : {message}
+                                                        </p>
+                                                    ))}
                                             </div>
                                         ))}
 
@@ -1417,6 +1942,7 @@ export default function ProductForm({ mode, product, options }: Props) {
 
                                 {/* 6. Product Variants */}
                                 <SectionCard
+                                    field="variants"
                                     title="Product Variants"
                                     description="Add size/color combinations with individual stock and pricing"
                                     icon={
@@ -1462,8 +1988,11 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                     {data.variants.map(
                                                         (variant, index) => (
                                                             <tr
+                                                                aria-invalid={invalidVariantIndexes.includes(
+                                                                    index,
+                                                                )}
                                                                 key={index}
-                                                                className="group transition-colors hover:bg-zinc-50/60"
+                                                                className="group transition-colors hover:bg-zinc-50/60 aria-[invalid=true]:bg-red-50"
                                                             >
                                                                 <td className="px-3 py-2 text-center">
                                                                     <GripVertical className="h-3.5 w-3.5 cursor-grab text-zinc-300" />
@@ -1521,7 +2050,9 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                                         variant.sale_price ||
                                                                             variant.regular_price ||
                                                                             0,
-                                                                    ).toLocaleString('id-ID')}
+                                                                    ).toLocaleString(
+                                                                        'id-ID',
+                                                                    )}
                                                                 </td>
                                                                 <td className="px-3 py-2 text-right font-mono text-zinc-700">
                                                                     {
@@ -1659,7 +2190,6 @@ export default function ProductForm({ mode, product, options }: Props) {
                                     )}
                                 </SectionCard>
 
-
                                 {/* Form Actions (bottom) */}
                                 <div className="flex items-center justify-between pt-2 pb-8">
                                     <Button
@@ -1749,6 +2279,15 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                 </span>
                                             </Label>
                                             <select
+                                                data-error-field="status"
+                                                aria-invalid={Boolean(
+                                                    errors.status,
+                                                )}
+                                                aria-describedby={
+                                                    errors.status
+                                                        ? 'product-status-error'
+                                                        : undefined
+                                                }
                                                 value={data.status}
                                                 onChange={(e) =>
                                                     setData(
@@ -1768,12 +2307,20 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                 ))}
                                             </select>
                                             {errors.status && (
+                                                <p
+                                                    id="product-status-error"
+                                                    role="alert"
+                                                    className="text-xs text-red-600"
+                                                >
+                                                    {errors.status}
+                                                </p>
+                                            )}
+                                            {errors.status && (
                                                 <p className="text-[11px] text-red-500">
                                                     {errors.status}
                                                 </p>
                                             )}
                                         </div>
-
 
                                         <div className="space-y-1.5 rounded-lg border border-zinc-100 bg-zinc-50 p-3 text-[11px] text-zinc-500">
                                             <p>
@@ -1810,6 +2357,12 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                     </Label>
                                                 </div>
                                                 <Switch
+                                                    data-error-field="is_featured"
+                                                    aria-invalid={Boolean(
+                                                        fieldError(
+                                                            'is_featured',
+                                                        ),
+                                                    )}
                                                     id="is_featured"
                                                     checked={data.is_featured}
                                                     onCheckedChange={(v) =>
@@ -1820,6 +2373,16 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                     }
                                                     className="scale-90 data-[state=checked]:bg-primary"
                                                 />
+                                                {fieldError('is_featured') && (
+                                                    <p
+                                                        role="alert"
+                                                        className="text-xs text-red-600"
+                                                    >
+                                                        {fieldError(
+                                                            'is_featured',
+                                                        )}
+                                                    </p>
+                                                )}
                                             </div>
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
@@ -1834,6 +2397,12 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                     </Label>
                                                 </div>
                                                 <Switch
+                                                    data-error-field="is_new_arrival"
+                                                    aria-invalid={Boolean(
+                                                        fieldError(
+                                                            'is_new_arrival',
+                                                        ),
+                                                    )}
                                                     id="is_new_arrival"
                                                     checked={
                                                         data.is_new_arrival
@@ -1846,6 +2415,18 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                     }
                                                     className="scale-90 data-[state=checked]:bg-primary"
                                                 />
+                                                {fieldError(
+                                                    'is_new_arrival',
+                                                ) && (
+                                                    <p
+                                                        role="alert"
+                                                        className="text-xs text-red-600"
+                                                    >
+                                                        {fieldError(
+                                                            'is_new_arrival',
+                                                        )}
+                                                    </p>
+                                                )}
                                             </div>
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
@@ -1860,6 +2441,12 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                     </Label>
                                                 </div>
                                                 <Switch
+                                                    data-error-field="is_best_seller"
+                                                    aria-invalid={Boolean(
+                                                        fieldError(
+                                                            'is_best_seller',
+                                                        ),
+                                                    )}
                                                     id="is_best_seller"
                                                     checked={
                                                         data.is_best_seller
@@ -1872,6 +2459,18 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                     }
                                                     className="scale-90 data-[state=checked]:bg-primary"
                                                 />
+                                                {fieldError(
+                                                    'is_best_seller',
+                                                ) && (
+                                                    <p
+                                                        role="alert"
+                                                        className="text-xs text-red-600"
+                                                    >
+                                                        {fieldError(
+                                                            'is_best_seller',
+                                                        )}
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -1996,12 +2595,20 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                     <Layers className="h-3.5 w-3.5" />
                                                 ),
                                                 label: 'Collections',
-                                                value: data.collection_ids?.length > 0
-                                                    ? options.collections
-                                                        .filter(c => data.collection_ids.includes(c.id))
-                                                        .map(c => c.name)
-                                                        .join(', ')
-                                                    : '—',
+                                                value:
+                                                    data.collection_ids
+                                                        ?.length > 0
+                                                        ? options.collections
+                                                              .filter((c) =>
+                                                                  data.collection_ids.includes(
+                                                                      c.id,
+                                                                  ),
+                                                              )
+                                                              .map(
+                                                                  (c) => c.name,
+                                                              )
+                                                              .join(', ')
+                                                        : '—',
                                             },
                                             {
                                                 icon: (
@@ -2080,40 +2687,138 @@ export default function ProductForm({ mode, product, options }: Props) {
                 </form>
             </div>
 
-            {variantModalOpen && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
-                    onMouseDown={(event: MouseEvent<HTMLDivElement>) => {
-                        if (event.target === event.currentTarget) {
-                            closeVariantModal();
+            <Dialog
+                open={variantModalOpen}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        closeVariantModal();
+                    }
+                }}
+            >
+                <DialogContent
+                    ref={variantModalRef}
+                    onOpenAutoFocus={(event) => {
+                        if (requestedField) {
+                            event.preventDefault();
                         }
                     }}
+                    onCloseAutoFocus={(event) => {
+                        event.preventDefault();
+                        returnFocusRef.current?.focus();
+                    }}
+                    className="flex max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-6xl flex-col gap-0 overflow-hidden rounded-xl border border-zinc-200 bg-white p-0 shadow-2xl sm:max-w-6xl [&>button]:hidden"
                 >
-                    <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-6xl flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-2xl">
-                        <div className="flex items-start justify-between gap-4 border-b border-zinc-100 px-6 py-4">
-                            <div>
-                                <h2 className="text-sm font-semibold text-zinc-900">
-                                    {editingVariantIndex === null
-                                        ? 'Add Variant'
-                                        : 'Edit Variant'}
-                                </h2>
-                                <p className="mt-0.5 text-xs text-zinc-500">
-                                    Input size, color, stock, price, and image
-                                    file.
-                                </p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={closeVariantModal}
-                                className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
-                            >
-                                <X className="h-4 w-4" />
-                            </button>
+                    <div className="flex items-start justify-between gap-4 border-b border-zinc-100 px-6 py-4">
+                        <div>
+                            <DialogTitle className="text-sm font-semibold text-zinc-900">
+                                {editingVariantIndex === null
+                                    ? 'Add Variant'
+                                    : 'Edit Variant — Varian ' +
+                                      (editingVariantIndex + 1)}
+                            </DialogTitle>
+                            <DialogDescription className="mt-0.5 text-xs text-zinc-500">
+                                Input size, color, stock, price, and image file.
+                            </DialogDescription>
                         </div>
+                        <button
+                            type="button"
+                            onClick={closeVariantModal}
+                            aria-label="Tutup modal varian"
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    </div>
 
-                        <div className="grid max-h-[calc(100vh-11rem)] grid-cols-1 gap-4 overflow-y-auto px-6 py-5 lg:grid-cols-[340px_minmax(0,1fr)] lg:gap-x-6">
+                    <div className="min-h-0 flex-1 overflow-y-auto">
+                        {(fieldError('variants') ||
+                            invalidVariantIndexes.includes(
+                                editingVariantIndex ?? -1,
+                            )) && (
+                            <div
+                                data-error-field="variants"
+                                tabIndex={-1}
+                                className="shrink-0 border-b border-red-200 bg-red-50 px-6 py-3 text-sm text-red-800"
+                            >
+                                {fieldError('variants') && (
+                                    <p>{fieldError('variants')}</p>
+                                )}
+                                <ul className="mt-1 list-disc pl-5">
+                                    {errorEntries
+                                        .filter(([key]) =>
+                                            key.startsWith(
+                                                'variants.' +
+                                                    editingVariantIndex +
+                                                    '.',
+                                            ),
+                                        )
+                                        .map(([key, message]) => (
+                                            <li key={key}>
+                                                <button
+                                                    type="button"
+                                                    className="text-left underline"
+                                                    onClick={() =>
+                                                        focusProductField(
+                                                            key,
+                                                            variantModalRef.current ??
+                                                                document,
+                                                        )
+                                                    }
+                                                >
+                                                    {productErrorLabel(
+                                                        key,
+                                                        data.variants,
+                                                    )}
+                                                    : {message}
+                                                </button>
+                                            </li>
+                                        ))}
+                                </ul>
+                                {invalidVariantIndexes.length > 1 && (
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                        {invalidVariantIndexes
+                                            .filter(
+                                                (index) => data.variants[index],
+                                            )
+                                            .map((index) => (
+                                                <button
+                                                    key={index}
+                                                    type="button"
+                                                    disabled={
+                                                        index ===
+                                                        editingVariantIndex
+                                                    }
+                                                    className="rounded border border-red-300 px-2 py-1 disabled:bg-red-100"
+                                                    onClick={() => {
+                                                        saveVariantDraft(false);
+                                                        openVariantModal(
+                                                            index,
+                                                            errorEntries.find(
+                                                                ([key]) =>
+                                                                    key.startsWith(
+                                                                        'variants.' +
+                                                                            index +
+                                                                            '.',
+                                                                    ),
+                                                            )?.[0] ?? null,
+                                                        );
+                                                    }}
+                                                >
+                                                    Varian {index + 1}
+                                                </button>
+                                            ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        <div className="grid grid-cols-1 gap-4 px-6 py-5 lg:grid-cols-[340px_minmax(0,1fr)] lg:gap-x-6">
                             <FieldRow className="lg:col-start-2">
-                                <FieldGroup label="Variant SKU" required>
+                                <FieldGroup
+                                    field={variantField('sku')}
+                                    error={variantError('sku')}
+                                    label="Variant SKU"
+                                    required
+                                >
                                     <Input
                                         value={variantDraft.sku}
                                         onChange={(e) =>
@@ -2129,7 +2834,11 @@ export default function ProductForm({ mode, product, options }: Props) {
                             </FieldRow>
 
                             <FieldRow cols={3} className="lg:col-start-2">
-                                <FieldGroup label="Variant Name">
+                                <FieldGroup
+                                    field={variantField('variant_name')}
+                                    error={variantError('variant_name')}
+                                    label="Variant Name"
+                                >
                                     <Input
                                         value={variantDraft.variant_name}
                                         onChange={(e) =>
@@ -2142,7 +2851,11 @@ export default function ProductForm({ mode, product, options }: Props) {
                                         className="h-9 border-zinc-200 text-sm focus:border-[#151515] focus:ring-[#151515]"
                                     />
                                 </FieldGroup>
-                                <FieldGroup label="Size">
+                                <FieldGroup
+                                    field={variantField('size')}
+                                    error={variantError('size')}
+                                    label="Size"
+                                >
                                     <Input
                                         value={variantDraft.size}
                                         onChange={(e) =>
@@ -2155,7 +2868,11 @@ export default function ProductForm({ mode, product, options }: Props) {
                                         className="h-9 border-zinc-200 text-sm focus:border-[#151515] focus:ring-[#151515]"
                                     />
                                 </FieldGroup>
-                                <FieldGroup label="Package Type">
+                                <FieldGroup
+                                    field={variantField('package_type')}
+                                    error={variantError('package_type')}
+                                    label="Package Type"
+                                >
                                     <Input
                                         value={variantDraft.package_type}
                                         onChange={(e) =>
@@ -2171,7 +2888,11 @@ export default function ProductForm({ mode, product, options }: Props) {
                             </FieldRow>
 
                             <FieldRow cols={2} className="lg:col-start-2">
-                                <FieldGroup label="Color Name">
+                                <FieldGroup
+                                    field={variantField('color_name')}
+                                    error={variantError('color_name')}
+                                    label="Color Name"
+                                >
                                     <Input
                                         value={variantDraft.color_name}
                                         onChange={(e) =>
@@ -2184,7 +2905,11 @@ export default function ProductForm({ mode, product, options }: Props) {
                                         className="h-9 border-zinc-200 text-sm focus:border-[#151515] focus:ring-[#151515]"
                                     />
                                 </FieldGroup>
-                                <FieldGroup label="Color Hex">
+                                <FieldGroup
+                                    field={variantField('color_hex')}
+                                    error={variantError('color_hex')}
+                                    label="Color Hex"
+                                >
                                     <div className="flex h-9 items-center gap-2 rounded-md border border-zinc-200 bg-white px-2 shadow-sm focus-within:border-[#151515] focus-within:ring-1 focus-within:ring-[#151515]">
                                         <input
                                             type="color"
@@ -2219,7 +2944,11 @@ export default function ProductForm({ mode, product, options }: Props) {
                             </FieldRow>
 
                             <FieldRow cols={4} className="lg:col-start-2">
-                                <FieldGroup label="Regular Price">
+                                <FieldGroup
+                                    field={variantField('regular_price')}
+                                    error={variantError('regular_price')}
+                                    label="Regular Price"
+                                >
                                     <Input
                                         type="number"
                                         min="0"
@@ -2233,7 +2962,11 @@ export default function ProductForm({ mode, product, options }: Props) {
                                         className="h-9 border-zinc-200 font-mono text-sm focus:border-[#151515] focus:ring-[#151515]"
                                     />
                                 </FieldGroup>
-                                <FieldGroup label="Sale Price">
+                                <FieldGroup
+                                    field={variantField('sale_price')}
+                                    error={variantError('sale_price')}
+                                    label="Sale Price"
+                                >
                                     <Input
                                         type="number"
                                         min="0"
@@ -2247,7 +2980,11 @@ export default function ProductForm({ mode, product, options }: Props) {
                                         className="h-9 border-zinc-200 font-mono text-sm focus:border-[#151515] focus:ring-[#151515]"
                                     />
                                 </FieldGroup>
-                                <FieldGroup label="Stock">
+                                <FieldGroup
+                                    field={variantField('stock')}
+                                    error={variantError('stock')}
+                                    label="Stock"
+                                >
                                     <Input
                                         type="number"
                                         min="0"
@@ -2261,7 +2998,11 @@ export default function ProductForm({ mode, product, options }: Props) {
                                         className="h-9 border-zinc-200 font-mono text-sm focus:border-[#151515] focus:ring-[#151515]"
                                     />
                                 </FieldGroup>
-                                <FieldGroup label="Reserved">
+                                <FieldGroup
+                                    field={variantField('reserved_stock')}
+                                    error={variantError('reserved_stock')}
+                                    label="Reserved"
+                                >
                                     <Input
                                         type="number"
                                         min="0"
@@ -2278,8 +3019,24 @@ export default function ProductForm({ mode, product, options }: Props) {
                             </FieldRow>
 
                             <FieldRow cols={4} className="lg:col-start-2">
-                                {(['weight', 'length', 'width', 'height'] as const).map((field) => (
-                                    <FieldGroup key={field} label={field === 'weight' ? 'Weight (g)' : `${field[0].toUpperCase()}${field.slice(1)} (cm)`}>
+                                {(
+                                    [
+                                        'weight',
+                                        'length',
+                                        'width',
+                                        'height',
+                                    ] as const
+                                ).map((field) => (
+                                    <FieldGroup
+                                        field={variantField(field)}
+                                        error={variantError(field)}
+                                        key={field}
+                                        label={
+                                            field === 'weight'
+                                                ? 'Weight (g)'
+                                                : `${field[0].toUpperCase()}${field.slice(1)} (cm)`
+                                        }
+                                    >
                                         <Input
                                             type="number"
                                             min="0"
@@ -2298,6 +3055,11 @@ export default function ProductForm({ mode, product, options }: Props) {
 
                             <div className="order-first rounded-xl border border-zinc-200 bg-zinc-50/70 p-5 lg:col-start-1 lg:row-span-6 lg:row-start-1 lg:self-start">
                                 <FieldGroup
+                                    field={variantField('image')}
+                                    error={
+                                        variantError('image') ||
+                                        variantError('image_url')
+                                    }
                                     label="Variant Image"
                                     hint="Stored in Laravel public storage. JPG, PNG, WEBP up to 4MB."
                                 >
@@ -2393,7 +3155,9 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                         image: null,
                                                         image_url: '',
                                                     });
-                                                    setVariantDraftPreview(null);
+                                                    setVariantDraftPreview(
+                                                        null,
+                                                    );
                                                 }}
                                                 className="text-xs font-medium text-red-500 hover:text-red-600"
                                             >
@@ -2409,6 +3173,15 @@ export default function ProductForm({ mode, product, options }: Props) {
                                     Active Variant
                                 </Label>
                                 <Switch
+                                    data-error-field={variantField('is_active')}
+                                    aria-invalid={Boolean(
+                                        variantError('is_active'),
+                                    )}
+                                    aria-describedby={
+                                        variantError('is_active')
+                                            ? 'variant-active-error'
+                                            : undefined
+                                    }
                                     checked={variantDraft.is_active}
                                     onCheckedChange={(value) =>
                                         setVariantDraft({
@@ -2418,31 +3191,39 @@ export default function ProductForm({ mode, product, options }: Props) {
                                     }
                                     className="scale-90 data-[state=checked]:bg-primary"
                                 />
+                                {variantError('is_active') && (
+                                    <p
+                                        id="variant-active-error"
+                                        role="alert"
+                                        className="text-xs text-red-600"
+                                    >
+                                        {variantError('is_active')}
+                                    </p>
+                                )}
                             </div>
                         </div>
-
-                        <div className="flex items-center justify-end gap-2 border-t border-zinc-100 bg-zinc-50 px-6 py-4">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={closeVariantModal}
-                                className="h-9 border-zinc-200 px-4 text-xs text-zinc-700"
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                type="button"
-                                onClick={saveVariantDraft}
-                                className="h-9 bg-primary px-5 text-xs font-medium text-white hover:bg-primary/90"
-                            >
-                                {editingVariantIndex === null
-                                    ? 'Add Variant'
-                                    : 'Save Changes'}
-                            </Button>
-                        </div>
                     </div>
-                </div>
-            )}
+                    <div className="flex shrink-0 items-center justify-end gap-2 border-t border-zinc-100 bg-zinc-50 px-6 py-4">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={closeVariantModal}
+                            className="h-9 border-zinc-200 px-4 text-xs text-zinc-700"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={() => saveVariantDraft()}
+                            className="h-9 bg-primary px-5 text-xs font-medium text-white hover:bg-primary/90"
+                        >
+                            {editingVariantIndex === null
+                                ? 'Add Variant'
+                                : 'Save Changes'}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

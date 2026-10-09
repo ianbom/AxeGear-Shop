@@ -7,6 +7,7 @@ use App\Enums\PaymentStatus;
 use App\Enums\ShippingStatus;
 use App\Models\AdminActivityLog;
 use App\Models\Order;
+use App\Models\StockLog;
 use App\Services\Notifications\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -157,6 +158,15 @@ class OrderManagementService
 
     private function detail(Order $order): array
     {
+        $stockMovements = StockLog::query()
+            ->where('reference_type', 'order')
+            ->where('reference_id', $order->id)
+            ->whereIn('product_variant_id', $order->items->pluck('product_variant_id')->filter()->unique())
+            ->oldest('created_at')
+            ->orderBy('id')
+            ->get(['id', 'product_variant_id', 'quantity', 'stock_before', 'stock_after', 'created_at'])
+            ->groupBy('product_variant_id');
+
         return [
             ...$this->row($order),
             'created_at' => $order->created_at?->toISOString(),
@@ -199,6 +209,13 @@ class OrderManagementService
                 'subtotal' => $item->subtotal,
                 'weight' => $item->weight,
                 'product_image_url' => $item->product_image_url,
+                'stock_movements' => $stockMovements->get($item->product_variant_id, collect())->map(fn (StockLog $log): array => [
+                    'id' => $log->id,
+                    'quantity' => $log->quantity,
+                    'stock_before' => $log->stock_before,
+                    'stock_after' => $log->stock_after,
+                    'created_at' => $log->created_at?->toISOString(),
+                ])->values()->all(),
             ])->values(),
             'address' => $order->address,
             'payment' => $order->payment,

@@ -1,15 +1,12 @@
 import { Head } from '@inertiajs/react';
 import {
     ArrowRight,
-    CheckCircle2,
     Clock3,
     Instagram,
     Mail,
     MapPin,
     MessageCircle,
     Phone,
-    ShoppingBag,
-    Youtube,
 } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
@@ -19,44 +16,148 @@ import ShopLayout from '@/layouts/shop-layout';
 const unsplash = (id: string, width = 1400) =>
     `https://images.unsplash.com/${id}?auto=format&fit=crop&q=85&w=${width}`;
 
-const supportInfo = [
-    {
-        icon: Clock3,
-        title: 'Support Hours',
-        content: (
-            <div className="grid grid-cols-[1fr_auto] gap-x-6 text-[11px] leading-[1.55]">
-                <span>Monday–Friday</span>
-                <span>09:00 – 17:00</span>
-                <span>Saturday</span>
-                <span>09:00 – 14:00</span>
-                <span>Sunday & Public Holidays</span>
-                <span>Closed</span>
-            </div>
-        ),
-    },
-    {
-        icon: Mail,
-        title: 'Customer Support Email',
-        content: 'support@axegearshop.com',
-    },
-    { icon: Phone, title: 'Phone / WhatsApp', content: '+62 812 3456 7890' },
-    {
-        icon: MapPin,
-        title: 'Head Office',
-        content: 'AxeGear Shop\nSurabaya, Indonesia',
-    },
-];
+interface ContactSettings {
+    store_name: string | null;
+    store_email: string | null;
+    store_phone: string | null;
+    store_address: string | null;
+    business_hours: string | null;
+    store_latitude: string | null;
+    store_longitude: string | null;
+    contact_maps_url: string | null;
+    instagram_url: string | null;
+    tiktok_url: string | null;
+}
+
+function httpUrl(value: string | null): string | null {
+    try {
+        const url = new URL(value ?? '');
+
+        return ['https:', 'http:'].includes(url.protocol) ? url.href : null;
+    } catch {
+        return null;
+    }
+}
 
 const fieldClass =
     'h-11 w-full rounded-none border border-[#BEBEBE] bg-white px-3 text-[13px] text-[#252525] outline-none focus:border-[#F58220] focus:ring-0';
 
-export default function ContactIndex() {
+export default function ContactIndex({
+    contactSettings,
+}: {
+    contactSettings: ContactSettings;
+}) {
     const [messageLength, setMessageLength] = useState(0);
-    const [sent, setSent] = useState(false);
+    const [error, setError] = useState('');
+    const settings = contactSettings;
+    const digits = (settings.store_phone ?? '').replace(/[\s()+.-]/g, '');
+    const internationalPhone = digits.startsWith('0')
+        ? '62' + digits.slice(1)
+        : digits;
+    const whatsappPhone = /^[1-9]\d{7,14}$/.test(internationalPhone)
+        ? internationalPhone
+        : null;
+    const email = settings.store_email?.trim();
+    const emailHref =
+        email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+            ? 'mailto:' + encodeURIComponent(email)
+            : undefined;
+    const latitude = Number(settings.store_latitude);
+    const longitude = Number(settings.store_longitude);
+    const coordinatesValid =
+        Boolean(
+            settings.store_latitude?.trim() && settings.store_longitude?.trim(),
+        ) &&
+        Number.isFinite(latitude) &&
+        Number.isFinite(longitude) &&
+        Math.abs(latitude) <= 90 &&
+        Math.abs(longitude) <= 180;
+    const mapQuery = coordinatesValid
+        ? latitude + ',' + longitude
+        : settings.store_address?.trim();
+    const mapEmbedUrl = mapQuery
+        ? 'https://www.google.com/maps?q=' +
+          encodeURIComponent(mapQuery) +
+          '&output=embed'
+        : null;
+    const mapLink =
+        httpUrl(settings.contact_maps_url) ??
+        (mapQuery
+            ? 'https://www.google.com/maps/search/?api=1&query=' +
+              encodeURIComponent(mapQuery)
+            : null);
+    const supportInfo = [
+        {
+            icon: Clock3,
+            title: 'Support Hours',
+            content: settings.business_hours || '—',
+        },
+        {
+            icon: Mail,
+            title: 'Customer Support Email',
+            content: email || '—',
+            href: emailHref,
+        },
+        {
+            icon: Phone,
+            title: 'Phone / WhatsApp',
+            content: settings.store_phone || '—',
+            href: whatsappPhone ? 'tel:+' + whatsappPhone : undefined,
+        },
+        {
+            icon: MapPin,
+            title: 'Head Office',
+            content:
+                [settings.store_name, settings.store_address]
+                    .filter(Boolean)
+                    .join('\n') || '—',
+        },
+    ];
+    const socialLinks = [
+        {
+            icon: Instagram,
+            label: 'Instagram',
+            url: httpUrl(settings.instagram_url),
+        },
+        {
+            icon: MessageCircle,
+            label: 'TikTok',
+            url: httpUrl(settings.tiktok_url),
+        },
+    ].filter((social) => social.url);
 
     const submitContact = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        setSent(true);
+        setError('');
+        const form = new FormData(event.currentTarget);
+        const name = String(form.get('full_name') ?? '').trim();
+        const message = String(form.get('message') ?? '').trim();
+
+        if (!name || !message || message.length > 1000) {
+            setError('Isi nama dan pesan. Pesan maksimal 1.000 karakter.');
+
+            return;
+        }
+
+        if (!whatsappPhone) {
+            setError('Nomor WhatsApp toko belum tersedia.');
+
+            return;
+        }
+
+        const text =
+            'Halo ' +
+            (settings.store_name?.trim() || 'toko') +
+            ', saya ingin menghubungi customer support.\n\nNama: ' +
+            name +
+            '\n\nPesan:\n' +
+            message;
+        window.location.assign(
+            'https://wa.me/' +
+                whatsappPhone +
+                '?text=' +
+                encodeURIComponent(text),
+        );
     };
 
     return (
@@ -88,7 +189,8 @@ export default function ContactIndex() {
                                 href="#contact-form"
                                 className="mt-5 inline-flex items-center gap-3 text-[14px] font-bold text-[#F58220]"
                             >
-                                Contact Support <ArrowRight className="h-4 w-4" />
+                                Contact Support{' '}
+                                <ArrowRight className="h-4 w-4" />
                             </a>
                         </div>
                     </div>
@@ -108,29 +210,33 @@ export default function ContactIndex() {
                                 How Can We Help?
                             </h2>
                             <p className="mt-2 text-[10px] text-[#666]">
-                                Complete the form and our support team will
-                                respond as soon as possible.
+                                Isi nama dan pesan untuk membuka draft WhatsApp.
+                                Kirim pesan melalui WhatsApp setelah chat
+                                terbuka.
                             </p>
-                            <div className="mt-5 grid gap-x-5 gap-y-4 sm:grid-cols-2">
+                            <div className="mt-5">
                                 <Field label="Full Name" required>
                                     <input
                                         required
+                                        name="full_name"
+                                        autoComplete="name"
+                                        aria-describedby={
+                                            error ? 'contact-error' : undefined
+                                        }
                                         className={fieldClass}
                                         placeholder="Rizky Pratama"
-                                    />
-                                </Field>
-                                <Field label="Phone Number" required>
-                                    <input
-                                        required
-                                        type="tel"
-                                        className={fieldClass}
-                                        placeholder="+62 812 3456 7890"
                                     />
                                 </Field>
                             </div>
                             <Field label="Message" required className="mt-4">
                                 <textarea
                                     required
+                                    name="message"
+                                    aria-describedby={
+                                        error
+                                            ? 'contact-message-count contact-error'
+                                            : 'contact-message-count'
+                                    }
                                     maxLength={1000}
                                     onChange={(event) =>
                                         setMessageLength(
@@ -140,29 +246,35 @@ export default function ContactIndex() {
                                     className="h-[150px] w-full resize-none rounded-none border border-[#BEBEBE] p-3 text-[13px] outline-none focus:border-[#F58220]"
                                     placeholder={'Tell us how we can help you.'}
                                 />
-                                <span className="block text-right text-[9px] text-[#777]">
+                                <span
+                                    id="contact-message-count"
+                                    className="block text-right text-[9px] text-[#777]"
+                                >
                                     {messageLength} / 1000
                                 </span>
                             </Field>
                             <div className="mt-5 flex justify-end">
                                 <button
                                     type="submit"
-                                    className="h-12 w-full rounded-none bg-[#F58220] px-8 text-[13px] font-bold text-white uppercase hover:bg-[#E67312] sm:w-[230px]"
+                                    disabled={!whatsappPhone}
+                                    className="min-h-12 w-full rounded-none bg-[#F58220] px-6 py-3 text-[13px] font-bold text-white uppercase hover:bg-[#E67312] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                                 >
-                                    Send Message
+                                    Lanjutkan ke WhatsApp
                                 </button>
                             </div>
-                            {sent && (
-                                <div className="mt-4 flex items-center gap-3 border border-[#52A76C] bg-[#F6FFF8] p-3 text-[10px] text-[#28753E]">
-                                    <CheckCircle2 className="h-5 w-5" />
-                                    <span>
-                                        <strong className="block">
-                                            Your message has been sent.
-                                        </strong>
-                                        Our support team will contact you
-                                        shortly.
-                                    </span>
-                                </div>
+                            {!whatsappPhone && (
+                                <p className="mt-3 text-sm text-[#555]">
+                                    Nomor WhatsApp toko belum tersedia.
+                                </p>
+                            )}
+                            {error && (
+                                <p
+                                    id="contact-error"
+                                    role="alert"
+                                    className="mt-3 text-sm text-destructive"
+                                >
+                                    {error}
+                                </p>
                             )}
                         </form>
 
@@ -172,7 +284,7 @@ export default function ContactIndex() {
                             </h2>
                             <div className="mt-4">
                                 {supportInfo.map(
-                                    ({ icon: Icon, title, content }) => (
+                                    ({ icon: Icon, title, content, href }) => (
                                         <div
                                             key={title}
                                             className="flex gap-5 border-b border-white/20 py-5"
@@ -185,8 +297,17 @@ export default function ContactIndex() {
                                                 <h3 className="text-[11px] font-black tracking-[0.03em] text-white uppercase">
                                                     {title}
                                                 </h3>
-                                                <div className="mt-1 text-[11px] leading-[1.5] whitespace-pre-line text-white/85">
-                                                    {content}
+                                                <div className="mt-1 text-[11px] leading-[1.5] wrap-anywhere whitespace-pre-line text-white/85">
+                                                    {href ? (
+                                                        <a
+                                                            href={href}
+                                                            className="underline underline-offset-2"
+                                                        >
+                                                            {content}
+                                                        </a>
+                                                    ) : (
+                                                        content
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -194,56 +315,68 @@ export default function ContactIndex() {
                                 )}
                             </div>
                             <p className="mt-5 max-w-[350px] text-[11px] leading-[1.5] text-white/75">
-                                For faster assistance, provide an active phone
-                                number and explain your request clearly.
+                                Jelaskan kebutuhan Anda dengan jelas agar tim
+                                support dapat membantu melalui WhatsApp.
                             </p>
                         </aside>
                     </section>
 
                     <section className="mt-5 grid gap-5 lg:grid-cols-2">
                         <div className="relative min-h-[260px] overflow-hidden border border-[#D8D8D8]">
-                            <iframe
-                                title="AxeGear Surabaya location"
-                                src="https://www.google.com/maps?q=Surabaya%2C%20Indonesia&output=embed"
-                                className="absolute inset-0 h-full w-full border-0 grayscale-[25%]"
-                                loading="lazy"
-                                referrerPolicy="no-referrer-when-downgrade"
-                            />
+                            {mapEmbedUrl ? (
+                                <iframe
+                                    title={
+                                        'Lokasi ' +
+                                        (settings.store_name || 'toko')
+                                    }
+                                    src={mapEmbedUrl}
+                                    className="absolute inset-0 h-full w-full border-0 grayscale-[25%]"
+                                    loading="lazy"
+                                    referrerPolicy="no-referrer-when-downgrade"
+                                />
+                            ) : (
+                                <p className="p-5 text-sm text-[#555]">
+                                    Lokasi toko belum tersedia.
+                                </p>
+                            )}
+                            {mapLink && (
+                                <a
+                                    href={mapLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="absolute right-3 bottom-3 bg-white px-3 py-2 font-medium underline shadow-sm"
+                                >
+                                    Buka Google Maps
+                                </a>
+                            )}
                         </div>
                         <div className="border border-[#D8D8D8] p-5">
                             <p className="text-[10px] font-bold text-[#F58220] uppercase">
                                 Stay Connected
                             </p>
                             <p className="mt-2 max-w-[520px] text-[10px] leading-[1.45] text-[#555]">
-                                Follow AxeGear for product launches, athlete
-                                stories, riding inspiration, and event updates.
+                                Follow {settings.store_name || 'our store'} for
+                                product launches, athlete stories, riding
+                                inspiration, and event updates.
                             </p>
-                            <div className="mt-10 grid grid-cols-4 gap-4 text-center">
-                                {[
-                                    [Instagram, 'Instagram'],
-                                    [MessageCircle, 'TikTok'],
-                                    [Youtube, 'YouTube'],
-                                    [ShoppingBag, 'Facebook'],
-                                ].map(([Icon, label]) => {
-                                    const SocialIcon = Icon as typeof Instagram;
-
-                                    return (
+                            <div className="mt-10 grid grid-cols-2 gap-4 text-center">
+                                {socialLinks.map(
+                                    ({ icon: Icon, label, url }) => (
                                         <a
-                                            key={String(label)}
-                                            href="#"
-                                            onClick={(event) =>
-                                                event.preventDefault()
-                                            }
+                                            key={label}
+                                            href={url ?? undefined}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
                                             className="flex flex-col items-center gap-3 text-[8px]"
                                         >
-                                            <SocialIcon
+                                            <Icon
                                                 className="h-9 w-9"
                                                 strokeWidth={2}
                                             />
-                                            <span>@axegearshop</span>
+                                            <span>{label}</span>
                                         </a>
-                                    );
-                                })}
+                                    ),
+                                )}
                             </div>
                         </div>
                     </section>
