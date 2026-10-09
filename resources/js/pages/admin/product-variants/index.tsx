@@ -1,8 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import {
     Box,
-    ChevronLeft,
-    ChevronRight,
     Edit,
     LayoutGrid,
     MoreVertical,
@@ -31,7 +29,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { PerPageSelect } from '../pagination';
+import { PaginationLabel, PerPageSelect } from '../pagination';
 
 interface Variant {
     id: number;
@@ -434,7 +432,11 @@ export default function ProductVariantsIndex({
                                             </td>
                                             <td className="px-5 py-3">
                                                 <span className="font-medium text-zinc-900">
-                                                    {fmt(v.sale_price ?? v.regular_price ?? 0)}
+                                                    {fmt(
+                                                        v.sale_price ??
+                                                            v.regular_price ??
+                                                            0,
+                                                    )}
                                                 </span>
                                             </td>
                                             <td className="px-5 py-3">
@@ -542,22 +544,8 @@ export default function ProductVariantsIndex({
                         </span>
                         <div className="flex items-center gap-1">
                             {variants.links.map((link, i) => {
-                                const isChevronLeft =
-                                    link.label.includes('Previous') ||
-                                    link.label.includes('&laquo;');
-                                const isChevronRight =
-                                    link.label.includes('Next') ||
-                                    link.label.includes('&raquo;');
-                                const label = isChevronLeft ? (
-                                    <ChevronLeft className="h-3.5 w-3.5" />
-                                ) : isChevronRight ? (
-                                    <ChevronRight className="h-3.5 w-3.5" />
-                                ) : (
-                                    <span
-                                        dangerouslySetInnerHTML={{
-                                            __html: link.label,
-                                        }}
-                                    />
+                                const label = (
+                                    <PaginationLabel label={link.label} />
                                 );
 
                                 return (

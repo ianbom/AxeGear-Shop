@@ -34,6 +34,7 @@ class MidtransWebhookService
                 ->where('midtrans_order_id', $payload['order_id'])
                 ->lockForUpdate()
                 ->firstOrFail();
+            $payment->setRelation('order', $payment->order()->lockForUpdate()->first());
 
             if ($payment->logs()->where('payload_hash', $payloadHash)->exists()) {
                 Log::info('duplicate_webhook_ignored', ['provider' => 'midtrans', 'payment_id' => $payment->id]);
@@ -65,6 +66,10 @@ class MidtransWebhookService
                 'payload' => $payload,
                 'processed_at' => now(),
             ]);
+
+            if (! $this->applyStatus->canApply($payment, (string) $payload['transaction_status'], $payload['fraud_status'] ?? null)) {
+                return;
+            }
 
             $payment->update([
                 'midtrans_transaction_id' => $payload['transaction_id'] ?? $payment->midtrans_transaction_id,

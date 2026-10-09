@@ -36,4 +36,18 @@ enum ShippingStatus: string
     {
         return [self::Failed->value, self::Cancelled->value, self::Problem->value, self::Lost->value, self::Returned->value];
     }
+
+    public static function transitions(string $status): array
+    {
+        return match ($status) {
+            self::NotCreated->value => [self::Creating->value],
+            self::Creating->value => [self::Confirmed->value, self::Allocated->value, self::Picked->value, self::InTransit->value, self::Delivered->value, self::Cancelled->value, self::Failed->value, self::Problem->value],
+            self::Confirmed->value => [self::Allocated->value, self::Picked->value, self::InTransit->value, self::Delivered->value, self::Cancelled->value, self::Failed->value, self::Problem->value],
+            self::Allocated->value => [self::Picked->value, self::InTransit->value, self::Delivered->value, self::Cancelled->value, self::Failed->value, self::Problem->value],
+            self::Picked->value => [self::InTransit->value, self::Delivered->value, self::Failed->value, self::Problem->value, self::Lost->value, self::Returned->value],
+            self::InTransit->value => [self::Delivered->value, self::Failed->value, self::Problem->value, self::Lost->value, self::Returned->value],
+            self::Problem->value => [self::Confirmed->value, self::Allocated->value, self::Picked->value, self::InTransit->value, self::Delivered->value, self::Cancelled->value, self::Failed->value, self::Lost->value, self::Returned->value],
+            default => [],
+        };
+    }
 }

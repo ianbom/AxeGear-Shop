@@ -330,26 +330,20 @@ function DetailProductContent({
                 <div className="mx-auto max-w-[1760px] px-4 py-5 md:px-8 md:py-6">
                     <Breadcrumb product={product} />
 
-                    <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr] lg:gap-12 xl:grid-cols-[940px_1fr]">
-                        <div className="space-y-6">
-                            <FadeInOnScroll>
-                                <ProductGallery
-                                    gallery={gallery}
-                                    mainImage={mainImage}
-                                    productTitle={product.title}
-                                    onSelectImage={setMainImage}
-                                />
-                            </FadeInOnScroll>
+                    <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr] lg:gap-x-12 lg:gap-y-6 xl:grid-cols-[940px_1fr]">
+                        <FadeInOnScroll className="lg:col-start-1 lg:row-start-1">
+                            <ProductGallery
+                                gallery={gallery}
+                                mainImage={mainImage}
+                                productTitle={product.title}
+                                onSelectImage={setMainImage}
+                            />
+                        </FadeInOnScroll>
 
-                            <FadeInOnScroll delay={40}>
-                                <ProductSpecs
-                                    product={product}
-                                    productDescription={productDescription}
-                                />
-                            </FadeInOnScroll>
-                        </div>
-
-                        <FadeInOnScroll delay={80}>
+                        <FadeInOnScroll
+                            className="lg:col-start-2 lg:row-span-2 lg:row-start-1"
+                            delay={80}
+                        >
                             <section className="pt-1 lg:pt-6">
                                 <ProductHeader
                                     product={product}
@@ -449,6 +443,16 @@ function DetailProductContent({
 
                                 {/* <ServiceStrip isAvailable={isAvailable} /> */}
                             </section>
+                        </FadeInOnScroll>
+
+                        <FadeInOnScroll
+                            className="lg:col-start-1 lg:row-start-2"
+                            delay={40}
+                        >
+                            <ProductSpecs
+                                product={product}
+                                productDescription={productDescription}
+                            />
                         </FadeInOnScroll>
                     </div>
 

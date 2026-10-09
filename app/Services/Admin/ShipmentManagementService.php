@@ -75,7 +75,7 @@ class ShipmentManagementService
         $shipment->load([
             'order.address',
             'order.items',
-            'trackings' => fn ($query) => $query->latest('happened_at'),
+            'trackings' => fn ($query) => $query->latest('happened_at')->latest('id'),
         ]);
 
         return [
@@ -88,6 +88,10 @@ class ShipmentManagementService
                 'insurance_cost' => $shipment->insurance_cost,
                 'raw_rate_response' => $shipment->raw_rate_response,
                 'raw_order_response' => $shipment->raw_order_response,
+                'failed_reason' => $shipment->failed_reason,
+                'last_synced_at' => $shipment->last_synced_at?->toDateTimeString(),
+                'can_create_shipment' => $this->canCreateShipment($shipment->order, $shipment),
+                'booking_uncertain' => (bool) data_get($shipment->raw_order_response, 'booking_uncertain', false),
                 'order' => $shipment->order,
                 'address' => $shipment->order?->address,
                 'trackings' => $shipment->trackings->map(fn ($tracking): array => [
@@ -97,10 +101,45 @@ class ShipmentManagementService
                     'location' => $tracking->location,
                     'happened_at' => $tracking->happened_at?->toDateTimeString(),
                     'raw_payload' => $tracking->raw_payload,
+                    'actor' => data_get($tracking->raw_payload, 'actor_name'),
                 ]),
             ],
-            'shippingStatuses' => ShippingStatus::values(),
+            'shippingStatuses' => $this->allowedStatuses($shipment),
         ];
+    }
+
+    public function canCreateShipment(Order $order, ?Shipment $shipment): bool
+    {
+        return $order->payment_status === PaymentStatus::Paid->value
+            && in_array($order->order_status, [OrderStatus::ReadyToShip->value, OrderStatus::ShipmentFailed->value, OrderStatus::ShipmentProblem->value], true)
+            && (! $shipment || (! $shipment->biteship_order_id && ! data_get($shipment->raw_order_response, 'booking_uncertain', false) && in_array($shipment->shipping_status, ShippingStatus::retryableValues(), true)));
+    }
+
+    public function allowedStatuses(Shipment $shipment): array
+    {
+        $order = $shipment->order;
+
+        if (! $order || $order->payment_status !== PaymentStatus::Paid->value || ! $shipment->biteship_order_id
+            || in_array($order->order_status, [OrderStatus::Completed->value, OrderStatus::Cancelled->value, OrderStatus::Refunded->value], true)) {
+            return [];
+        }
+
+        return $this->nextShippingStatuses($shipment);
+    }
+
+    private function nextShippingStatuses(Shipment $shipment): array
+    {
+        $statuses = ShippingStatus::transitions($shipment->shipping_status);
+
+        if ($shipment->shipped_at || $shipment->trackings()->whereIn('status', ['picked', 'in_transit'])->exists()) {
+            $statuses = array_diff($statuses, ['confirmed', 'allocated', 'cancelled']);
+        }
+
+        if ($shipment->trackings()->where('status', 'in_transit')->exists()) {
+            $statuses = array_diff($statuses, ['picked']);
+        }
+
+        return array_values($statuses);
     }
 
     public function createFromOrder(Request $request, Order $order): Shipment
@@ -117,6 +156,10 @@ class ShipmentManagementService
                 throw ValidationException::withMessages(['shipment' => 'Shipment hanya bisa dibuat untuk order paid.']);
             }
 
+            if (! in_array($order->order_status, [OrderStatus::ReadyToShip->value, OrderStatus::ShipmentFailed->value, OrderStatus::ShipmentProblem->value], true)) {
+                throw ValidationException::withMessages(['shipment' => 'Tandai pesanan siap dikirim sebelum membuat pengiriman.']);
+            }
+
             $shipment = Shipment::query()->where('order_id', $order->id)->lockForUpdate()->first()
                 ?: $order->shipment()->create([
                     'shipping_provider' => 'biteship',
@@ -127,7 +170,7 @@ class ShipmentManagementService
                     'shipping_status' => ShippingStatus::NotCreated->value,
                 ]);
 
-            if (! in_array($shipment->shipping_status, ShippingStatus::retryableValues(), true)) {
+            if (! $this->canCreateShipment($order, $shipment)) {
                 throw ValidationException::withMessages(['shipment' => "Shipment sedang {$shipment->shipping_status}."]);
             }
 
@@ -136,6 +179,7 @@ class ShipmentManagementService
             $this->validateBiteshipPayload($biteshipPayload);
 
             $shipment->update(['shipping_status' => ShippingStatus::Creating->value, 'creating_at' => now(), 'failed_reason' => null]);
+            $order->update(['shipping_status' => ShippingStatus::Creating->value]);
 
             return [$order, $shipment, $payload, $biteshipPayload];
         });
@@ -144,21 +188,35 @@ class ShipmentManagementService
 
         try {
             $biteshipOrder = $this->biteship->createOrder($biteshipPayload);
+
+            if (blank(Arr::get($biteshipOrder, 'id'))) {
+                throw new \UnexpectedValueException('Respons booking tidak memiliki ID Biteship. Periksa dashboard Biteship sebelum mencoba kembali.');
+            }
         } catch (\Throwable $exception) {
-            DB::transaction(function () use ($shipment, $exception): void {
-                Shipment::query()->whereKey($shipment->id)->lockForUpdate()->update([
+            DB::transaction(function () use ($order, $shipment, $exception): void {
+                $order = Order::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+                $shipment = Shipment::query()->whereKey($shipment->id)->lockForUpdate()->firstOrFail();
+                $shipment->update([
                     'shipping_status' => ShippingStatus::Failed->value,
                     'failed_reason' => $exception->getMessage(),
                     'last_synced_at' => now(),
+                    'raw_order_response' => ['booking_uncertain' => ! ($exception instanceof ValidationException)],
                 ]);
+                $this->synchronizeOrder($order, $shipment->shipping_status);
             });
 
             throw $exception;
         }
 
         $shipment = DB::transaction(function () use ($order, $shipment, $payload, $labelUrl, $biteshipOrder): Shipment {
+            $order = Order::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
             $shipment = Shipment::query()->whereKey($shipment->id)->lockForUpdate()->firstOrFail();
             $identifiers = $this->biteship->orderIdentifiers($biteshipOrder);
+            $status = $this->normalizeShippingStatus($identifiers['shipping_status'] ?: 'confirmed');
+
+            if ($status !== $shipment->shipping_status && ! in_array($status, $this->nextShippingStatuses($shipment), true)) {
+                $status = $shipment->shipping_status;
+            }
 
             $shipment->fill([
                 'shipping_provider' => 'biteship',
@@ -173,7 +231,9 @@ class ShipmentManagementService
                 'shipping_cost' => $order->shipping_cost,
                 'insurance_cost' => 0,
                 'estimated_delivery' => $payload['estimated_delivery'] ?? null,
-                'shipping_status' => $this->normalizeShippingStatus($identifiers['shipping_status'] ?: 'confirmed'),
+                'shipping_status' => $status,
+                'shipped_at' => in_array($status, ['picked', 'in_transit', 'delivered'], true) ? ($shipment->shipped_at ?? now()) : $shipment->shipped_at,
+                'delivered_at' => $status === 'delivered' ? ($shipment->delivered_at ?? now()) : $shipment->delivered_at,
                 'raw_rate_response' => $shipment->raw_rate_response ?: ['source' => 'admin_biteship_create', 'shipping_cost' => $order->shipping_cost],
                 'raw_order_response' => $biteshipOrder,
                 'last_synced_at' => now(),
@@ -188,10 +248,7 @@ class ShipmentManagementService
                 'raw_payload' => $biteshipOrder,
             ]);
 
-            $order->update([
-                'order_status' => in_array($order->order_status, [OrderStatus::Paid->value, OrderStatus::Processing->value], true) ? OrderStatus::ReadyToShip->value : $order->order_status,
-                'shipping_status' => $shipment->shipping_status,
-            ]);
+            $this->synchronizeOrder($order, $shipment->shipping_status);
 
             $this->notifications->forOrder($order, 'Shipment created', "Shipment untuk order {$order->order_number} sudah dibuat.", 'shipping');
 
@@ -206,15 +263,27 @@ class ShipmentManagementService
     public function updateStatus(Shipment $shipment, Request $request): void
     {
         DB::transaction(function () use ($request, $shipment): void {
+            $order = Order::query()->whereKey($shipment->order_id)->lockForUpdate()->firstOrFail();
+            $shipment = Shipment::query()->whereKey($shipment->id)->lockForUpdate()->firstOrFail();
+            $shipment->setRelation('order', $order);
             $status = $request->string('shipping_status')->toString();
+
+            if (! in_array($status, $this->allowedStatuses($shipment), true)) {
+                throw ValidationException::withMessages(['shipping_status' => 'Perubahan status pengiriman tidak diizinkan.']);
+            }
+
             $payload = ['shipping_status' => $status];
 
             if (in_array($status, [ShippingStatus::Picked->value, ShippingStatus::InTransit->value], true) && ! $shipment->shipped_at) {
                 $payload['shipped_at'] = now();
             }
 
-            if ($status === ShippingStatus::Delivered->value) {
+            if ($status === ShippingStatus::Delivered->value && ! $shipment->delivered_at) {
                 $payload['delivered_at'] = now();
+            }
+
+            if ($status === ShippingStatus::Cancelled->value && ! $shipment->cancelled_at) {
+                $payload['cancelled_at'] = now();
             }
 
             $shipment->update($payload);
@@ -223,20 +292,10 @@ class ShipmentManagementService
                 'description' => $request->input('description') ?: "Shipment marked as {$status}.",
                 'location' => $request->input('location'),
                 'happened_at' => now(),
-                'raw_payload' => ['source' => 'admin_manual_status'],
+                'raw_payload' => ['source' => 'admin_manual_status', 'actor_id' => $request->user()->id, 'actor_name' => $request->user()->name],
             ]);
 
-            $orderPayload = ['shipping_status' => $status];
-
-            if (in_array($status, [ShippingStatus::Picked->value, ShippingStatus::InTransit->value], true)) {
-                $orderPayload['order_status'] = OrderStatus::Shipped->value;
-            }
-
-            if ($status === ShippingStatus::Delivered->value) {
-                $orderPayload['order_status'] = OrderStatus::Delivered->value;
-            }
-
-            $shipment->order?->update($orderPayload);
+            $this->synchronizeOrder($order, $status);
 
             if ($shipment->order) {
                 $this->notifications->forOrder($shipment->order, 'Shipment status updated', "Shipment order {$shipment->order->order_number} sekarang {$status}.", 'shipping');
@@ -253,20 +312,17 @@ class ShipmentManagementService
             return;
         }
 
-        $shipment->trackings()->create([
-            'status' => $shipment->shipping_status,
-            'description' => 'Tracking refreshed from admin dashboard.',
-            'location' => null,
-            'happened_at' => now(),
-            'raw_payload' => ['source' => 'admin_manual_refresh'],
-        ]);
+        throw ValidationException::withMessages(['shipment' => 'Booking Biteship belum tersedia untuk disinkronkan.']);
     }
 
     public function applyBiteshipPayload(Shipment $shipment, array $payload, string $source = 'biteship'): void
     {
         DB::transaction(function () use ($shipment, $payload, $source): void {
-            $shipment = Shipment::query()->with('order')->whereKey($shipment->id)->lockForUpdate()->firstOrFail();
+            $order = Order::query()->whereKey($shipment->order_id)->lockForUpdate()->firstOrFail();
+            $shipment = Shipment::query()->whereKey($shipment->id)->lockForUpdate()->firstOrFail();
+            $shipment->setRelation('order', $order);
             $payloadHash = hash('sha256', json_encode($payload, JSON_THROW_ON_ERROR));
+            $shipment->update(['last_synced_at' => now()]);
 
             if ($shipment->trackings()->where('payload_hash', $payloadHash)->exists()) {
                 Log::info('duplicate_biteship_tracking_ignored', ['shipment_id' => $shipment->id]);
@@ -290,7 +346,7 @@ class ShipmentManagementService
                 ?? $shipment->shipping_status
             );
 
-            if ($shipment->shipping_status === ShippingStatus::Delivered->value && in_array($status, [ShippingStatus::Picked->value, ShippingStatus::InTransit->value, ShippingStatus::Confirmed->value, ShippingStatus::Allocated->value], true)) {
+            if ($status !== $shipment->shipping_status && ! in_array($status, $this->nextShippingStatuses($shipment), true)) {
                 Log::info('regressive_biteship_status_ignored', ['shipment_id' => $shipment->id, 'current' => $shipment->shipping_status, 'attempted' => $status]);
 
                 return;
@@ -303,8 +359,9 @@ class ShipmentManagementService
                 'shipping_status' => $status,
                 'raw_order_response' => $payload,
                 'shipped_at' => in_array($status, [ShippingStatus::Picked->value, ShippingStatus::InTransit->value], true) && ! $shipment->shipped_at ? now() : $shipment->shipped_at,
-                'delivered_at' => $status === ShippingStatus::Delivered->value ? now() : $shipment->delivered_at,
-                'cancelled_at' => $status === ShippingStatus::Cancelled->value ? now() : $shipment->cancelled_at,
+                'delivered_at' => $status === ShippingStatus::Delivered->value ? ($shipment->delivered_at ?? now()) : $shipment->delivered_at,
+                'cancelled_at' => $status === ShippingStatus::Cancelled->value ? ($shipment->cancelled_at ?? now()) : $shipment->cancelled_at,
+                'last_synced_at' => now(),
             ]);
 
             $shipment->trackings()->create([
@@ -317,38 +374,28 @@ class ShipmentManagementService
                 'raw_payload' => ['source' => $source, ...$payload],
             ]);
 
-            $orderPayload = ['shipping_status' => $status];
-
-            if (in_array($status, [ShippingStatus::Picked->value, ShippingStatus::InTransit->value], true)) {
-                $orderPayload['order_status'] = OrderStatus::Shipped->value;
-            }
-
-            if ($status === ShippingStatus::Delivered->value) {
-                $orderPayload['order_status'] = OrderStatus::Delivered->value;
-            }
-
-            if ($status === ShippingStatus::Cancelled->value) {
-                $orderPayload['order_status'] = OrderStatus::Cancelled->value;
-            }
-
-            if ($status === ShippingStatus::Problem->value) {
-                $orderPayload['order_status'] = OrderStatus::ShipmentProblem->value;
-            }
-
-            if ($status === ShippingStatus::Lost->value) {
-                $orderPayload['order_status'] = OrderStatus::Lost->value;
-            }
-
-            if ($status === ShippingStatus::Returned->value) {
-                $orderPayload['order_status'] = OrderStatus::Returned->value;
-            }
-
-            if ($status === ShippingStatus::Failed->value) {
-                $orderPayload['order_status'] = OrderStatus::ShipmentFailed->value;
-            }
-
-            $shipment->order?->update($orderPayload);
+            $this->synchronizeOrder($order, $status);
         });
+    }
+
+    private function synchronizeOrder(Order $order, string $status): void
+    {
+        $payload = ['shipping_status' => $status];
+
+        if ($order->payment_status === PaymentStatus::Paid->value && ! in_array($order->order_status, [OrderStatus::Completed->value, OrderStatus::Cancelled->value, OrderStatus::Refunded->value], true)) {
+            $payload['order_status'] = match ($status) {
+                'picked', 'in_transit' => OrderStatus::Shipped->value,
+                'delivered' => OrderStatus::Delivered->value,
+                'cancelled', 'problem' => OrderStatus::ShipmentProblem->value,
+                'failed' => OrderStatus::ShipmentFailed->value,
+                'lost' => OrderStatus::Lost->value,
+                'returned' => OrderStatus::Returned->value,
+                'confirmed', 'allocated' => in_array($order->order_status, [OrderStatus::ShipmentFailed->value, OrderStatus::ShipmentProblem->value], true) ? OrderStatus::ReadyToShip->value : $order->order_status,
+                default => $order->order_status,
+            };
+        }
+
+        $order->update($payload);
     }
 
     private function biteshipOrderPayload(Order $order, array $payload): array
@@ -356,7 +403,8 @@ class ShipmentManagementService
         $originPostalCode = $this->setting('store_postal_code', config('services.biteship.origin_postal_code'));
         $originAreaId = $this->validBiteshipAreaId($this->setting('origin_biteship_area_id', config('services.biteship.origin_area_id')));
         $destinationAreaId = $this->validBiteshipAreaId($order->address?->biteship_area_id);
-        $destinationNote = data_get($order->address, 'address_note') ?: $order->address?->note;
+        $destinationNote = trim((string) $order->address?->note);
+        $destinationSubdistrict = trim((string) $order->address?->subdistrict);
 
         return array_filter([
             'shipper_contact_name' => $this->setting('shipper_name', config('services.biteship.shipper_name')) ?: $this->settings->get('store_name'),
@@ -375,7 +423,7 @@ class ShipmentManagementService
             'destination_contact_name' => $order->address?->recipient_name ?: $order->customer_name,
             'destination_contact_phone' => $order->address?->recipient_phone ?: $order->customer_phone,
             'destination_contact_email' => $order->customer_email,
-            'destination_address' => $order->address?->full_address,
+            'destination_address' => $order->address?->full_address.($destinationNote !== '' ? " ({$destinationNote})" : '').($destinationSubdistrict !== '' ? ", {$destinationSubdistrict}" : ''),
             'destination_note' => $destinationNote,
             'destination_postal_code' => $order->address?->postal_code ? (int) $order->address->postal_code : null,
             'destination_area_id' => $destinationAreaId,
@@ -426,8 +474,8 @@ class ShipmentManagementService
             ...$payload,
             'courier_company' => Str::lower($payload['courier_company'] ?: $shipment->courier_company),
             'courier_type' => Str::lower($payload['courier_type'] ?: $shipment->courier_type),
-            'courier_service_name' => $payload['courier_service_name'] ?: $shipment->courier_service_name,
-            'estimated_delivery' => $payload['estimated_delivery'] ?: $shipment->estimated_delivery,
+            'courier_service_name' => ($payload['courier_service_name'] ?? null) ?: $shipment->courier_service_name,
+            'estimated_delivery' => ($payload['estimated_delivery'] ?? null) ?: $shipment->estimated_delivery,
         ];
     }
 
@@ -464,10 +512,10 @@ class ShipmentManagementService
     private function normalizeShippingStatus(?string $status): string
     {
         return match (strtolower((string) $status)) {
-            'confirmed', 'allocated', 'picking_up', 'picked_up' => 'confirmed',
-            'courier_assigned' => 'allocated',
-            'picked' => 'picked',
-            'dropping_off', 'on_process', 'on_delivery', 'shipped' => 'in_transit',
+            'confirmed' => 'confirmed',
+            'allocated', 'courier_assigned', 'picking_up' => 'allocated',
+            'picked', 'picked_up' => 'picked',
+            'in_transit', 'dropping_off', 'on_process', 'on_delivery', 'shipped' => 'in_transit',
             'delivered' => 'delivered',
             'cancelled', 'canceled' => 'cancelled',
             'failed', 'rejected' => 'failed',

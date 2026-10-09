@@ -13,33 +13,27 @@ class SiteSettingSeeder extends Seeder
 
         $settings = [
             // ─── Store Identity ──────────────────────────────────────────────────
-            ['key' => 'store_name',             'value' => "Auréa Syar'i",                              'type' => 'string'],
-            ['key' => 'store_email',            'value' => 'hello@aureasyari.id',                        'type' => 'string'],
-            ['key' => 'store_phone',            'value' => '+62 812-3456-7890',                          'type' => 'string'],
-            ['key' => 'whatsapp_number',        'value' => '6281234567890',                              'type' => 'string'],
-            ['key' => 'store_address',          'value' => 'Jl. Pahlawan No. 88, Surabaya, Jawa Timur 60123, Indonesia', 'type' => 'text'],
+            ['key' => 'store_name',             'value' => 'AxeGear',                                   'type' => 'string'],
+            ['key' => 'store_email',            'value' => 'indonesiaaxegear@gmail.com',                 'type' => 'string'],
+            ['key' => 'store_phone',            'value' => '6285780645938',                              'type' => 'string'],
+            ['key' => 'store_address',          'value' => 'Bavva (Samping Erafone atau seberang Solaria), Jl Ciater Raya, Ciater, Serpong, Tangerang Selatan 15310', 'type' => 'text'],
             ['key' => 'instagram_url',          'value' => 'https://instagram.com/itsarsyari.id',        'type' => 'string'],
             ['key' => 'tiktok_url',             'value' => 'https://tiktok.com/@itsarsyari.id',          'type' => 'string'],
             ['key' => 'footer_text',            'value' => "© 2026 Auréa Syar'i. Seluruh hak cipta dilindungi.", 'type' => 'text'],
 
-            ['key' => 'store_latitude',       'value' => '-7.2871053',                                    'type' => 'string'],
-            ['key' => 'store_longitude',       'value' => '112.8026283',                                    'type' => 'string'],
+            ['key' => 'store_latitude',       'value' => '-6.314540',                                    'type' => 'string'],
+            ['key' => 'store_longitude',       'value' => '106.699569',                                    'type' => 'string'],
 
             // ─── Contact & Location ──────────────────────────────────────────────
-            ['key' => 'contact_phone',          'value' => '+62 812-3456-7890',                         'type' => 'string'],
-            ['key' => 'contact_address',        'value' => 'Jl. Pahlawan No. 88, Surabaya, Jawa Timur 60123, Indonesia', 'type' => 'text'],
-            ['key' => 'contact_maps_url',       'value' => 'https://maps.google.com/?q=Surabaya',       'type' => 'string'],
+            ['key' => 'contact_maps_url',       'value' => 'https://maps.app.goo.gl/hJaZggaoj14kGQqq5',   'type' => 'string'],
             ['key' => 'business_hours',         'value' => 'Senin – Jumat: 09.00–17.00 WIB | Sabtu: 09.00–13.00 WIB', 'type' => 'string'],
 
             // ─── Shipping ────────────────────────────────────────────────────────
-            ['key' => 'origin_address',         'value' => 'Jl. Pahlawan No. 88, Surabaya, Jawa Timur 60123, Indonesia', 'type' => 'text'],
-            ['key' => 'origin_province',        'value' => 'Jawa Timur',                                'type' => 'string'],
-            ['key' => 'origin_city',            'value' => 'Surabaya',                                  'type' => 'string'],
-            ['key' => 'origin_district',        'value' => 'Genteng',                                   'type' => 'string'],
-            ['key' => 'shipper_name',           'value' => 'Auréa Syar\'i Warehouse',                  'type' => 'string'],
-            ['key' => 'shipper_phone',          'value' => '+62 812-3456-7890',                         'type' => 'string'],
-            ['key' => 'shipping_couriers',      'value' => 'jne,jnt,sicepat,anteraja',                  'type' => 'string'],
-            ['key' => 'store_postal_code',       'value' => '60111',                                    'type' => 'string'],
+            ['key' => 'origin_province',        'value' => 'Banten',                                    'type' => 'string'],
+            ['key' => 'origin_city',            'value' => 'Tangerang Selatan',                         'type' => 'string'],
+            ['key' => 'origin_district',        'value' => 'Serpong',                                   'type' => 'string'],
+            ['key' => 'shipping_couriers',      'value' => 'jnt,jne',                                   'type' => 'string'],
+            ['key' => 'store_postal_code',       'value' => '15310',                                    'type' => 'string'],
 
             // ─── Payment ─────────────────────────────────────────────────────────
             ['key' => 'payment_expiry_duration', 'value' => '1440',                                      'type' => 'integer'],

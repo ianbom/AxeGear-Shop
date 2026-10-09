@@ -5,9 +5,11 @@ namespace App\Services\Admin;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\ShippingStatus;
+use App\Models\AdminActivityLog;
 use App\Models\Order;
 use App\Services\Notifications\NotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class OrderManagementService
@@ -84,37 +86,41 @@ class OrderManagementService
         ];
     }
 
+    public function allowedStatuses(Order $order): array
+    {
+        if ($order->payment_status !== PaymentStatus::Paid->value) {
+            return [];
+        }
+
+        $order->loadMissing('shipment');
+
+        return match ($order->order_status) {
+            OrderStatus::Paid->value => [OrderStatus::Processing->value],
+            OrderStatus::Processing->value => [OrderStatus::ReadyToShip->value],
+            OrderStatus::Delivered->value => $order->shipment?->shipping_status === ShippingStatus::Delivered->value
+                && $order->shipping_status === ShippingStatus::Delivered->value ? [OrderStatus::Completed->value] : [],
+            default => [],
+        };
+    }
+
     public function updateStatus(Order $order, string $target): void
     {
-        if ($target === OrderStatus::Cancelled->value && $order->payment_status === PaymentStatus::Paid->value) {
-            throw ValidationException::withMessages(['status' => 'Order paid tidak bisa dibatalkan dari dashboard tanpa flow khusus.']);
-        }
+        DB::transaction(function () use ($order, $target): void {
+            $order = Order::query()->with('shipment')->whereKey($order->id)->lockForUpdate()->firstOrFail();
 
-        $allowed = match ($target) {
-            OrderStatus::Processing->value => in_array($order->order_status, [OrderStatus::Paid->value, OrderStatus::Processing->value], true) && $order->payment_status === PaymentStatus::Paid->value,
-            OrderStatus::ReadyToShip->value => in_array($order->order_status, [OrderStatus::Processing->value, OrderStatus::ReadyToShip->value], true) && $order->payment_status === PaymentStatus::Paid->value,
-            OrderStatus::Completed->value => in_array($order->order_status, [OrderStatus::Delivered->value, OrderStatus::Completed->value], true),
-            OrderStatus::Cancelled->value => $order->payment_status !== PaymentStatus::Paid->value && in_array($order->order_status, [OrderStatus::PendingPayment->value, OrderStatus::Cancelled->value], true),
-            default => false,
-        };
+            if (! in_array($target, $this->allowedStatuses($order), true)) {
+                throw ValidationException::withMessages(['status' => 'Perubahan status tidak sesuai flow order atau pembayaran dan pengiriman belum terkonfirmasi.']);
+            }
 
-        if (! $allowed) {
-            throw ValidationException::withMessages(['status' => 'Perubahan status tidak sesuai flow order.']);
-        }
+            $payload = ['order_status' => $target];
 
-        $payload = ['order_status' => $target];
+            if ($target === OrderStatus::Completed->value) {
+                $payload['completed_at'] = $order->completed_at ?? now();
+            }
 
-        if ($target === OrderStatus::Cancelled->value) {
-            $payload['payment_status'] = PaymentStatus::Cancelled->value;
-            $payload['cancelled_at'] = now();
-        }
-
-        if ($target === OrderStatus::Completed->value) {
-            $payload['completed_at'] = now();
-        }
-
-        $order->update($payload);
-        $this->notifications->forOrder($order->fresh(), 'Order status updated', "Order {$order->order_number} sekarang berstatus {$target}.", 'order');
+            $order->update($payload);
+            $this->notifications->forOrder($order, 'Order status updated', "Order {$order->order_number} sekarang berstatus {$target}.", 'order');
+        });
     }
 
     public function updateNotes(Order $order, ?string $notes): void
@@ -153,18 +159,32 @@ class OrderManagementService
     {
         return [
             ...$this->row($order),
+            'created_at' => $order->created_at?->toISOString(),
+            'allowedStatuses' => $this->allowedStatuses($order),
+            'status_history' => AdminActivityLog::query()
+                ->with('user:id,name')
+                ->where('reference_type', 'admin.orders.status')
+                ->where('reference_id', $order->id)
+                ->latest('id')
+                ->get()
+                ->map(fn (AdminActivityLog $log): array => [
+                    'id' => $log->id,
+                    'status' => $log->new_values['status'] ?? null,
+                    'actor' => $log->user?->name ?? 'Admin',
+                    'created_at' => $log->created_at?->toISOString(),
+                ])->values(),
             'subtotal' => $order->subtotal,
             'discount_amount' => $order->discount_amount,
             'shipping_cost' => $order->shipping_cost,
             'service_fee' => $order->service_fee,
             'voucher_code' => $order->voucher_code,
             'notes' => $order->notes,
-            'paid_at' => $order->paid_at?->toDateTimeString(),
-            'cancelled_at' => $order->cancelled_at?->toDateTimeString(),
-            'expired_at' => $order->expired_at?->toDateTimeString(),
-            'completed_at' => $order->completed_at?->toDateTimeString(),
+            'paid_at' => $order->paid_at?->toISOString(),
+            'cancelled_at' => $order->cancelled_at?->toISOString(),
+            'expired_at' => $order->expired_at?->toISOString(),
+            'completed_at' => $order->completed_at?->toISOString(),
             'no_return_refund_agreed' => $order->no_return_refund_agreed,
-            'no_return_refund_agreed_at' => $order->no_return_refund_agreed_at?->toDateTimeString(),
+            'no_return_refund_agreed_at' => $order->no_return_refund_agreed_at?->toISOString(),
             'items' => $order->items->map(fn ($item): array => [
                 'id' => $item->id,
                 'product_id' => $item->product_id,
@@ -186,8 +206,8 @@ class OrderManagementService
                 'id' => $log->id,
                 'event_type' => $log->event_type,
                 'transaction_status' => $log->transaction_status,
-                'processed_at' => $log->processed_at?->toDateTimeString(),
-                'created_at' => $log->created_at?->toDateTimeString(),
+                'processed_at' => $log->processed_at?->toISOString(),
+                'created_at' => $log->created_at?->toISOString(),
             ])->values() ?? [],
             'shipment' => $order->shipment,
             'trackings' => $order->shipment?->trackings?->map(fn ($tracking): array => [
@@ -195,7 +215,7 @@ class OrderManagementService
                 'status' => $tracking->status,
                 'description' => $tracking->description,
                 'location' => $tracking->location,
-                'happened_at' => $tracking->happened_at?->toDateTimeString(),
+                'happened_at' => $tracking->happened_at?->toISOString(),
             ])->values() ?? [],
         ];
     }

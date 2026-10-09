@@ -109,7 +109,12 @@ class BiteshipService
     public function createOrder(array $payload): array
     {
         $response = $this->client()
+            ->retry(1, 0, throw: false)
             ->post('/v1/orders', $payload);
+
+        if ($response->serverError()) {
+            $response->throw();
+        }
 
         if (! $response->successful()) {
             throw ValidationException::withMessages([

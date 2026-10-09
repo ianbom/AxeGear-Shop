@@ -25,7 +25,8 @@ class SyncMidtransPaymentAction
         }
 
         DB::transaction(function () use ($payment, $payload, $eventType): void {
-            $payment = Payment::query()->with('order')->whereKey($payment->id)->lockForUpdate()->firstOrFail();
+            $payment = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
+            $payment->setRelation('order', $payment->order()->lockForUpdate()->first());
 
             if ((string) $payload['order_id'] !== (string) $payment->midtrans_order_id) {
                 $this->logRejected($payment, $payload, 'rejected_reference_mismatch');
@@ -48,6 +49,10 @@ class SyncMidtransPaymentAction
                 'payload' => $payload,
                 'processed_at' => now(),
             ]);
+
+            if (! $this->applyStatus->canApply($payment, (string) $payload['transaction_status'], $payload['fraud_status'] ?? null)) {
+                return;
+            }
 
             $payment->update([
                 'midtrans_transaction_id' => $payload['transaction_id'] ?? $payment->midtrans_transaction_id,

@@ -4,11 +4,9 @@ import {
     Box,
     CalendarDays,
     Check,
-    ChevronDown,
-    FileDown,
     Mail,
     MapPin,
-    Save,
+    TriangleAlert,
     UserRound,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -18,13 +16,12 @@ import {
     updateStatus,
 } from '@/actions/App/Http/Controllers/Admin/OrderController';
 import { Button } from '@/components/ui/button';
+import { getOrderWorkflow } from '@/lib/order-workflow';
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+    show as paymentShow,
+    sync as syncPayment,
+} from '@/routes/admin/payments';
+import { show as shipmentShow } from '@/routes/admin/shipments';
 
 interface OrderItem {
     id: number;
@@ -53,6 +50,7 @@ interface Address {
 }
 
 interface Payment {
+    id: number;
     payment_provider?: string | null;
     payment_method?: string | null;
     midtrans_order_id?: string | null;
@@ -67,6 +65,7 @@ interface Payment {
 
 interface Shipment {
     id?: number;
+    biteship_order_id?: string | null;
     courier_company?: string | null;
     courier_type?: string | null;
     courier_service_name?: string | null;
@@ -74,6 +73,8 @@ interface Shipment {
     shipping_status?: string | null;
     shipping_cost?: string | number | null;
     estimated_delivery?: string | null;
+    shipped_at?: string | null;
+    delivered_at?: string | null;
 }
 
 interface Order {
@@ -90,6 +91,13 @@ interface Order {
     voucher_code: string | null;
     payment_status: string;
     order_status: string;
+    allowedStatuses: string[];
+    status_history: {
+        id: number;
+        status: string | null;
+        actor: string;
+        created_at: string | null;
+    }[];
     shipping_status: string;
     created_at: string | null;
     paid_at: string | null;
@@ -140,11 +148,10 @@ const tabs: { value: Tab; label: string }[] = [
     { value: 'activity', label: 'Activity' },
 ];
 
-const statusTransitions: Record<string, string[]> = {
-    paid: ['processing'],
-    processing: ['ready_to_ship'],
-    delivered: ['completed'],
-    pending_payment: ['cancelled'],
+const actionLabels: Record<string, string> = {
+    processing: 'Mulai proses pesanan',
+    ready_to_ship: 'Selesai packing: siap dikirim',
+    completed: 'Selesaikan pesanan',
 };
 
 const money = (value: string | number | null | undefined) =>
@@ -159,13 +166,21 @@ const date = (value: string | null | undefined) => {
         return '—';
     }
 
-    return new Intl.DateTimeFormat('id-ID', {
+    const timestamp = new Date(value);
+
+    if (Number.isNaN(timestamp.getTime())) {
+        return '—';
+    }
+
+    return `${new Intl.DateTimeFormat('id-ID', {
         day: '2-digit',
         month: 'short',
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
-    }).format(new Date(value));
+        hourCycle: 'h23',
+        timeZone: 'Asia/Jakarta',
+    }).format(timestamp)} WIB`;
 };
 
 const label = (value: string | null | undefined) =>
@@ -173,13 +188,18 @@ const label = (value: string | null | undefined) =>
 
 export default function OrderShow({ order }: Props) {
     const [tab, setTab] = useState<Tab>('overview');
-    const [status, setStatus] = useState('');
     const [processing, setProcessing] = useState(false);
-    const availableStatuses = statusTransitions[order.order_status] ?? [];
+    const [statusError, setStatusError] = useState('');
+    const availableStatuses = order.allowedStatuses;
 
     const activities = useMemo(
         () =>
             [
+                ...order.status_history.map((item) => ({
+                    id: `order-${item.id}`,
+                    title: `${label(item.status)} - ${item.actor}`,
+                    time: item.created_at,
+                })),
                 ...order.trackings.map((item) => ({
                     id: `shipping-${item.id}`,
                     title: item.description ?? `Shipping ${label(item.status)}`,
@@ -203,44 +223,40 @@ export default function OrderShow({ order }: Props) {
         [order],
     );
 
-    const saveStatus = () => {
-        if (!status) {
-            return;
-        }
-
-        setProcessing(true);
-        router.post(
-            updateStatus.url(order.id),
-            { status },
-            {
-                preserveScroll: true,
-                onSuccess: () => setStatus(''),
-                onFinish: () => setProcessing(false),
-            },
-        );
-    };
-
     return (
         <>
             <Head title={`Order Detail - ${order.order_number}`} />
-            <main className="min-h-full bg-[#fafafa] px-4 py-5 text-[#171717] sm:px-6 lg:px-7">
+            <main className="flex-1 bg-[#fafafa] px-4 py-5 text-[#171717] sm:px-6 lg:px-7">
                 <div className="mx-auto flex max-w-[1440px] flex-col gap-5">
                     <PageHeader
+                        order={order}
                         availableStatuses={availableStatuses}
                         processing={processing}
                         onStatusChange={(nextStatus) => {
                             setProcessing(true);
+                            setStatusError('');
                             router.post(
                                 updateStatus.url(order.id),
                                 { status: nextStatus },
                                 {
                                     preserveScroll: true,
+                                    onError: (errors) =>
+                                        setStatusError(
+                                            errors.status ??
+                                                'Perubahan status gagal.',
+                                        ),
                                     onFinish: () => setProcessing(false),
                                 },
                             );
                         }}
                     />
+                    {statusError && (
+                        <p role="alert" className="text-sm text-destructive">
+                            {statusError}
+                        </p>
+                    )}
                     <OrderBanner order={order} />
+                    <OrderWorkflow order={order} />
 
                     <nav
                         className="flex overflow-x-auto border-b border-[#dedede]"
@@ -266,15 +282,7 @@ export default function OrderShow({ order }: Props) {
                     </nav>
 
                     {tab === 'overview' && (
-                        <Overview
-                            order={order}
-                            status={status}
-                            setStatus={setStatus}
-                            saveStatus={saveStatus}
-                            processing={processing}
-                            availableStatuses={availableStatuses}
-                            activities={activities}
-                        />
+                        <Overview order={order} activities={activities} />
                     )}
                     {tab === 'products' && <Products order={order} />}
                     {tab === 'customer' && <Customer order={order} />}
@@ -290,15 +298,17 @@ export default function OrderShow({ order }: Props) {
 }
 
 function PageHeader({
+    order,
     availableStatuses,
     processing,
     onStatusChange,
 }: {
+    order: Order;
     availableStatuses: string[];
     processing: boolean;
     onStatusChange: (status: string) => void;
 }) {
-    const headerStatuses = ['cancelled', 'ready_to_ship', 'completed'];
+    const nextStatus = availableStatuses[0];
 
     return (
         <header className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
@@ -332,43 +342,145 @@ function PageHeader({
                 >
                     <ArrowLeft className="size-4" /> Back to Orders
                 </Link>
-                <button
-                    type="button"
-                    onClick={() => window.print()}
-                    className="inline-flex h-10 items-center gap-2 rounded-md border border-[#d8d8d8] bg-white px-5 text-sm font-medium shadow-sm transition hover:bg-[#f5f5f5]"
-                >
-                    <FileDown className="size-4" /> Export
-                </button>
-                <div className="relative">
-                    <select
-                        aria-label="Update order status"
-                        value=""
+                {nextStatus && (
+                    <Button
+                        type="button"
                         disabled={processing}
-                        onChange={(event) => {
-                            if (event.target.value) {
-                                onStatusChange(event.target.value);
-                            }
-                        }}
-                        className="h-10 cursor-pointer appearance-none rounded-md bg-[#f0440b] py-0 pr-10 pl-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#d93a08] focus:ring-2 focus:ring-[#f0440b]/30 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={() => onStatusChange(nextStatus)}
+                        className="h-auto min-h-10 bg-[#d93a08] whitespace-normal text-white hover:bg-[#b83007]"
                     >
-                        <option value="" className="bg-white text-[#171717]">
-                            Update Order
-                        </option>
-                        {headerStatuses.map((value) => (
-                            <option
-                                key={value}
-                                value={value}
-                                disabled={!availableStatuses.includes(value)}
-                                className="bg-white text-[#171717] disabled:text-[#999]"
-                            >
-                                {label(value)}
-                            </option>
-                        ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute top-3 right-3 size-4 text-white" />
-                </div>
+                        {processing
+                            ? 'Menyimpan...'
+                            : (actionLabels[nextStatus] ?? label(nextStatus))}
+                    </Button>
+                )}
+                {!nextStatus &&
+                    order.payment &&
+                    ['pending', 'manual_review'].includes(
+                        order.payment_status,
+                    ) && (
+                        <Button asChild>
+                            <Link href={paymentShow.url(order.payment.id)}>
+                                Periksa pembayaran
+                            </Link>
+                        </Button>
+                    )}
+                {!nextStatus &&
+                    order.payment_status === 'paid' &&
+                    order.shipment?.id &&
+                    !['completed', 'cancelled', 'refunded'].includes(
+                        order.order_status,
+                    ) && (
+                        <Button asChild>
+                            <Link href={shipmentShow.url(order.shipment.id)}>
+                                {order.order_status === 'ready_to_ship' &&
+                                !order.shipment.biteship_order_id
+                                    ? 'Booking kurir'
+                                    : 'Pantau / tangani pengiriman'}
+                            </Link>
+                        </Button>
+                    )}
             </div>
         </header>
+    );
+}
+
+function OrderWorkflow({ order }: { order: Order }) {
+    const steps = [
+        { title: 'Dipesan', description: 'Pesanan dibuat pelanggan' },
+        { title: 'Dibayar', description: 'Pembayaran terkonfirmasi' },
+        { title: 'Diproses', description: 'Pengecekan dan packing' },
+        {
+            title: 'Siap Dikirim',
+            description: 'Packing selesai, booking kurir',
+        },
+        { title: 'Dikirim', description: 'Barang dibawa kurir' },
+        {
+            title: 'Diterima Pelanggan',
+            description: 'Kurir mengonfirmasi penerimaan',
+        },
+        { title: 'Selesai', description: 'Pesanan ditutup oleh admin' },
+    ];
+    const { currentStep, completed, issue } = getOrderWorkflow(order);
+
+    return (
+        <section
+            aria-labelledby="order-workflow-title"
+            className="@container min-w-0 rounded-xl border border-[#dedede] bg-white p-4 sm:p-5"
+        >
+            <h2 id="order-workflow-title" className="text-base font-bold">
+                Alur Pesanan
+            </h2>
+            <p role="status" className="mt-1 text-sm text-[#555]">
+                {issue
+                    ? 'Alur memerlukan pemeriksaan; progres terakhir ditampilkan di bawah.'
+                    : completed
+                      ? 'Seluruh tahap pesanan selesai.'
+                      : `Tahap saat ini: ${steps[currentStep].title}.`}
+            </p>
+            {issue && (
+                <p className="mt-3 flex items-start gap-2 rounded-md border border-[#f58220] bg-[#fff7ed] p-3 text-sm text-[#1a1a1a]">
+                    <TriangleAlert
+                        aria-hidden="true"
+                        className="mt-0.5 size-4 shrink-0"
+                    />
+                    {issue}
+                </p>
+            )}
+            <ol
+                aria-label="Workflow pesanan"
+                className="mt-5 grid grid-cols-1 @min-[900px]:grid-cols-7"
+            >
+                {steps.map((step, index) => {
+                    const isCurrent = index === currentStep && !completed;
+                    const isDone = index < currentStep || completed;
+
+                    return (
+                        <li
+                            key={step.title}
+                            aria-current={isCurrent ? 'step' : undefined}
+                            className="relative flex min-w-0 items-start gap-3 pb-6 last:pb-0 @min-[900px]:flex-col @min-[900px]:items-center @min-[900px]:px-2 @min-[900px]:pb-0 @min-[900px]:text-center"
+                        >
+                            {index < steps.length - 1 && (
+                                <span
+                                    aria-hidden="true"
+                                    className={`absolute top-9 bottom-0 left-[17px] w-px @min-[900px]:top-[17px] @min-[900px]:bottom-auto @min-[900px]:left-[calc(50%+18px)] @min-[900px]:h-px @min-[900px]:w-[calc(100%-36px)] ${index < currentStep ? 'bg-[#1a1a1a]' : 'bg-[#dedede]'}`}
+                                />
+                            )}
+                            <span
+                                aria-hidden="true"
+                                className={`relative z-10 flex size-9 shrink-0 items-center justify-center rounded-full border text-sm font-semibold ${isDone ? 'border-[#1a1a1a] bg-[#1a1a1a] text-white' : isCurrent ? 'border-[#f58220] bg-[#f58220] text-[#1a1a1a]' : 'border-[#dedede] bg-white text-[#555]'}`}
+                            >
+                                {isDone ? (
+                                    <Check className="size-4" />
+                                ) : isCurrent && issue ? (
+                                    <TriangleAlert className="size-4" />
+                                ) : (
+                                    index + 1
+                                )}
+                            </span>
+                            <div className="min-w-0">
+                                <h3 className="text-sm font-semibold text-[#1a1a1a]">
+                                    {step.title}
+                                </h3>
+                                <p className="mt-1 text-xs leading-5 text-[#555]">
+                                    {step.description}
+                                </p>
+                                <p className="mt-1 text-xs font-medium text-[#555]">
+                                    {isDone
+                                        ? 'Selesai'
+                                        : isCurrent
+                                          ? issue
+                                              ? 'Perlu diperiksa'
+                                              : 'Saat ini'
+                                          : 'Belum'}
+                                </p>
+                            </div>
+                        </li>
+                    );
+                })}
+            </ol>
+        </section>
     );
 }
 
@@ -452,26 +564,16 @@ interface Activity {
 
 function Overview({
     order,
-    status,
-    setStatus,
-    saveStatus,
-    processing,
-    availableStatuses,
     activities,
 }: {
     order: Order;
-    status: string;
-    setStatus: (value: string) => void;
-    saveStatus: () => void;
-    processing: boolean;
-    availableStatuses: string[];
     activities: Activity[];
 }) {
     return (
         <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.75fr)_minmax(320px,0.95fr)]">
             <div className="grid gap-4">
                 <Panel>
-                    <div className="grid lg:grid-cols-[1fr_1.15fr]">
+                    <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
                         <div className="border-b border-[#e1e1e1] p-5 lg:border-r lg:border-b-0">
                             <PanelTitle>Order Information</PanelTitle>
                             <dl className="mt-5 grid gap-3">
@@ -504,57 +606,38 @@ function Overview({
                                 </Detail>
                             </dl>
                         </div>
-                        <div id="update-status" className="scroll-mt-5 p-5">
-                            <PanelTitle>Update Status</PanelTitle>
+                        <div className="p-5">
+                            <PanelTitle>Panduan Pemenuhan Pesanan</PanelTitle>
                             <div className="mt-5 grid gap-3">
                                 <StatusField
                                     label="Payment Status"
                                     value={order.payment_status}
                                 />
-                                <div>
-                                    <label className="mb-1.5 block text-sm">
-                                        Order Status
-                                    </label>
-                                    {availableStatuses.length ? (
-                                        <Select
-                                            value={status}
-                                            onValueChange={setStatus}
-                                        >
-                                            <SelectTrigger className="h-10 border-[#d8d8d8] bg-white">
-                                                <SelectValue placeholder="Select next status" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {availableStatuses.map(
-                                                    (value) => (
-                                                        <SelectItem
-                                                            key={value}
-                                                            value={value}
-                                                        >
-                                                            {label(value)}
-                                                        </SelectItem>
-                                                    ),
-                                                )}
-                                            </SelectContent>
-                                        </Select>
-                                    ) : (
-                                        <p className="rounded-md border border-[#dedede] bg-[#fafafa] px-3 py-2.5 text-sm text-[#666]">
-                                            No status change available.
-                                        </p>
-                                    )}
-                                </div>
+                                <p className="text-sm text-[#555]">
+                                    Periksa pembayaran, produk, alamat, dan
+                                    catatan pelanggan. Mulai proses melalui
+                                    tombol di atas; tandai siap dikirim setelah
+                                    packing selesai.
+                                </p>
+                                <p className="text-sm text-[#555]">
+                                    Pembayaran mengikuti Midtrans, pengiriman
+                                    mengikuti Biteship. Pesanan hanya dapat
+                                    diselesaikan setelah pembayaran lunas dan
+                                    barang terkirim.
+                                </p>
                                 <StatusField
                                     label="Shipping Status"
                                     value={order.shipping_status}
                                 />
-                                {availableStatuses.length > 0 && (
-                                    <Button
-                                        type="button"
-                                        onClick={saveStatus}
-                                        disabled={processing || !status}
-                                        className="mt-1 w-fit bg-[#f0440b] px-6 text-white hover:bg-[#d93a08]"
+                                {order.shipment?.id && (
+                                    <Link
+                                        href={shipmentShow.url(
+                                            order.shipment.id,
+                                        )}
+                                        className="text-sm font-medium text-[#d93a08] underline"
                                     >
-                                        <Save className="size-4" /> Save Changes
-                                    </Button>
+                                        Buka pengiriman dan booking kurir
+                                    </Link>
                                 )}
                             </div>
                         </div>
@@ -661,12 +744,6 @@ function AddressCard({ order }: { order: Order }) {
                     <p>{order.customer_phone}</p>
                 </div>
             </div>
-            <button
-                type="button"
-                className="mt-4 h-9 rounded-md border border-[#d8d8d8] bg-white px-5 text-xs font-medium hover:bg-[#f5f5f5]"
-            >
-                View Full Address
-            </button>
         </Panel>
     );
 }
@@ -762,11 +839,60 @@ function Customer({ order }: { order: Order }) {
 
 function PaymentTab({ order }: { order: Order }) {
     const payment = order.payment;
+    const [syncing, setSyncing] = useState(false);
+    const [syncError, setSyncError] = useState('');
 
     return (
-        <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
             <Panel className="p-5">
                 <PanelTitle>Payment Information</PanelTitle>
+                {payment && (
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                        <Link
+                            href={paymentShow.url(payment.id)}
+                            className="text-sm font-medium underline"
+                        >
+                            Detail pembayaran
+                        </Link>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            disabled={syncing}
+                            onClick={() => {
+                                setSyncing(true);
+                                setSyncError('');
+                                router.post(
+                                    syncPayment.url(payment.id),
+                                    {},
+                                    {
+                                        preserveScroll: true,
+                                        onError: (errors) =>
+                                            setSyncError(
+                                                Object.values(errors).join(' '),
+                                            ),
+                                        onFinish: () => setSyncing(false),
+                                    },
+                                );
+                            }}
+                        >
+                            {syncing
+                                ? 'Menyinkronkan...'
+                                : 'Sinkronkan Midtrans'}
+                        </Button>
+                        <p className="w-full text-sm text-[#555]">
+                            Pembatalan dan refund diproses melalui Midtrans,
+                            lalu sinkronkan status di sini.
+                        </p>
+                        {syncError && (
+                            <p
+                                role="alert"
+                                className="text-sm text-destructive"
+                            >
+                                {syncError}
+                            </p>
+                        )}
+                    </div>
+                )}
                 {payment ? (
                     <div className="mt-5 grid gap-4 sm:grid-cols-2">
                         <Detail label="Provider">
@@ -819,9 +945,17 @@ function ShippingTab({ order }: { order: Order }) {
     const shipment = order.shipment;
 
     return (
-        <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
             <Panel className="p-5">
                 <PanelTitle>Shipping Information</PanelTitle>
+                {shipment?.id && (
+                    <Link
+                        href={shipmentShow.url(shipment.id)}
+                        className="mt-4 inline-flex text-sm font-medium text-[#d93a08] underline"
+                    >
+                        Kelola pengiriman, booking kurir, dan label
+                    </Link>
+                )}
                 {shipment ? (
                     <div className="mt-5 grid gap-4 sm:grid-cols-2">
                         <Detail label="Courier">
@@ -887,9 +1021,9 @@ function ActivityList({
             {activities.map((item, index) => (
                 <div
                     key={item.id}
-                    className="grid grid-cols-[20px_minmax(0,1fr)_auto] gap-3 text-sm"
+                    className="grid grid-cols-[20px_minmax(0,1fr)] gap-x-3 text-sm sm:grid-cols-[20px_minmax(0,1fr)_auto]"
                 >
-                    <div className="flex flex-col items-center">
+                    <div className="row-span-2 flex flex-col items-center sm:row-span-1">
                         <span className="mt-0.5 flex size-4 items-center justify-center rounded-full bg-[#24953a] text-white">
                             <Check className="size-2.5" />
                         </span>
@@ -897,8 +1031,10 @@ function ActivityList({
                             <span className="h-7 w-px border-l border-dashed border-[#bdbdbd]" />
                         )}
                     </div>
-                    <p className="pb-4">{item.title}</p>
-                    <time className="pb-4 text-xs text-[#777]">
+                    <p className="min-w-0 pb-1 break-words sm:pb-4">
+                        {item.title}
+                    </p>
+                    <time className="col-start-2 pb-4 text-xs text-[#555] sm:col-start-auto">
                         {date(item.time)}
                     </time>
                 </div>
@@ -916,14 +1052,6 @@ function ActivityList({
         <Panel className="p-5">
             <PanelTitle>Order Activity {expanded ? '' : '(Latest)'}</PanelTitle>
             <div className="mt-5">{content}</div>
-            {!expanded && (
-                <button
-                    type="button"
-                    className="mt-1 h-9 rounded-md border border-[#d8d8d8] bg-white px-8 text-xs font-medium hover:bg-[#f5f5f5]"
-                >
-                    View All Activity
-                </button>
-            )}
         </Panel>
     );
 }

@@ -172,11 +172,6 @@ const adminNavGroups: NavGroup[] = [
                 icon: Images,
             },
             {
-                title: 'Halaman',
-                href: '/admin/pages',
-                icon: FileText,
-            },
-            {
                 title: 'New Product',
                 href: '/admin/new-product',
                 icon: Package,

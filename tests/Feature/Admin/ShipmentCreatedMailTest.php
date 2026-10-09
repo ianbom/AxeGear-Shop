@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Mail;
 
 uses(RefreshDatabase::class);
 
-it('emails the customer when admin creates a shipment from an order', function () {
+it('emails the customer when admin creates a shipment from an order', function (bool $canonicalIdentity) {
     Mail::fake();
     config(['services.biteship.api_key' => 'test-key']);
 
@@ -27,7 +27,7 @@ it('emails the customer when admin creates a shipment from an order', function (
         'phone' => '081234567890',
     ]);
 
-    seedShipmentSettings();
+    seedShipmentSettings($canonicalIdentity);
 
     $order = Order::query()->create([
         'user_id' => $customer->id,
@@ -40,7 +40,7 @@ it('emails the customer when admin creates a shipment from an order', function (
         'service_fee' => 0,
         'grand_total' => 266000,
         'payment_status' => 'paid',
-        'order_status' => 'paid',
+        'order_status' => 'ready_to_ship',
         'shipping_status' => 'not_created',
         'no_return_refund_agreed' => true,
         'no_return_refund_agreed_at' => now(),
@@ -95,6 +95,14 @@ it('emails the customer when admin creates a shipment from an order', function (
         ])
         ->assertRedirect();
 
+    Http::assertSent(fn ($request): bool => $request->url() === 'https://api.biteship.com/v1/orders'
+        && $request['shipper_contact_name'] === 'Anemi Store'
+        && $request['shipper_contact_phone'] === '080000000000'
+        && $request['origin_contact_name'] === 'Anemi Store'
+        && $request['origin_contact_phone'] === '080000000000'
+        && $request['origin_address'] === 'Jl. Store No. 1'
+        && $request['origin_postal_code'] === 60111);
+
     Mail::assertSent(ShipmentCreatedMail::class, function (ShipmentCreatedMail $mail): bool {
         $html = $mail->render();
 
@@ -111,14 +119,14 @@ it('emails the customer when admin creates a shipment from an order', function (
             && str_contains($html, 'JNE123456789')
             && str_contains($html, 'https://track.example.test/JNE123456789');
     });
-});
+})->with(['legacy settings' => false, 'canonical settings' => true]);
 
-function seedShipmentSettings(): void
+function seedShipmentSettings(bool $canonicalIdentity = false): void
 {
     collect([
-        'shipper_name' => 'Anemi Store',
-        'shipper_phone' => '080000000000',
-        'origin_address' => 'Jl. Store No. 1',
+        ($canonicalIdentity ? 'store_name' : 'shipper_name') => 'Anemi Store',
+        ($canonicalIdentity ? 'store_phone' : 'shipper_phone') => '080000000000',
+        ($canonicalIdentity ? 'store_address' : 'origin_address') => 'Jl. Store No. 1',
         'store_postal_code' => '60111',
         'store_latitude' => '-6.2',
         'store_longitude' => '106.8',

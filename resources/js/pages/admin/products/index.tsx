@@ -5,8 +5,6 @@ import {
     ArrowUp,
     ArrowUpDown,
     Ban,
-    ChevronLeft,
-    ChevronRight,
     Download,
     Eye,
     FileText,
@@ -39,7 +37,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { PerPageSelect } from '../pagination';
+import { PaginationLabel, PerPageSelect } from '../pagination';
 
 interface Product {
     id: number;
@@ -565,11 +563,25 @@ export default function ProductsIndex({
                     </form>
 
                     {/* Table */}
-                    <div className="overflow-x-auto">
-                        <table className="w-full min-w-[1120px] text-left text-sm">
+                    <div className="overflow-x-auto lg:overflow-x-hidden">
+                        <table className="w-full min-w-[1120px] text-left text-sm lg:min-w-0 lg:table-fixed lg:text-xs">
+                            <colgroup className="hidden lg:table-column-group">
+                                <col className="w-[3%]" />
+                                <col className="w-[20%]" />
+                                <col className="w-[6%]" />
+                                <col className="w-[7%]" />
+                                <col className="w-[7%]" />
+                                <col className="w-[12%]" />
+                                <col className="w-[5%]" />
+                                <col className="w-[5%]" />
+                                <col className="w-[9%]" />
+                                <col className="w-[8%]" />
+                                <col className="w-[12%]" />
+                                <col className="w-[6%]" />
+                            </colgroup>
                             <thead>
                                 <tr className="border-b border-zinc-100 bg-zinc-50/60">
-                                    <th className="w-14 px-4 py-3 text-[11px] font-semibold tracking-wider text-zinc-400 uppercase">
+                                    <th className="w-14 px-4 py-3 text-[11px] font-semibold tracking-wider text-zinc-400 uppercase lg:w-auto lg:px-1 lg:py-2 lg:text-[9px] lg:leading-tight lg:break-all">
                                         No
                                     </th>
                                     <SortableTh
@@ -579,13 +591,13 @@ export default function ProductsIndex({
                                         direction={filters.direction}
                                         onSort={applySort}
                                     />
-                                    <th className="px-4 py-3 text-[11px] font-semibold tracking-wider text-zinc-400 uppercase">
+                                    <th className="px-4 py-3 text-[11px] font-semibold tracking-wider text-zinc-400 uppercase lg:px-1 lg:py-2 lg:text-[9px] lg:leading-tight lg:break-all">
                                         SKU
                                     </th>
-                                    <th className="px-4 py-3 text-[11px] font-semibold tracking-wider text-zinc-400 uppercase">
+                                    <th className="px-4 py-3 text-[11px] font-semibold tracking-wider text-zinc-400 uppercase lg:px-1 lg:py-2 lg:text-[9px] lg:leading-tight lg:break-all">
                                         Category
                                     </th>
-                                    <th className="px-4 py-3 text-[11px] font-semibold tracking-wider text-zinc-400 uppercase">
+                                    <th className="px-4 py-3 text-[11px] font-semibold tracking-wider text-zinc-400 uppercase lg:px-1 lg:py-2 lg:text-[9px] lg:leading-tight lg:break-all">
                                         Collection
                                     </th>
                                     <SortableTh
@@ -595,16 +607,16 @@ export default function ProductsIndex({
                                         direction={filters.direction}
                                         onSort={applySort}
                                     />
-                                    <th className="px-4 py-3 text-center text-[11px] font-semibold tracking-wider text-zinc-400 uppercase">
+                                    <th className="px-4 py-3 text-center text-[11px] font-semibold tracking-wider text-zinc-400 uppercase lg:px-1 lg:py-2 lg:text-[9px] lg:leading-tight lg:break-all">
                                         Variants
                                     </th>
-                                    <th className="px-4 py-3 text-[11px] font-semibold tracking-wider text-zinc-400 uppercase">
+                                    <th className="px-4 py-3 text-[11px] font-semibold tracking-wider text-zinc-400 uppercase lg:px-1 lg:py-2 lg:text-[9px] lg:leading-tight lg:break-all">
                                         Stock
                                     </th>
-                                    <th className="px-4 py-3 text-[11px] font-semibold tracking-wider text-zinc-400 uppercase">
+                                    <th className="px-4 py-3 text-[11px] font-semibold tracking-wider text-zinc-400 uppercase lg:px-1 lg:py-2 lg:text-[9px] lg:leading-tight lg:break-all">
                                         Status
                                     </th>
-                                    <th className="px-4 py-3 text-[11px] font-semibold tracking-wider text-zinc-400 uppercase">
+                                    <th className="px-4 py-3 text-[11px] font-semibold tracking-wider text-zinc-400 uppercase lg:px-1 lg:py-2 lg:text-[9px] lg:leading-tight lg:break-all">
                                         Tag
                                     </th>
                                     <SortableTh
@@ -614,7 +626,7 @@ export default function ProductsIndex({
                                         direction={filters.direction}
                                         onSort={applySort}
                                     />
-                                    <th className="w-10 px-4 py-3"></th>
+                                    <th className="w-10 px-4 py-3 lg:w-auto lg:px-1 lg:py-2"></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-zinc-50">
@@ -665,13 +677,13 @@ export default function ProductsIndex({
                                             key={p.id}
                                             className="transition-colors hover:bg-zinc-50/70"
                                         >
-                                            <td className="px-4 py-3.5 text-xs font-medium text-zinc-400">
+                                            <td className="px-4 py-3.5 text-xs font-medium text-zinc-400 lg:px-1 lg:py-2.5">
                                                 {(products.from ?? 1) + index}
                                             </td>
 
-                                            <td className="px-4 py-3.5">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50">
+                                            <td className="px-4 py-3.5 lg:px-1 lg:py-2.5">
+                                                <div className="flex items-center gap-3 lg:gap-1.5">
+                                                    <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 lg:h-8 lg:w-8">
                                                         {p.thumbnail ? (
                                                             <img
                                                                 src={
@@ -686,13 +698,14 @@ export default function ProductsIndex({
                                                             </div>
                                                         )}
                                                     </div>
-                                                    <div className="min-w-[160px]">
+                                                    <div className="min-w-[160px] lg:min-w-0">
                                                         <Link
                                                             href={
                                                                 '/admin/products/' +
                                                                 p.id
                                                             }
-                                                            className="line-clamp-1 font-semibold text-zinc-900 transition-colors hover:text-[#151515]"
+                                                            title={p.name}
+                                                            className="line-clamp-1 font-semibold text-zinc-900 transition-colors hover:text-[#151515] lg:text-[11px]"
                                                         >
                                                             {p.name}
                                                         </Link>
@@ -706,13 +719,19 @@ export default function ProductsIndex({
                                                 </div>
                                             </td>
 
-                                            <td className="px-4 py-3.5">
-                                                <span className="rounded-md bg-zinc-100 font-mono text-xs text-zinc-500">
+                                            <td className="px-4 py-3.5 lg:px-1 lg:py-2.5">
+                                                <span
+                                                    title={p.sku ?? undefined}
+                                                    className="rounded-md bg-zinc-100 font-mono text-xs text-zinc-500 lg:block lg:truncate lg:text-[10px]"
+                                                >
                                                     {p.sku ?? '-'}
                                                 </span>
                                             </td>
 
-                                            <td className="px-4 py-3.5 text-sm text-zinc-600">
+                                            <td
+                                                title={p.category ?? undefined}
+                                                className="px-4 py-3.5 text-sm text-zinc-600 lg:truncate lg:px-1 lg:py-2.5 lg:text-[10px]"
+                                            >
                                                 {p.category ?? (
                                                     <span className="text-zinc-300">
                                                         -
@@ -720,7 +739,12 @@ export default function ProductsIndex({
                                                 )}
                                             </td>
 
-                                            <td className="px-4 py-3.5 text-sm text-zinc-600">
+                                            <td
+                                                title={
+                                                    p.collection ?? undefined
+                                                }
+                                                className="px-4 py-3.5 text-sm text-zinc-600 lg:truncate lg:px-1 lg:py-2.5 lg:text-[10px]"
+                                            >
                                                 {p.collection ?? (
                                                     <span className="text-zinc-300">
                                                         -
@@ -728,14 +752,16 @@ export default function ProductsIndex({
                                                 )}
                                             </td>
 
-                                            <td className="px-4 py-3.5">
+                                            <td className="px-4 py-3.5 lg:px-1 lg:py-2.5">
                                                 {p.sale_price ? (
                                                     <div className="flex flex-col gap-0">
-                                                        <span className="text-sm font-semibold text-zinc-900">
+                                                        <span className="text-sm font-semibold text-zinc-900 lg:text-[10px] lg:[overflow-wrap:anywhere]">
                                                             {fmt(p.sale_price)}
                                                         </span>
-                                                        <span className="text-xs text-zinc-400 line-through">
-                                                            {fmt(p.regular_price)}
+                                                        <span className="text-xs text-zinc-400 line-through lg:text-[9px] lg:[overflow-wrap:anywhere]">
+                                                            {fmt(
+                                                                p.regular_price,
+                                                            )}
                                                         </span>
                                                         {discount && (
                                                             <span className="text-[10px] font-semibold text-red-500">
@@ -744,23 +770,23 @@ export default function ProductsIndex({
                                                         )}
                                                     </div>
                                                 ) : (
-                                                    <span className="text-sm font-semibold text-zinc-900">
+                                                    <span className="text-sm font-semibold text-zinc-900 lg:text-[10px] lg:[overflow-wrap:anywhere]">
                                                         {fmt(p.regular_price)}
                                                     </span>
                                                 )}
                                             </td>
 
-                                            <td className="px-4 py-3.5 text-center">
-                                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-100 text-xs font-semibold text-zinc-700">
+                                            <td className="px-4 py-3.5 text-center lg:px-1 lg:py-2.5">
+                                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-100 text-xs font-semibold text-zinc-700 lg:h-6 lg:w-6">
                                                     {p.variants_count}
                                                 </span>
                                             </td>
 
-                                            <td className="px-4 py-3.5">
-                                                <div className="flex items-center gap-1.5">
+                                            <td className="px-4 py-3.5 lg:px-1 lg:py-2.5">
+                                                <div className="flex items-center gap-1.5 lg:flex-col lg:items-start lg:gap-0">
                                                     <span
                                                         className={
-                                                            'text-sm font-semibold ' +
+                                                            'text-sm font-semibold lg:text-xs ' +
                                                             (isOutOfStock
                                                                 ? 'text-red-500'
                                                                 : isLowStock
@@ -783,10 +809,10 @@ export default function ProductsIndex({
                                                 </div>
                                             </td>
 
-                                            <td className="px-4 py-3.5">
+                                            <td className="px-4 py-3.5 lg:px-1 lg:py-2.5">
                                                 <span
                                                     className={
-                                                        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ' +
+                                                        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold lg:max-w-full lg:gap-0.5 lg:px-0.5 lg:py-0.5 lg:text-[9px] lg:leading-tight ' +
                                                         sc.text +
                                                         ' ' +
                                                         sc.bg
@@ -794,19 +820,25 @@ export default function ProductsIndex({
                                                 >
                                                     <span
                                                         className={
-                                                            'h-1.5 w-1.5 rounded-full ' +
+                                                            'h-1.5 w-1.5 rounded-full lg:h-1 lg:w-1 lg:shrink-0 ' +
                                                             sc.dot
                                                         }
                                                     />
-                                                    {sc.label}
+                                                    <span
+                                                        className="lg:min-w-0 lg:truncate"
+                                                        title={sc.label}
+                                                    >
+                                                        {sc.label}
+                                                    </span>
                                                 </span>
                                             </td>
 
-                                            <td className="px-4 py-3.5">
+                                            <td className="px-4 py-3.5 lg:px-1 lg:py-2.5">
                                                 <Badge
                                                     variant="outline"
+                                                    title={vis.label}
                                                     className={
-                                                        'px-2 py-0.5 text-xs ' +
+                                                        'px-2 py-0.5 text-xs lg:max-w-full lg:truncate lg:px-1 lg:text-[9px] lg:leading-tight ' +
                                                         vis.cls
                                                     }
                                                 >
@@ -814,8 +846,8 @@ export default function ProductsIndex({
                                                 </Badge>
                                             </td>
 
-                                            <td className="px-4 py-3.5">
-                                                <span className="text-xs whitespace-nowrap text-zinc-400">
+                                            <td className="px-4 py-3.5 lg:px-1 lg:py-2.5">
+                                                <span className="text-xs whitespace-nowrap text-zinc-400 lg:text-[10px] lg:whitespace-normal">
                                                     {p.created_at
                                                         ? new Date(
                                                               p.created_at,
@@ -831,7 +863,7 @@ export default function ProductsIndex({
                                                 </span>
                                             </td>
 
-                                            <td className="px-4 py-3.5">
+                                            <td className="px-4 py-3.5 lg:px-1 lg:py-2.5">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger
                                                         asChild
@@ -839,6 +871,10 @@ export default function ProductsIndex({
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
+                                                            aria-label={
+                                                                'Actions for ' +
+                                                                p.name
+                                                            }
                                                             className="h-8 w-8 rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"
                                                         >
                                                             <MoreVertical className="h-4 w-4" />
@@ -983,22 +1019,8 @@ export default function ProductsIndex({
                         </span>
                         <div className="flex flex-wrap items-center gap-1">
                             {products.links.map((link, i) => {
-                                const isChevronLeft =
-                                    link.label.includes('Previous') ||
-                                    link.label.includes('&laquo;');
-                                const isChevronRight =
-                                    link.label.includes('Next') ||
-                                    link.label.includes('&raquo;');
-                                const label = isChevronLeft ? (
-                                    <ChevronLeft className="h-3.5 w-3.5" />
-                                ) : isChevronRight ? (
-                                    <ChevronRight className="h-3.5 w-3.5" />
-                                ) : (
-                                    <span
-                                        dangerouslySetInnerHTML={{
-                                            __html: link.label,
-                                        }}
-                                    />
+                                const label = (
+                                    <PaginationLabel label={link.label} />
                                 );
 
                                 return (
@@ -1051,19 +1073,21 @@ function SortableTh({
         : ArrowUpDown;
 
     return (
-        <th className="px-4 py-3 text-left">
+        <th className="px-4 py-3 text-left lg:px-1 lg:py-2">
             <button
                 type="button"
                 onClick={() => onSort(sortKey)}
                 className={[
-                    'inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-wider uppercase transition-colors',
+                    'inline-flex min-w-0 items-center gap-1.5 text-[11px] font-semibold tracking-wider uppercase transition-colors lg:gap-0.5 lg:text-[9px]',
                     active
                         ? 'text-zinc-800'
                         : 'text-zinc-400 hover:text-zinc-700',
                 ].join(' ')}
             >
-                {label}
-                <Icon className="h-3.5 w-3.5" />
+                <span className="lg:min-w-0 lg:[overflow-wrap:anywhere]">
+                    {label}
+                </span>
+                <Icon className="h-3.5 w-3.5 shrink-0 lg:h-3 lg:w-3" />
             </button>
         </th>
     );

@@ -1,4 +1,5 @@
 import { router } from '@inertiajs/react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
     Select,
     SelectContent,
@@ -6,12 +7,32 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { getPaginationDirection } from '@/lib/pagination';
 
 type Paginator = {
     per_page?: number;
 };
 
 const perPageOptions = [10, 50, 100];
+
+export function PaginationLabel({ label }: { label: string }) {
+    const direction = getPaginationDirection(label);
+
+    if (!direction) {
+        return <span>{label.replace(/&hellip;|&#8230;/g, '…')}</span>;
+    }
+
+    const Icon = direction === 'previous' ? ChevronLeft : ChevronRight;
+
+    return (
+        <>
+            <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="sr-only">
+                {direction === 'previous' ? 'Previous page' : 'Next page'}
+            </span>
+        </>
+    );
+}
 
 export function PerPageSelect({ paginator }: { paginator: Paginator }) {
     return (

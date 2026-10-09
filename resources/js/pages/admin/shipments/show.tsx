@@ -17,6 +17,12 @@ import {
     PageHeader,
     StatusBadge,
 } from '@/pages/admin/sales/shared';
+import { show as orderShow } from '@/routes/admin/orders';
+import { store as createShipment } from '@/routes/admin/orders/shipments';
+import {
+    refreshTracking,
+    status as updateShipmentStatus,
+} from '@/routes/admin/shipments';
 
 type Tracking = {
     id: number;
@@ -25,6 +31,7 @@ type Tracking = {
     location: string | null;
     happened_at: string | null;
     raw_payload: unknown;
+    actor: string | null;
 };
 type Shipment = {
     id: number;
@@ -46,12 +53,18 @@ type Shipment = {
     biteship_tracking_id: string | null;
     raw_rate_response: unknown;
     raw_order_response: unknown;
+    can_create_shipment: boolean;
+    booking_uncertain: boolean;
+    failed_reason: string | null;
+    last_synced_at: string | null;
     address: Record<string, string | number | null> | null;
     order?: {
         order_number?: string | null;
         customer_name?: string | null;
         customer_phone?: string | null;
         shipping_cost?: string | number | null;
+        payment_status?: string;
+        order_status?: string;
         items?: {
             product_name?: string | null;
             quantity?: number | null;
@@ -83,7 +96,7 @@ function text(value: unknown): string {
         .replace(/'/g, '&#039;');
 }
 
-function printBiteshipLabel(shipment: Shipment) {
+function printPackingDocument(shipment: Shipment) {
     const printWindow = window.open('', '_blank', 'width=900,height=700');
 
     if (!printWindow) {
@@ -142,8 +155,8 @@ function printBiteshipLabel(shipment: Shipment) {
                 <main class="page">
                     <section class="header">
                         <div>
-                            <div class="brand">Biteship Shipment Label</div>
-                            <div class="muted">Generated from admin shipment detail</div>
+                            <div class="brand">AxeGear Packing Document</div>
+                            <div class="muted">Dokumen lokal, bukan label resmi kurir</div>
                             <div class="line"><strong>Order:</strong> ${text(shipment.order_number ?? shipment.order?.order_number)}</div>
                         </div>
                         <div class="waybill">
@@ -214,7 +227,7 @@ function printBiteshipLabel(shipment: Shipment) {
 
 export default function ShipmentShow({ shipment, shippingStatuses }: Props) {
     const form = useForm({
-        shipping_status: shipment.shipping_status,
+        shipping_status: '',
         description: '',
         location: '',
     });
@@ -231,13 +244,14 @@ export default function ShipmentShow({ shipment, shippingStatuses }: Props) {
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        form.post(`/admin/shipments/${shipment.id}/status`, {
+        form.post(updateShipmentStatus.url(shipment.id), {
             preserveScroll: true,
+            onSuccess: () => form.reset(),
         });
     };
     const createBiteshipOrder = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        createOrderForm.post(`/admin/orders/${shipment.order_id}/shipments`, {
+        createOrderForm.post(createShipment.url(shipment.order_id), {
             preserveScroll: true,
         });
     };
@@ -259,22 +273,23 @@ export default function ShipmentShow({ shipment, shippingStatuses }: Props) {
                                         target="_blank"
                                         rel="noreferrer"
                                     >
-                                        <Printer /> Cetak Resi Biteship
+                                        <Printer /> Buka label / tautan kurir
                                     </a>
                                 </Button>
                             )}
                             <Button
                                 type="button"
                                 variant="outline"
-                                onClick={() => printBiteshipLabel(shipment)}
+                                onClick={() => printPackingDocument(shipment)}
                             >
-                                <Printer /> Cetak Resi Biteship
+                                <Printer /> Cetak dokumen packing
                             </Button>
                             <Button
                                 type="button"
+                                disabled={!shipment.biteship_order_id}
                                 onClick={() =>
                                     router.post(
-                                        `/admin/shipments/${shipment.id}/refresh-tracking`,
+                                        refreshTracking.url(shipment.id),
                                         {},
                                         { preserveScroll: true },
                                     )
@@ -305,7 +320,29 @@ export default function ShipmentShow({ shipment, shippingStatuses }: Props) {
                         value={shipment.estimated_delivery ?? '-'}
                     />
                 </div>
-                {!shipment.biteship_order_id && (
+                {!shipment.can_create_shipment &&
+                    !shipment.biteship_order_id && (
+                        <p className="rounded-md border p-4 text-sm">
+                            {shipment.booking_uncertain
+                                ? 'Hasil booking belum pasti. Periksa nomor pesanan di dashboard Biteship sebelum mencoba kembali; booking ulang diblokir untuk menghindari pengiriman ganda.'
+                                : 'Booking belum tersedia: pastikan pembayaran lunas dan packing selesai. Jika booking sedang berjalan, tunggu hasilnya.'}{' '}
+                            <Link
+                                href={orderShow.url(shipment.order_id)}
+                                className="font-medium underline"
+                            >
+                                Buka pesanan
+                            </Link>
+                        </p>
+                    )}
+                {shipment.failed_reason && (
+                    <p
+                        role="alert"
+                        className="rounded-md border border-destructive/30 p-4 text-sm text-destructive"
+                    >
+                        {shipment.failed_reason}
+                    </p>
+                )}
+                {shipment.can_create_shipment && (
                     <Card className="border-amber-200 bg-amber-50/60 dark:border-amber-900 dark:bg-amber-950/20">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
@@ -431,7 +468,7 @@ export default function ShipmentShow({ shipment, shippingStatuses }: Props) {
                                 value={
                                     <Link
                                         className="text-primary underline"
-                                        href={`/admin/orders/${shipment.order_id}`}
+                                        href={orderShow.url(shipment.order_id)}
                                     >
                                         {shipment.order_number ?? '-'}
                                     </Link>
@@ -461,24 +498,10 @@ export default function ShipmentShow({ shipment, shippingStatuses }: Props) {
                                 label="Delivered At"
                                 value={shipment.delivered_at ?? '-'}
                             />
-                            {labelUrl ? (
-                                <a
-                                    href={labelUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="inline-flex items-center gap-2 text-sm font-medium text-primary underline"
-                                >
-                                    <Printer className="size-4" /> Cetak Resi
-                                    Biteship
-                                </a>
-                            ) : null}
-                            <button
-                                type="button"
-                                onClick={() => printBiteshipLabel(shipment)}
-                                className="inline-flex items-center gap-2 text-sm font-medium text-primary underline"
-                            >
-                                <Printer className="size-4" /> Cetak Resi Lokal
-                            </button>
+                            <Row
+                                label="Terakhir sinkron"
+                                value={shipment.last_synced_at ?? '-'}
+                            />
                         </CardContent>
                     </Card>
                     <Card>
@@ -514,72 +537,123 @@ export default function ShipmentShow({ shipment, shippingStatuses }: Props) {
                         </CardContent>
                     </Card>
                 </div>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Manual Shipment Status</CardTitle>
-                        <CardDescription>
-                            Update status manual dan simpan timeline event.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <form
-                            onSubmit={submit}
-                            className="grid gap-4 md:grid-cols-[220px_minmax(0,1fr)_minmax(0,1fr)_auto]"
-                        >
-                            <div className="grid gap-2">
-                                <Label>Status</Label>
-                                <select
-                                    value={form.data.shipping_status}
-                                    onChange={(event) =>
-                                        form.setData(
-                                            'shipping_status',
-                                            event.target.value,
-                                        )
-                                    }
-                                    className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm"
-                                >
-                                    {shippingStatuses.map((status) => (
-                                        <option key={status} value={status}>
-                                            {status}
+                <details className="rounded-xl border bg-card p-4">
+                    <summary className="cursor-pointer font-semibold">
+                        Koreksi pengiriman manual (pengecualian)
+                    </summary>
+                    <p className="mt-3 text-sm text-muted-foreground">
+                        Gunakan sinkronisasi Biteship terlebih dahulu. Koreksi
+                        memerlukan alasan; admin dan perubahan dicatat. Koreksi
+                        lokal tidak mengubah booking di Biteship.
+                    </p>
+                    {shippingStatuses.length === 0 ? (
+                        <p className="mt-3 text-sm text-muted-foreground">
+                            Tidak ada transisi manual yang diizinkan.
+                        </p>
+                    ) : (
+                        <div className="mt-4">
+                            <form
+                                onSubmit={submit}
+                                className="grid gap-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
+                            >
+                                <div className="grid gap-2">
+                                    <Label htmlFor="manual-shipping-status">
+                                        Status
+                                    </Label>
+                                    <select
+                                        id="manual-shipping-status"
+                                        required
+                                        value={form.data.shipping_status}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'shipping_status',
+                                                event.target.value,
+                                            )
+                                        }
+                                        className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                                    >
+                                        <option value="">
+                                            Pilih status berikutnya
                                         </option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="grid gap-2">
-                                <Label>Description</Label>
-                                <Input
-                                    value={form.data.description}
-                                    onChange={(event) =>
-                                        form.setData(
-                                            'description',
-                                            event.target.value,
-                                        )
-                                    }
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label>Location</Label>
-                                <Input
-                                    value={form.data.location}
-                                    onChange={(event) =>
-                                        form.setData(
-                                            'location',
-                                            event.target.value,
-                                        )
-                                    }
-                                />
-                            </div>
-                            <div className="flex items-end">
-                                <Button
-                                    type="submit"
-                                    disabled={form.processing}
-                                >
-                                    <Save /> Save
-                                </Button>
-                            </div>
-                        </form>
-                    </CardContent>
-                </Card>
+                                        {shippingStatuses.map((status) => (
+                                            <option key={status} value={status}>
+                                                {status}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {form.errors.shipping_status && (
+                                        <p
+                                            role="alert"
+                                            className="text-sm text-destructive"
+                                        >
+                                            {form.errors.shipping_status}
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="manual-shipping-reason">
+                                        Alasan koreksi
+                                    </Label>
+                                    <Input
+                                        id="manual-shipping-reason"
+                                        required
+                                        maxLength={500}
+                                        value={form.data.description}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'description',
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                    {form.errors.description && (
+                                        <p
+                                            role="alert"
+                                            className="text-sm text-destructive"
+                                        >
+                                            {form.errors.description}
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="manual-shipping-location">
+                                        Location
+                                    </Label>
+                                    <Input
+                                        id="manual-shipping-location"
+                                        value={form.data.location}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'location',
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                    {form.errors.location && (
+                                        <p
+                                            role="alert"
+                                            className="text-sm text-destructive"
+                                        >
+                                            {form.errors.location}
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="flex items-end">
+                                    <Button
+                                        type="submit"
+                                        disabled={
+                                            form.processing ||
+                                            !form.data.shipping_status ||
+                                            !form.data.description.trim()
+                                        }
+                                    >
+                                        <Save /> Save
+                                    </Button>
+                                </div>
+                            </form>
+                        </div>
+                    )}
+                </details>
                 <Card>
                     <CardHeader>
                         <CardTitle>Tracking Timeline</CardTitle>
@@ -593,7 +667,7 @@ export default function ShipmentShow({ shipment, shippingStatuses }: Props) {
                                 key={tracking.id}
                                 className="rounded-lg border p-4 text-sm"
                             >
-                                <div className="flex items-center justify-between gap-3">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
                                     <span className="font-medium">
                                         {tracking.status}
                                     </span>
@@ -604,6 +678,11 @@ export default function ShipmentShow({ shipment, shippingStatuses }: Props) {
                                 <p className="mt-1 text-muted-foreground">
                                     {tracking.description ?? '-'}
                                 </p>
+                                {tracking.actor && (
+                                    <p className="text-xs text-muted-foreground">
+                                        Dikoreksi oleh {tracking.actor}
+                                    </p>
+                                )}
                                 <p className="text-xs text-muted-foreground">
                                     {tracking.location ?? '-'}
                                 </p>
@@ -611,24 +690,31 @@ export default function ShipmentShow({ shipment, shippingStatuses }: Props) {
                         ))}
                     </CardContent>
                 </Card>
-                <div className="grid gap-6 lg:grid-cols-2">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Raw Rate Response</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <JsonBlock value={shipment.raw_rate_response} />
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Raw Order Response</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <JsonBlock value={shipment.raw_order_response} />
-                        </CardContent>
-                    </Card>
-                </div>
+                <details className="rounded-xl border bg-card p-4">
+                    <summary className="cursor-pointer font-semibold">
+                        Diagnostik Biteship
+                    </summary>
+                    <div className="mt-4 grid min-w-0 gap-6 lg:grid-cols-2">
+                        <Card className="min-w-0">
+                            <CardHeader>
+                                <CardTitle>Raw Rate Response</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <JsonBlock value={shipment.raw_rate_response} />
+                            </CardContent>
+                        </Card>
+                        <Card className="min-w-0">
+                            <CardHeader>
+                                <CardTitle>Raw Order Response</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <JsonBlock
+                                    value={shipment.raw_order_response}
+                                />
+                            </CardContent>
+                        </Card>
+                    </div>
+                </details>
             </div>
         </>
     );
@@ -647,9 +733,9 @@ function Metric({ label, value }: { label: string; value: React.ReactNode }) {
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
     return (
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
             <span className="text-muted-foreground">{label}</span>
-            <span className="font-medium">{value}</span>
+            <span className="min-w-0 font-medium break-all">{value}</span>
         </div>
     );
 }

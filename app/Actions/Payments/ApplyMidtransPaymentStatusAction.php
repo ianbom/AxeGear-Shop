@@ -22,14 +22,7 @@ class ApplyMidtransPaymentStatusAction
 
     public function execute(Payment $payment, string $transactionStatus, ?string $fraudStatus = null): void
     {
-        $payment->loadMissing('order');
-        $order = $payment->order;
-
-        if (! $order) {
-            return;
-        }
-
-        if ($order->payment_status === PaymentStatus::Paid->value && in_array($transactionStatus, ['pending', 'expire', 'cancel', 'deny', 'failure'], true)) {
+        if (! $this->canApply($payment, $transactionStatus, $fraudStatus)) {
             return;
         }
 
@@ -51,26 +44,51 @@ class ApplyMidtransPaymentStatusAction
         };
     }
 
+    public function canApply(Payment $payment, string $transactionStatus, ?string $fraudStatus = null): bool
+    {
+        $payment->loadMissing('order');
+        $status = $payment->order?->payment_status;
+
+        if (! $status || $status === PaymentStatus::Refunded->value) {
+            return false;
+        }
+
+        if ($status === PaymentStatus::PartiallyRefunded->value) {
+            return in_array($transactionStatus, ['refund', 'partial_refund'], true);
+        }
+
+        return $status !== PaymentStatus::Paid->value
+            || in_array($transactionStatus, ['settlement', 'refund', 'partial_refund'], true)
+            || ($transactionStatus === 'capture' && $fraudStatus === 'accept');
+    }
+
     private function markPaid(Payment $payment): void
     {
         $order = $payment->order;
+
+        if ($order->payment_status === PaymentStatus::Paid->value) {
+            $payment->update(['paid_at' => $payment->paid_at ?? $order->paid_at ?? now()]);
+
+            return;
+        }
 
         if ($order->payment_status !== PaymentStatus::Paid->value) {
             try {
                 $this->finalizeStock->execute($order, $payment->midtrans_order_id);
             } catch (DomainException $exception) {
                 $order->update(['payment_status' => PaymentStatus::ManualReview->value, 'order_status' => OrderStatus::PendingPayment->value]);
-                $payment->update(['transaction_status' => 'manual_review']);
-                throw $exception;
+                $payment->update(['transaction_status' => 'manual_review', 'failure_reason' => $exception->getMessage()]);
+
+                return;
             }
         }
 
         $order->update([
             'payment_status' => PaymentStatus::Paid->value,
-            'order_status' => in_array($order->order_status, [OrderStatus::ReadyToShip->value, OrderStatus::Shipped->value, OrderStatus::Delivered->value], true) ? $order->order_status : OrderStatus::Paid->value,
+            'order_status' => $order->order_status === OrderStatus::PendingPayment->value ? OrderStatus::Paid->value : $order->order_status,
             'paid_at' => $order->paid_at ?? now(),
         ]);
-        $payment->update(['paid_at' => $payment->paid_at ?? now()]);
+        $payment->update(['paid_at' => $payment->paid_at ?? now(), 'failure_reason' => null]);
         $this->notifications->forOrder($order, 'Payment received', "Payment untuk order {$order->order_number} berhasil diterima.", 'payment');
     }
 

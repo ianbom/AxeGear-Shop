@@ -26,11 +26,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import {
-    ActiveBadge,
-    formatPrice,
-    PageHeader,
-} from '@/pages/admin/catalog/shared';
+import { ActiveBadge, formatPrice } from '@/pages/admin/catalog/shared';
 import { detail } from '@/routes';
 
 type ProductImage = {
@@ -159,91 +155,96 @@ export default function ProductShow({ product }: Props) {
     return (
         <>
             <Head title={product.name} />
-            <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                <PageHeader
-                    eyebrow="Product Management"
-                    title={product.name}
-                    description={`SKU: ${product.sku || '-'} · ${product.category ?? 'No Category'} · ${product.collection ?? 'No Collection'}`}
-                    action={
-                        <div className="flex flex-wrap items-center gap-2">
-                            <Badge
-                                variant="outline"
-                                className={`gap-1.5 ${status.badge}`}
+            <div className="flex min-w-0 flex-1 flex-col gap-5 p-4 md:gap-6 md:p-6">
+                <header className="space-y-4 border-b pb-5">
+                    <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
+                        <div className="min-w-0 space-y-1">
+                            <p className="text-sm font-medium text-muted-foreground">
+                                Product Management
+                            </p>
+                            <h1 className="text-2xl font-semibold tracking-tight break-words">
+                                {product.name}
+                            </h1>
+                            <p className="text-sm break-words text-muted-foreground">
+                                SKU: {product.sku || '-'} ·{' '}
+                                {product.category ?? 'No Category'} ·{' '}
+                                {product.collection ?? 'No Collection'}
+                            </p>
+                        </div>
+                        <Badge
+                            variant="outline"
+                            className={`shrink-0 gap-1.5 ${status.badge}`}
+                        >
+                            <span
+                                className={`size-1.5 rounded-full ${status.dot}`}
+                            />
+                            {status.label}
+                        </Badge>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button asChild variant="outline" size="sm">
+                            <Link href="/admin/products">
+                                <ArrowLeft className="size-3.5" /> Back
+                            </Link>
+                        </Button>
+                        <Button asChild variant="outline" size="sm">
+                            <Link href={`/admin/products/${product.id}/edit`}>
+                                <Pencil className="size-3.5" /> Edit
+                            </Link>
+                        </Button>
+                        {product.status !== 'published' && (
+                            <Button
+                                size="sm"
+                                onClick={() =>
+                                    doAction(
+                                        `/admin/products/${product.id}/publish`,
+                                    )
+                                }
                             >
-                                <span
-                                    className={`size-1.5 rounded-full ${status.dot}`}
-                                />
-                                {status.label}
-                            </Badge>
-                            <Button asChild variant="outline" size="sm">
-                                <Link href="/admin/products">
-                                    <ArrowLeft className="size-3.5" /> Back
-                                </Link>
+                                <CheckCircle2 className="size-3.5" /> Publish
                             </Button>
-                            <Button asChild variant="outline" size="sm">
-                                <Link
-                                    href={`/admin/products/${product.id}/edit`}
-                                >
-                                    <Pencil className="size-3.5" /> Edit
-                                </Link>
-                            </Button>
-                            {product.status !== 'published' && (
-                                <Button
-                                    size="sm"
-                                    onClick={() =>
-                                        doAction(
-                                            `/admin/products/${product.id}/publish`,
-                                        )
-                                    }
-                                >
-                                    <CheckCircle2 className="size-3.5" />{' '}
-                                    Publish
-                                </Button>
-                            )}
-                            {product.status !== 'archived' && (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                        doAction(
-                                            `/admin/products/${product.id}/archive`,
-                                        )
-                                    }
-                                >
-                                    <Archive className="size-3.5" /> Archive
-                                </Button>
-                            )}
-                            <Button asChild variant="outline" size="sm">
-                                <Link
-                                    href={detail.url({
-                                        query: { product: product.slug },
-                                    })}
-                                >
-                                    <Eye className="size-3.5" /> Lihat
-                                </Link>
-                            </Button>
+                        )}
+                        {product.status !== 'archived' && (
                             <Button
                                 variant="outline"
                                 size="sm"
-                                className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
-                                onClick={() => {
-                                    if (
-                                        confirm('Delete ' + product.name + '?')
-                                    ) {
-                                        doAction(
-                                            `/admin/products/${product.id}`,
-                                            'delete',
-                                        );
-                                    }
-                                }}
+                                onClick={() =>
+                                    doAction(
+                                        `/admin/products/${product.id}/archive`,
+                                    )
+                                }
                             >
-                                <Trash2 className="size-3.5" /> Delete
+                                <Archive className="size-3.5" /> Archive
                             </Button>
-                        </div>
-                    }
-                />
+                        )}
+                        <Button asChild variant="outline" size="sm">
+                            <Link
+                                href={detail.url({
+                                    query: { product: product.slug },
+                                })}
+                            >
+                                <Eye className="size-3.5" /> Lihat
+                            </Link>
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                            onClick={() => {
+                                if (confirm('Delete ' + product.name + '?')) {
+                                    doAction(
+                                        `/admin/products/${product.id}`,
+                                        'delete',
+                                    );
+                                }
+                            }}
+                        >
+                            <Trash2 className="size-3.5" /> Delete
+                        </Button>
+                    </div>
+                </header>
                 {/* Metric Cards */}
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
                     <MetricCard
                         icon={<Tag className="size-5 text-violet-600" />}
                         iconBg="bg-violet-50"
@@ -280,9 +281,9 @@ export default function ProductShow({ product }: Props) {
                     />
                 </div>
 
-                <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]">
+                <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] xl:gap-6">
                     {/* LEFT COLUMN */}
-                    <div className="flex flex-col gap-6">
+                    <div className="flex min-w-0 flex-col gap-5 xl:gap-6">
                         {/* Image Gallery */}
                         <Card className="overflow-hidden">
                             <CardHeader className="pb-3">
@@ -295,7 +296,7 @@ export default function ProductShow({ product }: Props) {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="p-0">
-                                <div className="relative aspect-[3/4] w-full overflow-hidden bg-zinc-50">
+                                <div className="relative flex aspect-square max-h-[420px] w-full items-center justify-center overflow-hidden bg-muted/40 p-4">
                                     {activeImage?.image_url ? (
                                         <img
                                             src={activeImage.image_url}
@@ -303,7 +304,7 @@ export default function ProductShow({ product }: Props) {
                                                 activeImage.alt_text ||
                                                 product.name
                                             }
-                                            className="size-full object-cover"
+                                            className="size-full object-contain"
                                         />
                                     ) : (
                                         <div className="flex size-full items-center justify-center">
@@ -317,15 +318,23 @@ export default function ProductShow({ product }: Props) {
                                     )}
                                 </div>
                                 {product.images.length > 0 && (
-                                    <div className="flex gap-2 overflow-x-auto p-3">
+                                    <div className="flex gap-2 overflow-x-auto overscroll-x-contain border-t p-4">
                                         {product.images.map((img) => (
                                             <button
                                                 key={img.id}
+                                                type="button"
+                                                aria-label={
+                                                    img.alt_text ||
+                                                    `Product image ${img.sort_order + 1}`
+                                                }
+                                                aria-pressed={
+                                                    activeImage?.id === img.id
+                                                }
                                                 onClick={() =>
                                                     setActiveImage(img)
                                                 }
                                                 className={[
-                                                    'relative h-20 w-14 shrink-0 overflow-hidden rounded-lg border-2 transition-all',
+                                                    'relative size-16 shrink-0 overflow-hidden rounded-lg border-2 bg-muted/40 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none',
                                                     activeImage?.id === img.id
                                                         ? 'border-zinc-800 shadow-sm'
                                                         : 'border-transparent hover:border-zinc-300',
@@ -335,7 +344,7 @@ export default function ProductShow({ product }: Props) {
                                                     <img
                                                         src={img.image_url}
                                                         alt={img.alt_text}
-                                                        className="size-full object-cover"
+                                                        className="size-full object-contain"
                                                     />
                                                 ) : (
                                                     <div className="flex size-full items-center justify-center bg-zinc-100 text-[10px] text-zinc-400">
@@ -367,7 +376,7 @@ export default function ProductShow({ product }: Props) {
                                     Product Information
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent className="grid gap-3 text-sm">
+                            <CardContent className="grid gap-1 text-sm">
                                 <InfoRow
                                     label="Category"
                                     value={product.category ?? '-'}
@@ -418,7 +427,7 @@ export default function ProductShow({ product }: Props) {
                                             : '-'
                                     }
                                 />
-                                <div className="flex flex-wrap gap-1.5 pt-1">
+                                <div className="flex flex-wrap gap-2 pt-4">
                                     <FlagPill
                                         active={product.is_featured}
                                         label="Featured"
@@ -442,27 +451,26 @@ export default function ProductShow({ product }: Props) {
                                         Description
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-3 text-sm text-muted-foreground">
+                                <CardContent className="min-w-0 space-y-4 text-sm leading-6 break-words text-muted-foreground">
                                     {product.short_description && (
                                         <p>{product.short_description}</p>
                                     )}
                                     {product.description && (
                                         <HTMLRender
                                             html={product.description}
-                                            className="text-sm text-muted-foreground"
+                                            className="text-sm leading-6 break-words text-muted-foreground [&_img]:h-auto [&_img]:max-w-full [&_pre]:overflow-x-auto"
                                         />
                                     )}
                                 </CardContent>
                             </Card>
                         )}
-
                     </div>
                     {/* RIGHT COLUMN */}
-                    <div className="flex flex-col gap-6">
+                    <div className="flex min-w-0 flex-col gap-5 xl:gap-6">
                         {/* Variants Table */}
-                        <Card>
+                        <Card className="min-w-0 overflow-hidden">
                             <CardHeader className="pb-3">
-                                <div className="flex items-center justify-between">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
                                     <div>
                                         <CardTitle className="flex items-center gap-2 text-base">
                                             <Package className="size-4 text-muted-foreground" />
@@ -484,10 +492,10 @@ export default function ProductShow({ product }: Props) {
                             </CardHeader>
                             <CardContent className="p-0">
                                 {product.variants.length > 0 ? (
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-sm">
+                                    <div className="overflow-x-auto overscroll-x-contain">
+                                        <table className="w-full min-w-[680px] text-sm tabular-nums">
                                             <thead>
-                                                <tr className="border-b bg-zinc-50/60 text-xs text-muted-foreground">
+                                                <tr className="border-b bg-muted/50 text-xs whitespace-nowrap text-muted-foreground">
                                                     <th className="px-4 py-2.5 text-left font-medium">
                                                         Variant
                                                     </th>
@@ -516,7 +524,7 @@ export default function ProductShow({ product }: Props) {
                                                             className="transition-colors hover:bg-zinc-50/50"
                                                         >
                                                             <td className="px-4 py-3">
-                                                                <div className="flex items-center gap-2.5">
+                                                                <div className="flex min-w-[160px] items-center gap-3">
                                                                     {variant.image_url ? (
                                                                         <img
                                                                             src={
@@ -526,11 +534,11 @@ export default function ProductShow({ product }: Props) {
                                                                                 variant.color_name ??
                                                                                 'variant'
                                                                             }
-                                                                            className="size-8 rounded-md border object-cover"
+                                                                            className="size-10 shrink-0 rounded-md border object-contain"
                                                                         />
                                                                     ) : (
                                                                         <div
-                                                                            className="size-8 rounded-md border"
+                                                                            className="size-10 shrink-0 rounded-md border"
                                                                             style={{
                                                                                 backgroundColor:
                                                                                     variant.color_hex ??
@@ -538,28 +546,41 @@ export default function ProductShow({ product }: Props) {
                                                                             }}
                                                                         />
                                                                     )}
-                                                                    <div>
-                                                                        <div className="font-medium">
-                                                                    {variant.variant_name ??
-                                                                        variant.color_name ??
-                                                                        '-'}
+                                                                    <div className="min-w-0">
+                                                                        <div className="font-medium break-words">
+                                                                            {variant.variant_name ??
+                                                                                variant.color_name ??
+                                                                                '-'}
                                                                         </div>
                                                                         <div className="text-xs text-muted-foreground">
-                                                                            {[variant.package_type, variant.size].filter(Boolean).join(' / ') ||
+                                                                            {[
+                                                                                variant.package_type,
+                                                                                variant.size,
+                                                                            ]
+                                                                                .filter(
+                                                                                    Boolean,
+                                                                                )
+                                                                                .join(
+                                                                                    ' / ',
+                                                                                ) ||
                                                                                 '-'}
                                                                         </div>
                                                                     </div>
                                                                 </div>
                                                             </td>
-                                                            <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                                                            <td className="max-w-[200px] px-4 py-3 font-mono text-xs break-all text-muted-foreground">
                                                                 {variant.sku}
                                                             </td>
-                                                            <td className="px-4 py-3 text-right">
+                                                            <td className="px-4 py-3 text-right whitespace-nowrap">
                                                                 {Number(
                                                                     variant.sale_price ??
                                                                         variant.regular_price,
                                                                 ) > 0 ? (
-                                                                    formatPrice(variant.sale_price ?? variant.regular_price ?? 0)
+                                                                    formatPrice(
+                                                                        variant.sale_price ??
+                                                                            variant.regular_price ??
+                                                                            0,
+                                                                    )
                                                                 ) : (
                                                                     <span className="text-muted-foreground">
                                                                         &mdash;
@@ -614,7 +635,7 @@ export default function ProductShow({ product }: Props) {
                             </CardContent>
                         </Card>
                         {/* Stock Logs */}
-                        <Card>
+                        <Card className="min-w-0 overflow-hidden">
                             <CardHeader className="pb-3">
                                 <CardTitle className="flex items-center gap-2 text-base">
                                     <TrendingUp className="size-4 text-muted-foreground" />
@@ -626,10 +647,10 @@ export default function ProductShow({ product }: Props) {
                             </CardHeader>
                             <CardContent className="p-0">
                                 {product.stock_logs.length > 0 ? (
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-sm">
+                                    <div className="overflow-x-auto overscroll-x-contain">
+                                        <table className="w-full min-w-[680px] text-sm tabular-nums">
                                             <thead>
-                                                <tr className="border-b bg-zinc-50/60 text-xs text-muted-foreground">
+                                                <tr className="border-b bg-muted/50 text-xs whitespace-nowrap text-muted-foreground">
                                                     <th className="px-4 py-2.5 text-left font-medium">
                                                         Variant SKU
                                                     </th>
@@ -657,7 +678,7 @@ export default function ProductShow({ product }: Props) {
                                                             key={log.id}
                                                             className="transition-colors hover:bg-zinc-50/50"
                                                         >
-                                                            <td className="px-4 py-2.5 font-mono text-xs">
+                                                            <td className="max-w-[200px] px-4 py-2.5 font-mono text-xs break-all">
                                                                 {log.variant}
                                                             </td>
                                                             <td className="px-4 py-2.5 text-center">
@@ -715,7 +736,7 @@ export default function ProductShow({ product }: Props) {
                             </CardContent>
                         </Card>
                         {/* Recent Orders */}
-                        <Card>
+                        <Card className="min-w-0 overflow-hidden">
                             <CardHeader className="pb-3">
                                 <CardTitle className="flex items-center gap-2 text-base">
                                     <ShoppingBag className="size-4 text-muted-foreground" />
@@ -727,10 +748,10 @@ export default function ProductShow({ product }: Props) {
                             </CardHeader>
                             <CardContent className="p-0">
                                 {product.orders.length > 0 ? (
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-sm">
+                                    <div className="overflow-x-auto overscroll-x-contain">
+                                        <table className="w-full min-w-[680px] text-sm tabular-nums">
                                             <thead>
-                                                <tr className="border-b bg-zinc-50/60 text-xs text-muted-foreground">
+                                                <tr className="border-b bg-muted/50 text-xs whitespace-nowrap text-muted-foreground">
                                                     <th className="px-4 py-2.5 text-left font-medium">
                                                         Order ID
                                                     </th>
@@ -806,10 +827,10 @@ function MetricCard({
 }) {
     return (
         <div className="rounded-xl border bg-card p-4 shadow-xs">
-            <div className="flex items-start justify-between">
-                <div>
+            <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
                     <p className="text-sm text-muted-foreground">{label}</p>
-                    <p className="mt-1.5 text-2xl font-semibold tracking-tight">
+                    <p className="mt-1.5 text-xl font-semibold tracking-tight break-words tabular-nums sm:text-2xl">
                         {value}
                     </p>
                     {sub && (
@@ -818,7 +839,9 @@ function MetricCard({
                         </p>
                     )}
                 </div>
-                <div className={`rounded-lg p-2 ${iconBg}`}>{icon}</div>
+                <div className={`shrink-0 rounded-lg p-2 ${iconBg}`}>
+                    {icon}
+                </div>
             </div>
         </div>
     );
@@ -834,10 +857,10 @@ function InfoRow({
     mono?: boolean;
 }) {
     return (
-        <div className="flex items-start justify-between gap-3">
-            <span className="shrink-0 text-muted-foreground">{label}</span>
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] items-start gap-4 border-b border-border/60 py-2.5">
+            <span className="break-words text-muted-foreground">{label}</span>
             <span
-                className={`text-right ${mono ? 'font-mono text-xs' : 'font-medium'}`}
+                className={`min-w-0 text-right ${mono ? 'font-mono text-xs break-all' : 'font-medium break-words'}`}
             >
                 {value}
             </span>

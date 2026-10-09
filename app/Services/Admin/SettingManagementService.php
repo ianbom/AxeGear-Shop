@@ -3,6 +3,7 @@
 namespace App\Services\Admin;
 
 use App\Models\SiteSetting;
+use App\Services\Settings\SiteSettingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
@@ -11,13 +12,13 @@ class SettingManagementService
     private array $sections = [
         'store' => [
             'title' => 'Store Settings',
-            'description' => 'Kelola identitas toko, kontak, dan link sosial yang tampil di website.',
+            'description' => 'Kelola identitas toko, kontak, dan link sosial. Nama, telepon, dan alamat toko juga digunakan untuk WhatsApp dan pengiriman.',
             'fields' => [
                 ['key' => 'store_name', 'label' => 'Store Name', 'type' => 'string'],
                 ['key' => 'store_email', 'label' => 'Store Email', 'type' => 'string', 'input' => 'email'],
                 ['key' => 'store_phone', 'label' => 'Store Phone', 'type' => 'string'],
-                ['key' => 'whatsapp_number', 'label' => 'WhatsApp Number', 'type' => 'string'],
                 ['key' => 'store_address', 'label' => 'Store Address', 'type' => 'string', 'input' => 'textarea'],
+                ['key' => 'contact_maps_url', 'label' => 'Store Maps URL', 'type' => 'string', 'input' => 'url'],
                 ['key' => 'instagram_url', 'label' => 'Instagram URL', 'type' => 'string', 'input' => 'url'],
                 ['key' => 'tiktok_url', 'label' => 'TikTok URL', 'type' => 'string', 'input' => 'url'],
                 ['key' => 'footer_text', 'label' => 'Footer Text', 'type' => 'string', 'input' => 'textarea'],
@@ -33,17 +34,14 @@ class SettingManagementService
         ],
         'shipping' => [
             'title' => 'Shipping Settings',
-            'description' => 'Kelola alamat asal pengiriman dan kurir aktif. API key Biteship tetap disimpan di .env.',
+            'description' => 'Kelola lokasi asal pengiriman dan kurir aktif. Identitas pengirim menggunakan Store Settings. API key Biteship tetap disimpan di .env.',
             'fields' => [
-                ['key' => 'origin_address', 'label' => 'Origin Address', 'type' => 'string', 'input' => 'textarea'],
                 ['key' => 'origin_province', 'label' => 'Origin Province', 'type' => 'string'],
                 ['key' => 'origin_city', 'label' => 'Origin City', 'type' => 'string'],
                 ['key' => 'origin_district', 'label' => 'Origin District', 'type' => 'string'],
                 ['key' => 'store_postal_code', 'label' => 'Store Postal Code', 'type' => 'string'],
                 ['key' => 'store_latitude', 'label' => 'Store Latitude', 'type' => 'string', 'input' => 'number'],
                 ['key' => 'store_longitude', 'label' => 'Store Longitude', 'type' => 'string', 'input' => 'number'],
-                ['key' => 'shipper_name', 'label' => 'Shipper Name', 'type' => 'string'],
-                ['key' => 'shipper_phone', 'label' => 'Shipper Phone', 'type' => 'string'],
                 ['key' => 'shipping_couriers', 'label' => 'Shipping Couriers', 'type' => 'string'],
             ],
         ],
@@ -55,11 +53,12 @@ class SettingManagementService
         abort_unless(array_key_exists($activeSection, $this->sections), 404);
 
         $keys = $this->fields()->pluck('key')->all();
+        $values = SiteSettingService::canonicalize(SiteSetting::query()->pluck('value', 'key')->all());
 
         return [
             'activeSection' => $activeSection,
             'sections' => $this->sections,
-            'values' => SiteSetting::query()->whereIn('key', $keys)->pluck('value', 'key')->all(),
+            'values' => array_intersect_key($values, array_flip($keys)),
         ];
     }
 
