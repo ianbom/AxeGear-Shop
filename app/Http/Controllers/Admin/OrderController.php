@@ -34,7 +34,7 @@ class OrderController extends Controller
 
     public function updateStatus(OrderStatusRequest $request, Order $order, OrderManagementService $orders): RedirectResponse
     {
-        $orders->updateStatus($order, $request->string('status')->toString());
+        $orders->updateStatus($order, $request->string('status')->toString(), $request->validated('reason'));
 
         return back()->with('success', 'Order status berhasil diperbarui.');
     }

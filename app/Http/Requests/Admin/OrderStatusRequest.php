@@ -18,7 +18,18 @@ class OrderStatusRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => ['required', Rule::in(['processing', 'ready_to_ship', 'completed'])],
+            'status' => ['required', Rule::in(['processing', 'ready_to_ship', 'completed', 'shipment_failed'])],
+            'reason' => ['required_if:status,shipment_failed', 'nullable', 'string', 'max:1000'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'reason.required_if' => 'Tuliskan alasan pesanan ditandai gagal dikirim.',
+            'reason.string' => 'Alasan harus berupa teks.',
+            'reason.max' => 'Alasan maksimal 1000 karakter.',
+            'status.in' => 'Perubahan status pesanan tidak diizinkan.',
         ];
     }
 }

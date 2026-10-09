@@ -68,17 +68,58 @@ class BiteshipService
         }
 
         $couriers = $this->settings->get('shipping_couriers', 'jne,jnt,sicepat,anteraja');
-        $response = $this->client()
-            ->post('/v1/rates/couriers', [
-                'origin_postal_code' => $originPostalCode,
-                'origin_latitude' => $originLatitude,
-                'origin_longitude' => $originLongitude,
-                'destination_postal_code' => $destinationPostalCode,
+
+        return $this->requestRates([
+            'origin_postal_code' => $originPostalCode,
+            'origin_latitude' => $originLatitude,
+            'origin_longitude' => $originLongitude,
+            'destination_postal_code' => $destinationPostalCode,
+            'destination_latitude' => $destinationLatitude,
+            'destination_longitude' => $destinationLongitude,
+            'couriers' => $couriers,
+            'items' => $items,
+        ]);
+    }
+
+    public function productShippingEstimate(array $dimensions): array
+    {
+        $latitude = $this->coordinate($this->settings->get('store_latitude'));
+        $longitude = $this->coordinate($this->settings->get('store_longitude'));
+        $destinationLatitude = $latitude === null ? null : $latitude + rad2deg(1000 / 6371000);
+
+        if ($latitude === null || $longitude === null || abs($latitude) > 90 || abs($longitude) > 180 || $destinationLatitude > 90) {
+            throw ValidationException::withMessages(['shipping' => 'Koordinat toko belum valid. Lengkapi latitude dan longitude di Site Settings.']);
+        }
+
+        $couriers = $this->settings->get('shipping_couriers', 'jne,jnt,sicepat,anteraja');
+
+        if (! filled($couriers)) {
+            throw ValidationException::withMessages(['shipping' => 'Kurir belum dikonfigurasi di Site Settings.']);
+        }
+
+        try {
+            $rates = $this->requestRates([
+                'origin_latitude' => $latitude,
+                'origin_longitude' => $longitude,
                 'destination_latitude' => $destinationLatitude,
-                'destination_longitude' => $destinationLongitude,
+                'destination_longitude' => $longitude,
                 'couriers' => $couriers,
-                'items' => $items,
+                'items' => [['name' => 'Simulasi produk', 'value' => 0, 'quantity' => 1, ...array_map(fn ($value) => $value + 0, $dimensions)]],
             ]);
+        } catch (ValidationException $exception) {
+            if (isset($exception->errors()['biteship'])) {
+                throw ValidationException::withMessages(['shipping' => 'API key Biteship belum dikonfigurasi. Hubungi pengelola website.']);
+            }
+
+            throw ValidationException::withMessages(['shipping' => 'Gagal mengambil estimasi ongkir Biteship. Silakan coba lagi.']);
+        }
+
+        return collect($rates)->sortBy('price')->values()->all();
+    }
+
+    private function requestRates(array $payload): array
+    {
+        $response = $this->client()->post('/v1/rates/couriers', $payload);
 
         if (! $response->successful()) {
             throw ValidationException::withMessages(['shipping' => $response->json('error') ?? 'Gagal mengambil ongkir Biteship.']);

@@ -5,6 +5,7 @@ namespace App\Services\Customer;
 use App\Actions\Payments\ApplyMidtransPaymentStatusAction;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
+use App\Enums\ShippingStatus;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Services\Integrations\MidtransService;
@@ -213,6 +214,7 @@ class OrderService
     private function detail(Order $order): array
     {
         return [
+            'shipping_issue' => ShippingStatus::issueDetails($order->shipment?->shipping_status ?? $order->shipping_status, $order->shipment?->raw_order_response, forCustomer: true),
             'id' => $order->id,
             'order_number' => $order->order_number,
             'customer_name' => $order->customer_name,

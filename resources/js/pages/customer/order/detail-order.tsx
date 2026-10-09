@@ -22,6 +22,7 @@ import {
 } from '@/actions/App/Http/Controllers/Customer/OrderController';
 import { show as productShow } from '@/actions/App/Http/Controllers/Customer/ProductController';
 import ProfileLayout from '@/layouts/profile-layout';
+import type { ShippingIssue } from '@/lib/order-workflow';
 
 type IconComponent = ComponentType<{
     className?: string;
@@ -112,6 +113,7 @@ type Order = {
     payment_status: string;
     order_status: string;
     shipping_status: string;
+    shipping_issue?: ShippingIssue | null;
     subtotal: number;
     discount_amount: number;
     shipping_cost: number;
@@ -137,7 +139,7 @@ type Order = {
     trackings: Tracking[];
 };
 
-type Props = { order: Order };
+type Props = { order: Order; supportPhone: string | null };
 
 const FALLBACK_IMAGE = '/img/hasan-almasi-_X2UAmIcpko-unsplash.webp';
 
@@ -163,10 +165,45 @@ const labelStatus = (status: string | null) => {
         return '-';
     }
 
-    return status
-        .split('_')
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(' ');
+    const labels: Record<string, string> = {
+        pending_payment: 'Menunggu pembayaran',
+        pending: 'Menunggu konfirmasi',
+        paid: 'Sudah dibayar',
+        processing: 'Sedang diproses',
+        ready_to_ship: 'Siap dikirim',
+        shipment_created: 'Pengiriman dibuat',
+        shipped: 'Sedang dikirim',
+        delivered: 'Telah diterima',
+        completed: 'Selesai',
+        not_created: 'Pengiriman belum dibuat',
+        creating: 'Membuat pengiriman',
+        confirmed: 'Pengiriman dikonfirmasi',
+        allocated: 'Kurir ditugaskan',
+        picked: 'Paket diambil kurir',
+        in_transit: 'Dalam pengiriman',
+        on_hold: 'Pengiriman tertunda',
+        return_in_transit: 'Paket sedang kembali ke toko',
+        lost: 'Paket dilaporkan hilang',
+        returned: 'Paket dikembalikan ke toko',
+        disposed: 'Paket dihancurkan oleh kurir',
+        damaged: 'Paket dilaporkan rusak',
+        rejected: 'Pengiriman ditolak',
+        failed: 'Gagal',
+        problem: 'Pengiriman bermasalah',
+        shipment_problem: 'Pengiriman bermasalah',
+        shipment_failed: 'Pesanan gagal dikirim',
+        cancelled: 'Dibatalkan',
+        expired: 'Kedaluwarsa',
+        payment_failed: 'Pembayaran gagal',
+        payment_expired: 'Pembayaran kedaluwarsa',
+        refunded: 'Pembayaran dikembalikan',
+        partially_refunded: 'Pembayaran dikembalikan sebagian',
+        manual_review: 'Menunggu pemeriksaan pembayaran',
+        settlement: 'Pembayaran berhasil',
+        capture: 'Pembayaran diterima',
+    };
+
+    return labels[status] ?? 'Status perlu diperiksa';
 };
 
 const statusTone = (status: string | null): StatusTone => {
@@ -186,11 +223,22 @@ const statusTone = (status: string | null): StatusTone => {
         case 'confirmed':
         case 'allocated':
         case 'picked':
+        case 'on_hold':
+        case 'return_in_transit':
             return 'amber';
         case 'cancelled':
         case 'expired':
         case 'failed':
         case 'problem':
+        case 'shipment_problem':
+        case 'shipment_failed':
+        case 'lost':
+        case 'returned':
+        case 'disposed':
+        case 'damaged':
+        case 'rejected':
+        case 'payment_failed':
+        case 'payment_expired':
             return 'red';
         default:
             return 'gray';
@@ -364,13 +412,29 @@ function buildProgress(order: Order) {
         paid: 1,
         processing: 2,
         ready_to_ship: 3,
+        shipment_created: 3,
         shipped: 4,
         delivered: 5,
         completed: 5,
     };
-    const currentRank =
-        rank[current] ??
-        (current === 'cancelled' || current === 'expired' ? 0 : 1);
+    const shippingStatus =
+        order.shipment?.shipping_status ?? order.shipping_status;
+    const hasShipped =
+        Boolean(order.shipment?.shipped_at) ||
+        order.trackings.some((tracking) =>
+            ['picked', 'in_transit', 'delivered'].includes(tracking.status),
+        ) ||
+        ['picked', 'in_transit', 'delivered'].includes(shippingStatus);
+    const currentRank = Math.min(
+        order.shipping_issue ? 4 : 5,
+        Math.max(
+            rank[current] ?? 0,
+            order.payment_status === 'paid' || paidAt ? 1 : 0,
+            ['confirmed', 'allocated'].includes(shippingStatus) ? 3 : 0,
+            hasShipped ? 4 : 0,
+            shippingStatus === 'delivered' ? 5 : 0,
+        ),
+    );
 
     return [
         {
@@ -435,7 +499,17 @@ function getBiteshipTrackingUrl(shipment: Shipment | null): string | null {
 
     const link = (courier as Record<string, unknown>).link;
 
-    return typeof link === 'string' && link.length > 0 ? link : null;
+    if (typeof link !== 'string' || !link.trim()) {
+        return null;
+    }
+
+    try {
+        return ['http:', 'https:'].includes(new URL(link.trim()).protocol)
+            ? link.trim()
+            : null;
+    } catch {
+        return null;
+    }
 }
 
 function getMidtransReceiptUrl(payment: Payment | null): string | null {
@@ -454,7 +528,7 @@ function getMidtransReceiptUrl(payment: Payment | null): string | null {
     return null;
 }
 
-export default function DetailOrder({ order }: Props) {
+export default function DetailOrder({ order, supportPhone }: Props) {
     const [isCancelling, setIsCancelling] = useState(false);
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
     const progressSteps = buildProgress(order);
@@ -474,6 +548,13 @@ export default function DetailOrder({ order }: Props) {
         order.payment?.midtrans_order_id ??
         '-';
     const trackingUrl = getBiteshipTrackingUrl(order.shipment);
+    const phoneDigits = (supportPhone ?? '').replace(/[\s()+.-]/g, '');
+    const internationalPhone = phoneDigits.startsWith('0')
+        ? '62' + phoneDigits.slice(1)
+        : phoneDigits;
+    const supportUrl = /^[1-9]\d{7,14}$/.test(internationalPhone)
+        ? `https://wa.me/${internationalPhone}`
+        : null;
     const isPaymentTerminal = [
         'cancelled',
         'expired',
@@ -555,6 +636,21 @@ export default function DetailOrder({ order }: Props) {
                                     >
                                         {labelStatus(order.order_status)}
                                     </StatusPill>
+                                    <StatusPill
+                                        tone={statusTone(
+                                            order.shipping_issue?.status ??
+                                                order.shipment
+                                                    ?.shipping_status ??
+                                                order.shipping_status,
+                                        )}
+                                    >
+                                        {order.shipping_issue?.label ??
+                                            labelStatus(
+                                                order.shipment
+                                                    ?.shipping_status ??
+                                                    order.shipping_status,
+                                            )}
+                                    </StatusPill>
                                 </div>
                             </div>
                             <div className="mt-5 grid grid-cols-2 gap-4 border-t border-hairline-strong pt-5 sm:grid-cols-3">
@@ -607,14 +703,36 @@ export default function DetailOrder({ order }: Props) {
                                 }
                             />
                             <ActionButton
-                                href="/notifications"
+                                href={supportUrl}
+                                external
                                 icon={Headphones}
                                 label="Dukungan"
                             />
                         </div>
+                        {!supportUrl && (
+                            <p className="px-4 pb-4 text-xs text-muted-foreground sm:px-5">
+                                Nomor WhatsApp toko belum tersedia.
+                            </p>
+                        )}
                     </div>
 
                     {/* Order Progress */}
+                    {order.shipping_issue && (
+                        <section
+                            aria-label="Kendala pengiriman"
+                            className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-950"
+                        >
+                            <h3 className="font-semibold">
+                                {order.shipping_issue.label}
+                            </h3>
+                            <p className="text-sm leading-relaxed">
+                                {order.shipping_issue.description}
+                            </p>
+                            <p className="text-sm">
+                                Hubungi toko melalui tombol Dukungan.
+                            </p>
+                        </section>
+                    )}
                     <SectionCard title="Progres Pesanan">
                         <div className="hide-scrollbar overflow-x-auto pb-1">
                             <div className="relative grid min-w-[520px] grid-cols-6">

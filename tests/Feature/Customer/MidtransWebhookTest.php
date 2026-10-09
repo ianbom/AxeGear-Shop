@@ -88,7 +88,20 @@ it('acknowledges successful payments and their duplicates without repeating stoc
     $payload = midtransWebhookPayload($payment, ['transaction_status' => $transactionStatus]);
 
     $this->postJson(route('payments.midtrans.notification'), $payload)->assertOk()->assertExactJson(['ok' => true]);
+    $shipment = $payment->order->shipment()->create([
+        'shipping_provider' => 'biteship',
+        'courier_company' => 'jne',
+        'courier_type' => 'reg',
+        'shipping_cost' => 0,
+        'shipping_status' => 'in_transit',
+        'biteship_tracking_id' => 'tracking-midtrans-test',
+        'waybill_id' => 'waybill-midtrans-test',
+        'raw_order_response' => ['courier' => ['link' => 'https://example.com/tracking/original']],
+    ]);
+    $shipmentSnapshot = $shipment->fresh()->getAttributes();
     $this->postJson(route('payments.midtrans.notification'), $payload)->assertOk();
+
+    expect($shipment->fresh()->getAttributes())->toBe($shipmentSnapshot);
 
     expect($payment->fresh()->order->payment_status)->toBe('paid')
         ->and($payment->fresh()->transaction_status)->toBe($transactionStatus)
@@ -99,6 +112,32 @@ it('acknowledges successful payments and their duplicates without repeating stoc
         ->and(StockLog::query()->count())->toBe(2)
         ->and(Notification::query()->count())->toBe(1)
         ->and($payment->logs()->count())->toBe(1);
+})->with(['settlement', 'capture']);
+
+it('preserves shipment data when another successful payment notification arrives', function (string $transactionStatus) {
+    $payment = createMidtransWebhookPayment();
+    $payload = midtransWebhookPayload($payment, ['transaction_status' => $transactionStatus]);
+    $this->postJson(route('payments.midtrans.notification'), $payload)->assertOk();
+    $payment->order->update(['order_status' => 'shipped', 'shipping_status' => 'in_transit']);
+    $shipment = $payment->order->shipment()->create([
+        'shipping_provider' => 'biteship',
+        'courier_company' => 'jne',
+        'courier_type' => 'reg',
+        'shipping_cost' => 0,
+        'shipping_status' => 'in_transit',
+        'raw_order_response' => ['courier' => ['link' => 'https://example.com/tracking/original']],
+    ]);
+    $snapshot = $shipment->fresh()->getAttributes();
+
+    $this->postJson(route('payments.midtrans.notification'), [
+        ...$payload, 'transaction_id' => 'another-transaction',
+    ])->assertOk();
+
+    expect($shipment->fresh()->getAttributes())->toBe($snapshot)
+        ->and($payment->order->fresh()->order_status)->toBe('shipped')
+        ->and(ProductVariant::query()->orderBy('id')->pluck('stock')->all())->toBe([8, 8])
+        ->and(StockLog::query()->count())->toBe(2)
+        ->and(Notification::query()->count())->toBe(1);
 })->with(['settlement', 'capture']);
 
 it('acknowledges an inventory conflict after rolling back all stock changes and saving manual review', function () {

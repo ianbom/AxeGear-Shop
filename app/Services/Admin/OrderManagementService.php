@@ -7,6 +7,7 @@ use App\Enums\PaymentStatus;
 use App\Enums\ShippingStatus;
 use App\Models\AdminActivityLog;
 use App\Models\Order;
+use App\Models\Shipment;
 use App\Models\StockLog;
 use App\Services\Notifications\NotificationService;
 use Illuminate\Http\Request;
@@ -95,6 +96,12 @@ class OrderManagementService
 
         $order->loadMissing('shipment');
 
+        if (! in_array($order->order_status, ['completed', 'cancelled', 'refunded', 'shipment_failed'], true)
+            && $order->shipment && $order->shipping_status === $order->shipment->shipping_status
+            && (ShippingStatus::issueDetails($order->shipment->shipping_status, $order->shipment->raw_order_response)['is_terminal'] ?? false)) {
+            return [OrderStatus::ShipmentFailed->value];
+        }
+
         return match ($order->order_status) {
             OrderStatus::Paid->value => [OrderStatus::Processing->value],
             OrderStatus::Processing->value => [OrderStatus::ReadyToShip->value],
@@ -104,10 +111,11 @@ class OrderManagementService
         };
     }
 
-    public function updateStatus(Order $order, string $target): void
+    public function updateStatus(Order $order, string $target, ?string $reason = null): void
     {
-        DB::transaction(function () use ($order, $target): void {
-            $order = Order::query()->with('shipment')->whereKey($order->id)->lockForUpdate()->firstOrFail();
+        DB::transaction(function () use ($order, $target, $reason): void {
+            $order = Order::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $order->setRelation('shipment', Shipment::query()->where('order_id', $order->id)->lockForUpdate()->first());
 
             if (! in_array($target, $this->allowedStatuses($order), true)) {
                 throw ValidationException::withMessages(['status' => 'Perubahan status tidak sesuai flow order atau pembayaran dan pengiriman belum terkonfirmasi.']);
@@ -115,12 +123,26 @@ class OrderManagementService
 
             $payload = ['order_status' => $target];
 
+            if ($target === OrderStatus::ShipmentFailed->value) {
+                if (trim($reason ?? '') === '' || mb_strlen($reason ?? '') > 1000) {
+                    throw ValidationException::withMessages(['reason' => 'Tuliskan alasan gagal kirim, maksimal 1000 karakter.']);
+                }
+                $order->shipment->trackings()->create([
+                    'status' => $order->shipment->shipping_status,
+                    'description' => 'Admin menandai pesanan gagal dikirim. '.trim($reason),
+                    'happened_at' => now(),
+                    'raw_payload' => ['source' => 'admin_order_failure', 'actor_id' => auth()->id(), 'reason' => trim($reason)],
+                ]);
+            }
+
             if ($target === OrderStatus::Completed->value) {
                 $payload['completed_at'] = $order->completed_at ?? now();
             }
 
             $order->update($payload);
-            $this->notifications->forOrder($order, 'Order status updated', "Order {$order->order_number} sekarang berstatus {$target}.", 'order');
+            $this->notifications->forOrder($order,
+                $target === OrderStatus::ShipmentFailed->value ? 'Pesanan gagal dikirim' : 'Order status updated',
+                $target === OrderStatus::ShipmentFailed->value ? "Pengiriman pesanan {$order->order_number} tidak dapat diselesaikan. Hubungi toko untuk tindak lanjut." : "Order {$order->order_number} sekarang berstatus {$target}.", 'order');
         });
     }
 
@@ -171,6 +193,7 @@ class OrderManagementService
             ...$this->row($order),
             'created_at' => $order->created_at?->toISOString(),
             'allowedStatuses' => $this->allowedStatuses($order),
+            'shipping_issue' => ShippingStatus::issueDetails($order->shipment?->shipping_status ?? $order->shipping_status, $order->shipment?->raw_order_response),
             'status_history' => AdminActivityLog::query()
                 ->with('user:id,name')
                 ->where('reference_type', 'admin.orders.status')
@@ -180,6 +203,7 @@ class OrderManagementService
                 ->map(fn (AdminActivityLog $log): array => [
                     'id' => $log->id,
                     'status' => $log->new_values['status'] ?? null,
+                    'reason' => $log->new_values['reason'] ?? null,
                     'actor' => $log->user?->name ?? 'Admin',
                     'created_at' => $log->created_at?->toISOString(),
                 ])->values(),

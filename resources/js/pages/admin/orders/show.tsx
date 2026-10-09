@@ -27,6 +27,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { getOrderWorkflow } from '@/lib/order-workflow';
+import type { ShippingIssue } from '@/lib/order-workflow';
 import { store as createShipment } from '@/routes/admin/orders/shipments';
 import {
     show as paymentShow,
@@ -113,11 +114,13 @@ interface Order {
     payment_status: string;
     order_status: string;
     allowedStatuses: string[];
+    shipping_issue?: ShippingIssue | null;
     can_create_shipment: boolean;
     booking_uncertain: boolean;
     status_history: {
         id: number;
         status: string | null;
+        reason?: string | null;
         actor: string;
         created_at: string | null;
     }[];
@@ -165,6 +168,7 @@ const tabs: { value: Tab; label: string }[] = [
 ];
 
 const actionLabels: Record<string, string> = {
+    shipment_failed: 'Tandai Gagal Dikirim',
     processing: 'Mulai proses pesanan',
     ready_to_ship: 'Selesai packing: siap dikirim',
     completed: 'Selesaikan pesanan',
@@ -200,16 +204,55 @@ const date = (value: string | null | undefined) => {
 };
 
 const label = (value: string | null | undefined) =>
-    value ? value.replaceAll('_', ' ') : '—';
+    value === 'shipment_failed'
+        ? 'Pesanan gagal dikirim'
+        : value
+          ? value.replaceAll('_', ' ')
+          : '—';
 
 export default function OrderShow({ order }: Props) {
     const [tab, setTab] = useState<Tab>('overview');
     const [processing, setProcessing] = useState(false);
     const [statusError, setStatusError] = useState('');
+    const [failureOpen, setFailureOpen] = useState(false);
+    const [failureReason, setFailureReason] = useState('');
     const [bookingOpen, setBookingOpen] = useState(false);
     const [shipmentProcessing, setShipmentProcessing] = useState(false);
     const [shipmentError, setShipmentError] = useState('');
     const availableStatuses = order.allowedStatuses;
+
+    const changeStatus = (nextStatus: string, reason?: string) => {
+        if (processing || shipmentProcessing) {
+            return;
+        }
+
+        if (nextStatus === 'shipment_failed' && !reason?.trim()) {
+            setStatusError('Tuliskan alasan pesanan ditandai gagal dikirim.');
+
+            return;
+        }
+
+        setProcessing(true);
+        setStatusError('');
+        router.post(
+            updateStatus.url(order.id),
+            {
+                status: nextStatus,
+                ...(reason ? { reason: reason.trim() } : {}),
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => setFailureOpen(false),
+                onError: (errors) =>
+                    setStatusError(
+                        errors.reason ??
+                            errors.status ??
+                            'Perubahan status gagal.',
+                    ),
+                onFinish: () => setProcessing(false),
+            },
+        );
+    };
 
     const openBooking = () => {
         setShipmentError('');
@@ -313,24 +356,16 @@ export default function OrderShow({ order }: Props) {
                         onBookShipment={openBooking}
                         onRefreshTracking={syncTracking}
                         onStatusChange={(nextStatus) => {
-                            setProcessing(true);
-                            setStatusError('');
-                            router.post(
-                                updateStatus.url(order.id),
-                                { status: nextStatus },
-                                {
-                                    preserveScroll: true,
-                                    onError: (errors) =>
-                                        setStatusError(
-                                            errors.status ??
-                                                'Perubahan status gagal.',
-                                        ),
-                                    onFinish: () => setProcessing(false),
-                                },
-                            );
+                            if (nextStatus === 'shipment_failed') {
+                                setFailureReason('');
+                                setStatusError('');
+                                setFailureOpen(true);
+                            } else {
+                                changeStatus(nextStatus);
+                            }
                         }}
                     />
-                    {statusError && (
+                    {statusError && !failureOpen && (
                         <p role="alert" className="text-sm text-destructive">
                             {statusError}
                         </p>
@@ -351,6 +386,38 @@ export default function OrderShow({ order }: Props) {
                         </p>
                     )}
                     <OrderBanner order={order} />
+                    {order.shipping_issue && (
+                        <section
+                            aria-label="Kendala pengiriman"
+                            className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-950"
+                        >
+                            <h3 className="font-semibold">
+                                {order.shipping_issue.label}
+                            </h3>
+                            <p className="text-sm leading-relaxed">
+                                {order.shipping_issue.description}
+                            </p>
+                            <p className="text-xs break-words">
+                                Status dari kurir: {order.shipping_issue.status}
+                            </p>
+                            {order.shipping_issue.reason && (
+                                <p className="text-sm break-words">
+                                    Keterangan kurir:{' '}
+                                    {order.shipping_issue.reason}
+                                </p>
+                            )}
+                            <p className="text-xs">
+                                Pembaruan terakhir:{' '}
+                                {date(order.trackings[0]?.happened_at)}
+                            </p>
+                            {order.order_status === 'shipment_failed' && (
+                                <p className="text-sm font-medium">
+                                    Pesanan ditandai gagal dikirim. Pembayaran
+                                    dan riwayat shipment tetap dipertahankan.
+                                </p>
+                            )}
+                        </section>
+                    )}
                     <OrderWorkflow order={order} />
 
                     <nav
@@ -404,6 +471,94 @@ export default function OrderShow({ order }: Props) {
                 }}
                 onConfirm={confirmBooking}
             />
+            <Dialog
+                open={failureOpen}
+                onOpenChange={(open) => {
+                    if (!processing) {
+                        setFailureOpen(open);
+                    }
+                }}
+            >
+                <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Tandai pesanan gagal dikirim?</DialogTitle>
+                        <DialogDescription>
+                            Pastikan kurir telah mengonfirmasi bahwa paket tidak
+                            akan sampai ke customer.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3 text-sm">
+                        <p className="font-semibold">{order.order_number}</p>
+                        <p>{order.shipping_issue?.label}</p>
+                        <p>
+                            Pembayaran tetap {label(order.payment_status)}{' '}
+                            sebesar {money(order.grand_total)}. Tindakan ini
+                            tidak melakukan refund, membatalkan booking kurir,
+                            mengembalikan stok, atau mengembalikan pemakaian
+                            voucher.
+                        </p>
+                        <label
+                            htmlFor="shipping-failure-reason"
+                            className="block font-medium"
+                        >
+                            Alasan gagal kirim
+                        </label>
+                        <textarea
+                            id="shipping-failure-reason"
+                            rows={4}
+                            maxLength={1000}
+                            required
+                            value={failureReason}
+                            disabled={processing}
+                            onChange={(event) =>
+                                setFailureReason(event.target.value)
+                            }
+                            aria-invalid={Boolean(statusError)}
+                            aria-describedby={
+                                statusError
+                                    ? 'shipping-failure-error'
+                                    : undefined
+                            }
+                            className="w-full rounded-md border border-input bg-background p-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                        />
+                        {statusError && (
+                            <p
+                                id="shipping-failure-error"
+                                role="alert"
+                                className="text-destructive"
+                            >
+                                {statusError}
+                            </p>
+                        )}
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            disabled={processing}
+                            onClick={() => setFailureOpen(false)}
+                        >
+                            Kembali
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            disabled={
+                                processing ||
+                                shipmentProcessing ||
+                                !availableStatuses.includes('shipment_failed')
+                            }
+                            onClick={() =>
+                                changeStatus('shipment_failed', failureReason)
+                            }
+                        >
+                            {processing
+                                ? 'Menyimpan...'
+                                : 'Ya, tandai gagal dikirim'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }
@@ -810,7 +965,11 @@ function OrderBanner({ order }: { order: Order }) {
             </div>
             <BannerStatus title="Payment" value={order.payment_status} />
             <BannerStatus title="Order Status" value={order.order_status} />
-            <BannerStatus title="Shipping" value={order.shipping_status} />
+            <BannerStatus
+                title="Shipping"
+                value={order.shipping_issue?.status ?? order.shipping_status}
+                display={order.shipping_issue?.label}
+            />
             <div className="flex flex-col justify-center px-7 py-5">
                 <p className="text-sm font-semibold">Total</p>
                 <p className="mt-2 font-mono text-2xl font-bold">
@@ -821,16 +980,24 @@ function OrderBanner({ order }: { order: Order }) {
     );
 }
 
-function BannerStatus({ title, value }: { title: string; value: string }) {
+function BannerStatus({
+    title,
+    value,
+    display,
+}: {
+    title: string;
+    value: string;
+    display?: string;
+}) {
     return (
         <div className="flex flex-col items-center justify-center border-b border-[#e4e4e4] px-4 py-5 lg:border-r lg:border-b-0">
             <p className="text-xs font-medium">{title}</p>
-            <StatusBadge value={value} />
+            <StatusBadge value={value} display={display} />
         </div>
     );
 }
 
-function StatusBadge({ value }: { value: string }) {
+function StatusBadge({ value, display }: { value: string; display?: string }) {
     const positive = [
         'paid',
         'completed',
@@ -838,7 +1005,20 @@ function StatusBadge({ value }: { value: string }) {
         'settlement',
         'capture',
     ].includes(value);
-    const negative = ['failed', 'cancelled', 'expired', 'deny'].includes(value);
+    const negative = [
+        'failed',
+        'cancelled',
+        'expired',
+        'deny',
+        'problem',
+        'lost',
+        'returned',
+        'shipment_failed',
+        'shipment_problem',
+        'disposed',
+        'damaged',
+        'rejected',
+    ].includes(value);
 
     return (
         <span
@@ -853,7 +1033,7 @@ function StatusBadge({ value }: { value: string }) {
             <span
                 className={`size-2 rounded-full ${positive ? 'bg-[#2ba33d]' : negative ? 'bg-red-500' : 'bg-amber-500'}`}
             />
-            {label(value)}
+            {display ?? label(value)}
         </span>
     );
 }

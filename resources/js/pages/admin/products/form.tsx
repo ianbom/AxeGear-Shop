@@ -47,6 +47,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { store, update } from '@/routes/admin/products';
+import ProductShippingEstimate from './shipping-estimate';
 
 type Option = { id: number; name: string };
 const productFieldLabels: Record<string, string> = {
@@ -1573,6 +1574,12 @@ export default function ProductForm({ mode, product, options }: Props) {
                                             />
                                         </FieldGroup>
                                     </FieldRow>
+                                    <ProductShippingEstimate
+                                        weight={data.weight}
+                                        length={data.length}
+                                        width={data.width}
+                                        height={data.height}
+                                    />
                                 </SectionCard>
 
                                 {/* 5. Product Images */}

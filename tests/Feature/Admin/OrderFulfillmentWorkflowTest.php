@@ -433,7 +433,8 @@ it('books from order detail using the saved customer courier without changing pa
     Http::assertSent(fn (Request $request): bool => $request->method() === 'POST'
         && $request['courier_company'] === 'jne'
         && $request['courier_type'] === 'reg'
-        && $request['items'][0]['quantity'] === 2);
+        && $request['items'][0]['quantity'] === 2
+        && $request['items'][0]['weight'] === 250);
     Http::assertSentCount(1);
     $order->refresh();
     expect($order->shipping_cost)->toBe('16000.00')

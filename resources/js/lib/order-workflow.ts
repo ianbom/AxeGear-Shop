@@ -1,3 +1,11 @@
+export type ShippingIssue = {
+    status: string;
+    label: string;
+    description: string;
+    reason: string | null;
+    is_terminal: boolean;
+};
+
 const orderSteps: Record<string, number> = {
     pending_payment: 0,
     paid: 1,
@@ -55,6 +63,7 @@ export function getOrderWorkflow(order: {
     order_status: string;
     payment_status: string;
     shipping_status: string;
+    shipping_issue?: ShippingIssue | null;
     paid_at?: string | null;
     shipment?: {
         shipping_status?: string | null;
@@ -68,21 +77,25 @@ export function getOrderWorkflow(order: {
         order.shipment?.shipping_status ?? order.shipping_status;
 
     return {
-        currentStep: Math.max(
-            orderSteps[order.order_status] ?? 0,
-            order.paid_at || order.payment_status === 'paid' ? 1 : 0,
-            shippingSteps[shippingStatus] ?? 0,
-            order.shipment?.shipped_at ? 4 : 0,
-            order.shipment?.delivered_at ? 5 : 0,
-            ...(order.status_history ?? []).map(({ status }) =>
-                Math.min(orderSteps[status ?? ''] ?? 0, 5),
-            ),
-            ...(order.trackings ?? []).map(
-                ({ status }) => shippingSteps[status] ?? 0,
+        currentStep: Math.min(
+            order.shipping_issue ? 4 : 6,
+            Math.max(
+                orderSteps[order.order_status] ?? 0,
+                order.paid_at || order.payment_status === 'paid' ? 1 : 0,
+                shippingSteps[shippingStatus] ?? 0,
+                order.shipment?.shipped_at ? 4 : 0,
+                order.shipment?.delivered_at ? 5 : 0,
+                ...(order.status_history ?? []).map(({ status }) =>
+                    Math.min(orderSteps[status ?? ''] ?? 0, 5),
+                ),
+                ...(order.trackings ?? []).map(
+                    ({ status }) => shippingSteps[status] ?? 0,
+                ),
             ),
         ),
-        completed: order.order_status === 'completed',
+        completed: order.order_status === 'completed' && !order.shipping_issue,
         issue:
+            order.shipping_issue?.description ??
             orderIssues[order.order_status] ??
             paymentIssues[order.payment_status] ??
             shippingIssues[shippingStatus] ??

@@ -61,6 +61,7 @@ function harness(mode = 'create') {
     };
     const context = {
         ...Object.fromEntries(imports.map((name) => [name, () => null])),
+        ProductShippingEstimate: () => null,
         React,
         document,
         URL: {

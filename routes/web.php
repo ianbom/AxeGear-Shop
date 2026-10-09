@@ -111,6 +111,7 @@ Route::middleware(['auth', 'admin', 'admin.activity'])->prefix('admin')->name('a
 
     Route::get('products', [ProductController::class, 'index'])->name('products.index');
     Route::get('products/create', [ProductController::class, 'create'])->name('products.create');
+    Route::post('products/shipping-estimate', [ProductController::class, 'shippingEstimate'])->withoutMiddleware('admin.activity')->middleware('throttle:30,1')->name('products.shipping-estimate');
     Route::post('products', [ProductController::class, 'store'])->name('products.store');
     Route::get('products/{product}', [ProductController::class, 'show'])->name('products.show');
     Route::get('products/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');

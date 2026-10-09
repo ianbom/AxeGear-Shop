@@ -90,6 +90,8 @@ class BiteshipWebhookController extends Controller
             ...$payload,
             'id' => Arr::get($payload, 'order_id') ?? Arr::get($payload, 'id'),
             'courier' => [
+                'link' => Arr::get($payload, 'courier.link'),
+                'status' => Arr::get($payload, 'courier.status'),
                 'tracking_id' => Arr::get($payload, 'courier_tracking_id') ?? Arr::get($payload, 'courier.tracking_id'),
                 'waybill_id' => Arr::get($payload, 'courier_waybill_id') ?? Arr::get($payload, 'courier.waybill_id'),
                 'company' => Arr::get($payload, 'courier_company') ?? Arr::get($payload, 'courier.company'),

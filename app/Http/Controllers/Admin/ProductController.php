@@ -4,14 +4,27 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ProductRequest;
+use App\Http\Requests\Admin\ProductShippingEstimateRequest;
 use App\Models\Product;
 use App\Services\Admin\ProductManagementService;
+use App\Services\Integrations\BiteshipService;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Response;
 
 class ProductController extends Controller
 {
+    public function shippingEstimate(ProductShippingEstimateRequest $request, BiteshipService $biteship): JsonResponse
+    {
+        try {
+            return response()->json(['rates' => $biteship->productShippingEstimate($request->validated())]);
+        } catch (ConnectionException) {
+            return response()->json(['message' => 'Biteship belum dapat dihubungi. Silakan coba lagi.'], 503);
+        }
+    }
+
     public function index(Request $request, ProductManagementService $products): Response
     {
         return inertia('admin/products/index', $products->indexData($request));

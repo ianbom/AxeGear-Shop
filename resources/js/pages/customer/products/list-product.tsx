@@ -1,5 +1,11 @@
 import { Head, InfiniteScroll, Link, router, usePage } from '@inertiajs/react';
-import { ChevronDown, Heart, Search } from 'lucide-react';
+import {
+    ArrowDownUp,
+    ChevronDown,
+    Heart,
+    Search,
+    SlidersHorizontal,
+} from 'lucide-react';
 import type { FormEvent, MouseEvent, ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -323,7 +329,7 @@ export default function ListProduct({
                     </div>
                 </section>
 
-                <div className="mx-auto mb-8 grid max-w-[1728px] gap-5 px-6 sm:px-8 md:grid-cols-[280px_minmax(0,1fr)] md:items-start lg:grid-cols-[300px_minmax(0,1fr)] lg:px-9">
+                <div className="mx-auto mb-3 grid max-w-[1728px] gap-4 px-4 md:mb-8 md:grid-cols-[280px_minmax(0,1fr)] md:items-start md:gap-5 md:px-8 lg:grid-cols-[300px_minmax(0,1fr)] lg:px-9">
                     <nav
                         aria-label="Breadcrumb"
                         className="flex items-center gap-3 text-[17px] text-ink"
@@ -338,17 +344,22 @@ export default function ListProduct({
                         <span className="font-extrabold">{pageTitle}</span>
                     </nav>
 
-                    <div className="flex flex-wrap items-center justify-between gap-4 md:justify-end">
+                    <div className="grid grid-cols-2 gap-3 md:flex md:flex-wrap md:items-center md:justify-end md:gap-4">
                         <button
                             type="button"
                             onClick={openFilter}
-                            className="h-11 border border-ink px-5 text-[13px] font-extrabold uppercase hover:bg-ink hover:text-white lg:hidden"
+                            aria-expanded={isFilterOpen}
+                            className="flex h-12 items-center justify-center gap-3 rounded-sm border border-hairline-strong px-3 text-[16px] font-extrabold hover:bg-ink hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink md:h-11 md:rounded-none md:border-ink md:px-5 md:text-[13px] md:uppercase lg:hidden"
                         >
+                            <SlidersHorizontal
+                                aria-hidden="true"
+                                className="size-5 md:hidden"
+                            />
                             Filter
                         </button>
                         <form
                             onSubmit={submitSearch}
-                            className="relative w-full sm:w-72 lg:w-80"
+                            className="relative order-first col-span-2 w-full md:order-none md:w-72 lg:w-80"
                         >
                             <Search
                                 className="absolute top-1/2 left-3 -translate-y-1/2 text-ink"
@@ -364,12 +375,24 @@ export default function ListProduct({
                                     }))
                                 }
                                 placeholder="Search products"
-                                className="h-11 w-full border border-hairline-strong bg-canvas pr-4 pl-10 text-[14px] text-ink placeholder:text-muted-foreground focus:border-ink focus:ring-0 focus:outline-none"
+                                className="h-11 w-full rounded-sm border border-hairline-strong bg-canvas pr-4 pl-10 text-[16px] text-ink placeholder:text-muted-foreground focus:border-ink focus:ring-0 focus:outline-none md:rounded-none md:text-[14px]"
                             />
                         </form>
-                        <label className="flex items-center gap-3 text-[17px] text-ink">
-                            <span>Sort by:</span>
+                        <label className="relative flex h-12 min-w-0 items-center justify-center gap-3 rounded-sm border border-hairline-strong text-[16px] text-ink focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ink md:h-auto md:justify-start md:rounded-none md:border-0 md:text-[17px]">
+                            <span className="flex items-center gap-3 md:hidden">
+                                <ArrowDownUp
+                                    aria-hidden="true"
+                                    className="size-5"
+                                />
+                                Sort by
+                            </span>
+                            <ChevronDown
+                                aria-hidden="true"
+                                className="absolute right-3 size-4 md:hidden"
+                            />
+                            <span className="hidden md:inline">Sort by:</span>
                             <select
+                                aria-label="Sort products"
                                 value={`${selectedSort?.value}:${selectedSort?.order}`}
                                 onChange={(event) => {
                                     const selected = options.sorts.find(
@@ -386,7 +409,7 @@ export default function ListProduct({
                                         });
                                     }
                                 }}
-                                className="border-0 bg-transparent py-0 pr-8 pl-0 text-[17px] font-medium text-ink focus:ring-0"
+                                className="absolute inset-0 h-full w-full cursor-pointer border-0 bg-transparent text-[16px] font-medium text-ink opacity-0 focus:ring-0 md:static md:h-auto md:w-auto md:py-0 md:pr-8 md:pl-0 md:text-[17px] md:opacity-100"
                             >
                                 {options.sorts.map((sort) => (
                                     <option
@@ -401,7 +424,7 @@ export default function ListProduct({
                     </div>
                 </div>
 
-                <div className="mx-auto grid max-w-[1728px] gap-9 px-6 sm:px-8 lg:grid-cols-[300px_minmax(0,1fr)] lg:px-9">
+                <div className="mx-auto grid max-w-[1728px] gap-9 px-4 md:px-8 lg:grid-cols-[300px_minmax(0,1fr)] lg:px-9">
                     <aside className="hidden lg:block" aria-label="Filters">
                         <h2 className="mb-7 text-[25px] leading-none font-extrabold text-ink">
                             Filter:
@@ -629,7 +652,7 @@ const ProductGrid = memo(function ProductGrid({
         <InfiniteScroll data="products" buffer={400}>
             {({ loading }) => (
                 <>
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 lg:gap-4">
+                    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 lg:gap-4">
                         {products.map((product, index) => (
                             <ProductTile
                                 key={product.id}
@@ -648,7 +671,7 @@ const ProductGrid = memo(function ProductGrid({
 
 function ProductGridSkeleton() {
     return (
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 lg:gap-4">
+        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 lg:gap-4">
             {Array.from({ length: 4 }).map((_, index) => (
                 <div key={index} className="border border-hairline p-4">
                     <div className="aspect-square animate-pulse bg-surface-muted" />
@@ -725,7 +748,7 @@ const ProductTile = memo(function ProductTile({
     return (
         <article className="group relative border border-hairline bg-canvas transition-colors hover:border-hairline-strong">
             <Link href={productHref} className="block">
-                <div className="relative aspect-square overflow-hidden bg-white p-5 sm:p-6">
+                <div className="relative aspect-square overflow-hidden bg-white p-2 md:p-6">
                     <img
                         src={
                             product.image ??
@@ -773,11 +796,11 @@ const ProductTile = memo(function ProductTile({
                 />
             </button>
 
-            <Link href={productHref} className="block px-4 pt-1 pb-4 sm:px-5">
+            <Link href={productHref} className="block px-3 pt-1 pb-4 md:px-5">
                 <h3 className="line-clamp-1 text-[16px] leading-5 font-extrabold text-ink uppercase">
                     {product.title}
                 </h3>
-                <p className="mt-1 line-clamp-1 text-[15px] leading-5 text-body">
+                <p className="mt-1 line-clamp-1 text-[14px] leading-5 text-body md:text-[15px]">
                     {subtitle ?? 'Performance Gear'}
                 </p>
                 <div className="mt-1 flex min-h-5 flex-wrap items-center gap-1.5">
@@ -791,12 +814,12 @@ const ProductTile = memo(function ProductTile({
                             />
                         ))
                     ) : (
-                        <span className="line-clamp-1 text-[15px] leading-5 text-body">
+                        <span className="line-clamp-1 text-[14px] leading-5 text-body md:text-[15px]">
                             {product.sku || 'AxeGear Edition'}
                         </span>
                     )}
                 </div>
-                <div className="mt-2 flex flex-wrap items-center gap-4 text-[18px] leading-none font-extrabold">
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-[16px] leading-none font-extrabold md:gap-4 md:text-[18px]">
                     {product.sale_price !== null && (
                         <span className="text-ink line-through decoration-1">
                             {formatPrice(product.price)}
