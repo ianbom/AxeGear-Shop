@@ -32,9 +32,10 @@ class MidtransWebhookService
             $payloadHash = hash('sha256', json_encode($payload, JSON_THROW_ON_ERROR));
             $payment = Payment::query()
                 ->where('midtrans_order_id', $payload['order_id'])
-                ->lockForUpdate()
                 ->firstOrFail();
-            $payment->setRelation('order', $payment->order()->lockForUpdate()->first());
+            $order = $payment->order()->lockForUpdate()->firstOrFail();
+            $payment = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
+            $payment->setRelation('order', $order);
 
             if ($payment->logs()->where('payload_hash', $payloadHash)->exists()) {
                 Log::info('duplicate_webhook_ignored', ['provider' => 'midtrans', 'payment_id' => $payment->id]);

@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\ShippingStatus;
 use App\Mail\ShipmentCreatedMail;
+use App\Models\BiteshipWebhookLog;
 use App\Models\Order;
 use App\Models\Shipment;
 use App\Services\Integrations\BiteshipService;
@@ -287,6 +288,8 @@ class ShipmentManagementService
             return $shipment;
         });
 
+        $this->replayWebhooks($shipment);
+        $shipment->refresh();
         $this->sendShipmentCreatedEmail($shipment);
 
         return $shipment;
@@ -345,6 +348,78 @@ class ShipmentManagementService
         }
 
         throw ValidationException::withMessages(['shipment' => 'Booking Biteship belum tersedia untuk disinkronkan.']);
+    }
+
+    public function processWebhook(BiteshipWebhookLog $receipt): bool
+    {
+        return DB::transaction(function () use ($receipt): bool {
+            $receipt = BiteshipWebhookLog::query()->whereKey($receipt->id)->lockForUpdate()->firstOrFail();
+
+            if ($receipt->processed_at) {
+                return true;
+            }
+
+            if (! $receipt->biteship_order_id && ! $receipt->biteship_tracking_id && ! $receipt->waybill_id) {
+                return false;
+            }
+
+            $shipment = Shipment::query()->where(function ($query) use ($receipt): void {
+                $query->when($receipt->biteship_order_id, fn ($matching) => $matching->orWhere('biteship_order_id', $receipt->biteship_order_id))
+                    ->when($receipt->biteship_tracking_id, fn ($matching) => $matching->orWhere('biteship_tracking_id', $receipt->biteship_tracking_id))
+                    ->when($receipt->waybill_id, fn ($matching) => $matching->orWhere('waybill_id', $receipt->waybill_id));
+            })->first();
+
+            if (! $shipment) {
+                return false;
+            }
+
+            $payload = $receipt->payload;
+            $this->applyBiteshipPayload($shipment, [
+                ...$payload,
+                'id' => $receipt->biteship_order_id,
+                'courier' => [
+                    'link' => Arr::get($payload, 'courier.link'),
+                    'status' => Arr::get($payload, 'courier.status'),
+                    'tracking_id' => $receipt->biteship_tracking_id,
+                    'waybill_id' => $receipt->waybill_id,
+                    'company' => Arr::get($payload, 'courier_company') ?? Arr::get($payload, 'courier.company'),
+                    'type' => Arr::get($payload, 'courier_type') ?? Arr::get($payload, 'courier.type'),
+                    'routing_code' => Arr::get($payload, 'courier_routing_code') ?? Arr::get($payload, 'courier.routing_code'),
+                ],
+            ], 'biteship_webhook');
+            $receipt->update(['processed_at' => now()]);
+
+            return true;
+        });
+    }
+
+    public function replayWebhooks(?Shipment $shipment = null): int
+    {
+        $processed = 0;
+        BiteshipWebhookLog::query()->whereNull('processed_at')
+            ->when($shipment, fn ($query) => $query->where(function ($matching) use ($shipment): void {
+                $matching->when($shipment->biteship_order_id, fn ($identifier) => $identifier->orWhere('biteship_order_id', $shipment->biteship_order_id))
+                    ->when($shipment->biteship_tracking_id, fn ($identifier) => $identifier->orWhere('biteship_tracking_id', $shipment->biteship_tracking_id))
+                    ->when($shipment->waybill_id, fn ($identifier) => $identifier->orWhere('waybill_id', $shipment->waybill_id));
+            }))
+            ->whereExists(function ($query): void {
+                $query->selectRaw('1')->from('shipments')->where(function ($matching): void {
+                    $matching->whereColumn('shipments.biteship_order_id', 'biteship_webhook_logs.biteship_order_id')
+                        ->orWhereColumn('shipments.biteship_tracking_id', 'biteship_webhook_logs.biteship_tracking_id')
+                        ->orWhereColumn('shipments.waybill_id', 'biteship_webhook_logs.waybill_id');
+                });
+            })
+            ->chunkById(50, function ($receipts) use (&$processed): void {
+                foreach ($receipts as $receipt) {
+                    try {
+                        $processed += (int) $this->processWebhook($receipt);
+                    } catch (\Throwable $exception) {
+                        Log::warning('biteship_webhook_replay_failed', ['receipt_id' => $receipt->id, 'message' => $exception->getMessage()]);
+                    }
+                }
+            });
+
+        return $processed;
     }
 
     public function applyBiteshipPayload(Shipment $shipment, array $payload, string $source = 'biteship'): void
@@ -479,8 +554,7 @@ class ShipmentManagementService
             'origin_note' => $this->setting('origin_note', config('services.biteship.origin_note')),
             'origin_postal_code' => $originPostalCode ? (int) $originPostalCode : null,
             'origin_area_id' => $originAreaId,
-            'origin_latitude' => $this->coordinate($this->setting('store_latitude')),
-            'origin_longitude' => $this->coordinate($this->setting('store_longitude')),
+            'origin_coordinate' => $this->coordinates($this->setting('store_latitude'), $this->setting('store_longitude')),
             'destination_contact_name' => $order->address?->recipient_name ?: $order->customer_name,
             'destination_contact_phone' => $order->address?->recipient_phone ?: $order->customer_phone,
             'destination_contact_email' => $order->customer_email,
@@ -488,8 +562,7 @@ class ShipmentManagementService
             'destination_note' => $destinationNote,
             'destination_postal_code' => $order->address?->postal_code ? (int) $order->address->postal_code : null,
             'destination_area_id' => $destinationAreaId,
-            'destination_latitude' => $this->coordinate($order->address?->latitude),
-            'destination_longitude' => $this->coordinate($order->address?->longitude),
+            'destination_coordinate' => $this->coordinates($order->address?->latitude, $order->address?->longitude),
             'courier_company' => $payload['courier_company'],
             'courier_type' => $payload['courier_type'],
             'courier_insurance' => 0,
@@ -517,6 +590,16 @@ class ShipmentManagementService
         return $this->settings->get($key) ?: $fallback;
     }
 
+    private function coordinates(mixed $latitude, mixed $longitude): ?array
+    {
+        $latitude = $this->coordinate($latitude);
+        $longitude = $this->coordinate($longitude);
+
+        return $latitude !== null && $longitude !== null && is_finite($latitude) && is_finite($longitude)
+            && abs($latitude) <= 90 && abs($longitude) <= 180
+            ? ['latitude' => $latitude, 'longitude' => $longitude] : null;
+    }
+
     private function coordinate(mixed $value): ?float
     {
         return is_numeric($value) ? (float) $value : null;
@@ -542,6 +625,11 @@ class ShipmentManagementService
 
     private function validateBiteshipPayload(array $payload): void
     {
+        if (in_array($payload['courier_company'] ?? null, ['gojek', 'grab'], true)
+            && (empty($payload['origin_coordinate']) || empty($payload['destination_coordinate']))) {
+            throw ValidationException::withMessages(['shipment' => 'Kurir instan membutuhkan koordinat toko dan alamat customer yang valid.']);
+        }
+
         $missing = collect([
             'origin_contact_name',
             'origin_contact_phone',

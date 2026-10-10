@@ -16,28 +16,32 @@ class SyncMidtransPaymentAction
 
     public function execute(Payment $payment, string $eventType = 'admin_sync'): void
     {
-        $payload = $this->midtrans->transactionStatus((string) $payment->midtrans_order_id);
+        $this->applyPayload($payment, $this->midtrans->transactionStatus((string) $payment->midtrans_order_id), $eventType);
+    }
 
+    public function applyPayload(Payment $payment, array $payload, string $eventType = 'admin_sync'): void
+    {
         foreach (['order_id', 'transaction_status', 'gross_amount', 'status_code'] as $field) {
             if (blank($payload[$field] ?? null)) {
                 throw ValidationException::withMessages(['payment' => "Response Midtrans tidak memiliki {$field}."]);
             }
         }
 
-        DB::transaction(function () use ($payment, $payload, $eventType): void {
+        $rejection = DB::transaction(function () use ($payment, $payload, $eventType): ?string {
+            $order = $payment->order()->lockForUpdate()->firstOrFail();
             $payment = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
-            $payment->setRelation('order', $payment->order()->lockForUpdate()->first());
+            $payment->setRelation('order', $order);
 
             if ((string) $payload['order_id'] !== (string) $payment->midtrans_order_id) {
                 $this->logRejected($payment, $payload, 'rejected_reference_mismatch');
 
-                throw ValidationException::withMessages(['payment' => 'Order ID Midtrans tidak cocok dengan payment lokal.']);
+                return 'Order ID Midtrans tidak cocok dengan payment lokal.';
             }
 
             if (! $this->midtrans->amountMatches($payload['gross_amount'], $payment)) {
                 $this->logRejected($payment, $payload, 'rejected_amount_mismatch');
 
-                throw ValidationException::withMessages(['payment' => 'Nominal Midtrans tidak cocok dengan payment lokal.']);
+                return 'Nominal Midtrans tidak cocok dengan payment lokal.';
             }
 
             $payment->logs()->create([
@@ -51,7 +55,7 @@ class SyncMidtransPaymentAction
             ]);
 
             if (! $this->applyStatus->canApply($payment, (string) $payload['transaction_status'], $payload['fraud_status'] ?? null)) {
-                return;
+                return null;
             }
 
             $payment->update([
@@ -64,7 +68,13 @@ class SyncMidtransPaymentAction
             ]);
 
             $this->applyStatus->execute($payment, (string) $payload['transaction_status'], $payload['fraud_status'] ?? null);
+
+            return null;
         });
+
+        if ($rejection !== null) {
+            throw ValidationException::withMessages(['payment' => $rejection]);
+        }
     }
 
     private function logRejected(Payment $payment, array $payload, string $eventType): void

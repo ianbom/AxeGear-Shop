@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
 use App\Models\BiteshipWebhookLog;
-use App\Models\Shipment;
 use App\Services\Admin\ShipmentManagementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,18 +21,12 @@ class BiteshipWebhookController extends Controller
         $payload = $request->json()->all() ?: $request->all();
         $payloadHash = hash('sha256', json_encode($payload, JSON_THROW_ON_ERROR));
 
-        if (BiteshipWebhookLog::query()->where('payload_hash', $payloadHash)->exists()) {
-            Log::info('duplicate_webhook_ignored', ['provider' => 'biteship']);
-
-            return response()->json(['success' => true, 'duplicate' => true]);
-        }
-
         $event = Arr::get($payload, 'event');
         $orderId = Arr::get($payload, 'order_id') ?? Arr::get($payload, 'id');
         $trackingId = Arr::get($payload, 'courier_tracking_id') ?? Arr::get($payload, 'courier.tracking_id');
         $waybillId = Arr::get($payload, 'courier_waybill_id') ?? Arr::get($payload, 'courier.waybill_id');
 
-        $log = BiteshipWebhookLog::query()->create([
+        $log = BiteshipWebhookLog::query()->firstOrCreate(['payload_hash' => $payloadHash], [
             'event_type' => $event,
             'biteship_order_id' => $orderId,
             'biteship_tracking_id' => $trackingId,
@@ -42,23 +35,11 @@ class BiteshipWebhookController extends Controller
             'payload' => $payload,
         ]);
 
-        $shipment = null;
-
-        if ($orderId || $trackingId || $waybillId) {
-            $shipment = Shipment::query()
-                ->where(function ($query) use ($orderId, $trackingId, $waybillId): void {
-                    $query
-                        ->when($orderId, fn ($query) => $query->orWhere('biteship_order_id', $orderId))
-                        ->when($trackingId, fn ($query) => $query->orWhere('biteship_tracking_id', $trackingId))
-                        ->when($waybillId, fn ($query) => $query->orWhere('waybill_id', $waybillId));
-                })
-                ->first();
+        if ($log->processed_at) {
+            return response()->json(['success' => true, 'duplicate' => true]);
         }
 
-        if ($shipment) {
-            $shipments->applyBiteshipPayload($shipment, $this->toOrderPayload($payload), 'biteship_webhook');
-            $log->update(['processed_at' => now()]);
-        }
+        $shipments->processWebhook($log);
 
         return response()->json(['success' => true]);
     }
@@ -82,22 +63,5 @@ class BiteshipWebhookController extends Controller
             ?: $request->bearerToken();
 
         return is_string($given) && hash_equals($secret, $given);
-    }
-
-    private function toOrderPayload(array $payload): array
-    {
-        return [
-            ...$payload,
-            'id' => Arr::get($payload, 'order_id') ?? Arr::get($payload, 'id'),
-            'courier' => [
-                'link' => Arr::get($payload, 'courier.link'),
-                'status' => Arr::get($payload, 'courier.status'),
-                'tracking_id' => Arr::get($payload, 'courier_tracking_id') ?? Arr::get($payload, 'courier.tracking_id'),
-                'waybill_id' => Arr::get($payload, 'courier_waybill_id') ?? Arr::get($payload, 'courier.waybill_id'),
-                'company' => Arr::get($payload, 'courier_company') ?? Arr::get($payload, 'courier.company'),
-                'type' => Arr::get($payload, 'courier_type') ?? Arr::get($payload, 'courier.type'),
-                'routing_code' => Arr::get($payload, 'courier_routing_code') ?? Arr::get($payload, 'courier.routing_code'),
-            ],
-        ];
     }
 }

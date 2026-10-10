@@ -47,28 +47,69 @@ class MidtransService
         ]);
 
         if (! $response->successful()) {
+            $message = $response->json('error_messages.0');
+
+            if (! is_string($message) || blank($message) || ! $response->clientError()
+                || in_array($response->status(), [408, 409, 429], true)
+                || preg_match('/already|duplicate|used|taken/i', $message)) {
+                throw new \UnexpectedValueException('Hasil pembuatan transaksi Midtrans belum dapat dipastikan.');
+            }
+
             throw ValidationException::withMessages(['payment' => $response->json('error_messages.0') ?? 'Gagal membuat transaksi Midtrans.']);
         }
 
-        return $response->json();
+        $payload = $response->json();
+
+        if (! is_array($payload) || ! is_string($payload['token'] ?? null) || blank($payload['token'])
+            || ! is_string($payload['redirect_url'] ?? null) || ! filter_var($payload['redirect_url'], FILTER_VALIDATE_URL)
+            || parse_url($payload['redirect_url'], PHP_URL_SCHEME) !== 'https') {
+            throw new \UnexpectedValueException('Respons Midtrans tidak memiliki token dan redirect pembayaran yang valid.');
+        }
+
+        return $payload;
     }
 
     public function transactionStatus(string $midtransOrderId): array
     {
+        return $this->findTransactionStatus($midtransOrderId)
+            ?? throw ValidationException::withMessages(['payment' => 'Transaksi belum ditemukan di Midtrans.']);
+    }
+
+    public function findTransactionStatus(string $midtransOrderId): ?array
+    {
         $response = $this->apiClient()->get('/v2/'.rawurlencode($midtransOrderId).'/status');
+
+        if (in_array($response->status(), [200, 404], true) && (string) $response->json('status_code') === '404') {
+            return null;
+        }
 
         if (! $response->successful()) {
             throw ValidationException::withMessages(['payment' => $response->json('status_message') ?? 'Gagal mengambil status Midtrans.']);
         }
 
-        return $response->json();
+        $payload = $response->json();
+
+        if (! is_array($payload) || blank($payload['transaction_status'] ?? null)) {
+            throw ValidationException::withMessages(['payment' => 'Respons status Midtrans tidak lengkap.']);
+        }
+
+        return $payload;
+    }
+
+    public function cancelSnapSession(string $token): void
+    {
+        $response = $this->snapClient()->post('/snap/v1/transactions/'.rawurlencode($token).'/cancel');
+
+        if (! $response->successful() || ! is_string($response->json('canceled_at')) || blank($response->json('canceled_at'))) {
+            throw ValidationException::withMessages(['payment' => 'Sesi pembayaran belum dapat dibatalkan. Periksa status pembayaran atau hubungi admin.']);
+        }
     }
 
     public function cancelTransaction(string $midtransOrderId): array
     {
         $response = $this->apiClient()->post('/v2/'.rawurlencode($midtransOrderId).'/cancel');
 
-        if (! $response->successful()) {
+        if (! $response->successful() || (string) $response->json('status_code') !== '200' || $response->json('transaction_status') !== 'cancel') {
             Log::warning('midtrans_cancel_failed', [
                 'order_id' => $midtransOrderId,
                 'status' => $response->status(),
@@ -103,12 +144,9 @@ class MidtransService
 
     public function amountMatches(string|float|int $payloadAmount, Payment $payment): bool
     {
-        return $this->minorUnits($payloadAmount) === $this->minorUnits($payment->gross_amount);
-    }
-
-    private function minorUnits(string|float|int $amount): int
-    {
-        return (int) round(((float) $amount) * 100);
+        return preg_match('/^\d+(?:\.0+)?$/D', (string) $payloadAmount) === 1
+            && is_finite((float) $payloadAmount)
+            && (float) $payloadAmount === round((float) $payment->gross_amount, 0, PHP_ROUND_HALF_UP);
     }
 
     private function itemDetails(Order $order): array
@@ -130,6 +168,13 @@ class MidtransService
 
         if ((float) $order->discount_amount > 0) {
             $items->push(['id' => 'discount', 'price' => -1 * (int) round((float) $order->discount_amount), 'quantity' => 1, 'name' => 'Discount']);
+        }
+
+        $adjustment = (int) round((float) $order->grand_total, 0, PHP_ROUND_HALF_UP)
+            - $items->sum(fn (array $item): int => $item['price'] * $item['quantity']);
+
+        if ($adjustment !== 0) {
+            $items->push(['id' => 'rounding', 'price' => $adjustment, 'quantity' => 1, 'name' => 'Pembulatan']);
         }
 
         return $items->all();

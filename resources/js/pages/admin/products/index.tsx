@@ -49,6 +49,7 @@ interface Product {
     regular_price: number;
     sale_price: number | null;
     total_stock: number;
+    total_reserved_stock: number;
     variants_count: number;
     status: string;
     is_featured: boolean;
@@ -567,11 +568,12 @@ export default function ProductsIndex({
                         <table className="w-full min-w-[1120px] text-left text-sm lg:min-w-0 lg:table-fixed lg:text-xs">
                             <colgroup className="hidden lg:table-column-group">
                                 <col className="w-[3%]" />
-                                <col className="w-[20%]" />
+                                <col className="w-[19%]" />
                                 <col className="w-[6%]" />
                                 <col className="w-[7%]" />
                                 <col className="w-[7%]" />
-                                <col className="w-[12%]" />
+                                <col className="w-[8%]" />
+                                <col className="w-[5%]" />
                                 <col className="w-[5%]" />
                                 <col className="w-[5%]" />
                                 <col className="w-[9%]" />
@@ -614,6 +616,9 @@ export default function ProductsIndex({
                                         Stock
                                     </th>
                                     <th className="px-4 py-3 text-[11px] font-semibold tracking-wider text-zinc-400 uppercase lg:px-1 lg:py-2 lg:text-[9px] lg:leading-tight lg:break-all">
+                                        Reserved Stock
+                                    </th>
+                                    <th className="px-4 py-3 text-[11px] font-semibold tracking-wider text-zinc-400 uppercase lg:px-1 lg:py-2 lg:text-[9px] lg:leading-tight lg:break-all">
                                         Status
                                     </th>
                                     <th className="px-4 py-3 text-[11px] font-semibold tracking-wider text-zinc-400 uppercase lg:px-1 lg:py-2 lg:text-[9px] lg:leading-tight lg:break-all">
@@ -632,7 +637,7 @@ export default function ProductsIndex({
                             <tbody className="divide-y divide-zinc-50">
                                 {products.data.length === 0 && (
                                     <tr>
-                                        <td colSpan={12}>
+                                        <td colSpan={13}>
                                             <div className="flex flex-col items-center justify-center gap-3 py-20">
                                                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-100">
                                                     <ShoppingBag className="h-5 w-5 text-zinc-400" />
@@ -807,6 +812,10 @@ export default function ProductsIndex({
                                                         </span>
                                                     )}
                                                 </div>
+                                            </td>
+
+                                            <td className="px-4 py-3.5 text-sm font-semibold text-zinc-800 tabular-nums lg:px-1 lg:py-2.5 lg:text-xs">
+                                                {p.total_reserved_stock}
                                             </td>
 
                                             <td className="px-4 py-3.5 lg:px-1 lg:py-2.5">

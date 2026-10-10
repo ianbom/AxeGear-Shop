@@ -14,6 +14,8 @@ import {
     PageHeader,
     StatusBadge,
 } from '@/pages/admin/sales/shared';
+import { show as showOrder } from '@/routes/admin/orders';
+import { sync } from '@/routes/admin/payments';
 
 type Payment = {
     id: number;
@@ -33,6 +35,7 @@ type Payment = {
     paid_at: string | null;
     expired_at: string | null;
     raw_response: unknown;
+    failure_reason: string | null;
     logs: {
         id: number;
         event_type: string | null;
@@ -62,7 +65,7 @@ export default function PaymentShow({ payment }: Props) {
                             type="button"
                             onClick={() =>
                                 router.post(
-                                    `/admin/payments/${payment.id}/sync`,
+                                    sync.url(payment.id),
                                     {},
                                     { preserveScroll: true },
                                 )
@@ -103,7 +106,7 @@ export default function PaymentShow({ payment }: Props) {
                                 value={
                                     <Link
                                         className="text-primary underline"
-                                        href={`/admin/orders/${payment.order_id}`}
+                                        href={showOrder.url(payment.order_id)}
                                     >
                                         {payment.order_number ?? '-'}
                                     </Link>
@@ -117,6 +120,12 @@ export default function PaymentShow({ payment }: Props) {
                                 label="Transaction ID"
                                 value={payment.midtrans_transaction_id ?? '-'}
                             />
+                            {payment.failure_reason && (
+                                <Row
+                                    label="Perlu Pemeriksaan"
+                                    value={payment.failure_reason}
+                                />
+                            )}
                             <Row
                                 label="Paid At"
                                 value={payment.paid_at ?? '-'}

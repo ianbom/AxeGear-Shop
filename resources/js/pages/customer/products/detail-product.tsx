@@ -606,13 +606,8 @@ function ProductGallery({
                     </p>
                 )}
                 {mainImage && (
-                    <button
-                        type="button"
-                        className="absolute top-5 right-5 flex h-12 w-12 items-center justify-center rounded-full border border-[#D8D8D8] bg-white text-[#1A1A1A] transition-colors hover:border-[#F58220] hover:text-[#F58220]"
-                        aria-label="Zoom product image"
-                    >
-                        <Search size={24} strokeWidth={1.8} />
-                    </button>
+             <>
+             </>
                 )}
             </div>
         </section>

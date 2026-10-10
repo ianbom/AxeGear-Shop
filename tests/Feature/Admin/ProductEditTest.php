@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\Category;
 use App\Models\Collection;
 use App\Models\Product;
 use App\Models\User;
@@ -49,12 +48,16 @@ it('updates product collection ids correctly', function () {
         'sku' => 'UPD-001',
         'regular_price' => 100000,
         'weight' => 500,
+        'length' => 10,
+        'width' => 10,
+        'height' => 10,
         'status' => 'draft',
         'collection_ids' => [$collection2->id, $collection3->id],
     ];
 
     $this->actingAs($admin)
         ->put(route('admin.products.update', $product), $payload)
+        ->assertSessionHasNoErrors()
         ->assertRedirect();
 
     $this->assertDatabaseMissing('product_collections', [

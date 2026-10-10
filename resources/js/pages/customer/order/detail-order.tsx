@@ -539,10 +539,13 @@ export default function DetailOrder({ order, supportPhone }: Props) {
         .filter(Boolean)
         .join(' ');
     const address = order.address;
+    const method = order.payment?.payment_method?.trim();
     const paymentMethod =
-        [order.payment?.payment_provider, order.payment?.payment_method]
-            .filter(Boolean)
-            .join(' / ') || '-';
+        method === 'bank_transfer'
+            ? 'Bank Transfer'
+            : method === 'qris'
+              ? 'QRIS'
+              : method?.replaceAll('_', ' ') || '-';
     const transactionId =
         order.payment?.midtrans_transaction_id ??
         order.payment?.midtrans_order_id ??
@@ -1141,9 +1144,8 @@ export default function DetailOrder({ order, supportPhone }: Props) {
                         <div className="space-y-4 px-6 py-5">
                             <p className="text-sm leading-6 text-muted-foreground">
                                 Order belum dibayar. Jika dibatalkan, transaksi
-                                pembayaran Midtrans akan dibuat tidak bisa
-                                dibayar lagi dan stok yang tertahan akan
-                                dilepaskan.
+                                pembayaran akan dibuat tidak bisa dibayar lagi
+                                dan stok yang tertahan akan dilepaskan.
                             </p>
                             <div className="rounded-[8px] border border-hairline-strong bg-surface-soft px-4 py-3">
                                 <p className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">

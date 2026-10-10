@@ -199,4 +199,39 @@ assert.doesNotMatch(
     source,
     /Riwayat Pengiriman|showTrackingHistory|trackingHistoryRef/,
 );
-console.log('Order courier tracking and WhatsApp support checks passed.');
+for (const [method, expected] of [
+    ['bank_transfer', 'Bank Transfer'],
+    ['qris', 'QRIS'],
+    ['credit_card', 'credit card'],
+    [null, '-'],
+    [' ', '-'],
+]) {
+    const tree = elements(
+        DetailOrder({
+            order: {
+                id: 1,
+                order_status: 'shipped',
+                payment_status: 'paid',
+                payment: {
+                    payment_provider: 'midtrans',
+                    payment_method: method,
+                },
+                payment_logs: [],
+                shipment: null,
+                items: [],
+                trackings: [],
+            },
+        }),
+    );
+    assert.equal(
+        tree.find((element) => element.props.label === 'Metode Pembayaran')
+            .props.children,
+        expected,
+    );
+    assert.equal(
+        tree.find((element) => element.props.label === 'Metode').props.value,
+        expected,
+    );
+}
+assert.doesNotMatch(source, /pembayaran Midtrans/);
+console.log('Order tracking, support and payment method checks passed.');

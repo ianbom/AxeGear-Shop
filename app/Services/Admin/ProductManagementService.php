@@ -46,6 +46,7 @@ class ProductManagementService
             'products' => Product::query()
                 ->with(['category:id,name', 'collections:id,name', 'primaryImage:id,product_id,image_url,alt_text'])
                 ->withSum('variants as total_stock', 'stock')
+                ->withSum('variants as total_reserved_stock', 'reserved_stock')
                 ->withCount('variants')
                 ->when($filters['search'] !== '', fn ($query) => $query->where(fn ($query) => $query
                     ->where('name', 'like', "%{$filters['search']}%")
@@ -378,6 +379,7 @@ class ProductManagementService
             'regular_price' => $product->regular_price,
             'sale_price' => $product->sale_price,
             'total_stock' => (int) ($product->total_stock ?? 0),
+            'total_reserved_stock' => (int) ($product->total_reserved_stock ?? 0),
             'variants_count' => $product->variants_count,
             'status' => $product->status,
             'is_featured' => $product->is_featured,

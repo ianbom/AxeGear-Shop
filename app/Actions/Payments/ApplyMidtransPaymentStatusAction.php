@@ -57,6 +57,16 @@ class ApplyMidtransPaymentStatusAction
             return in_array($transactionStatus, ['refund', 'partial_refund'], true);
         }
 
+        if (in_array($status, PaymentStatus::terminalFailureValues(), true)) {
+            return in_array($transactionStatus, ['settlement', 'refund', 'partial_refund'], true)
+                || ($transactionStatus === 'capture' && $fraudStatus === 'accept');
+        }
+
+        if ($status === PaymentStatus::ManualReview->value && $payment->order->stock_released_at
+            && in_array($transactionStatus, ['pending', 'authorize'], true)) {
+            return false;
+        }
+
         return $status !== PaymentStatus::Paid->value
             || in_array($transactionStatus, ['settlement', 'refund', 'partial_refund'], true)
             || ($transactionStatus === 'capture' && $fraudStatus === 'accept');

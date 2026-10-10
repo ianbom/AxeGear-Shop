@@ -174,7 +174,7 @@ class CheckoutService
                 ];
             }
 
-            throw ValidationException::withMessages(['checkout' => 'Checkout sebelumnya masih diproses atau gagal. Muat ulang checkout untuk mencoba lagi.']);
+            throw ValidationException::withMessages(['checkout' => 'Checkout sebelumnya belum selesai. Periksa pesanan atau hubungi admin sebelum mencoba lagi.']);
         }
 
         $this->validateSelectedShippingRate($user, (int) $payload['customer_address_id'], (string) $payload['shipping_rate_id']);
@@ -215,6 +215,12 @@ class CheckoutService
                 $subtotal += (float) $item->price_snapshot * $item->quantity;
             }
 
+            $checkoutItems = $this->checkoutItems($items);
+            $this->assertShippingDimensions($checkoutItems);
+            if ((string) session('checkout.selected_rate_binding.cart_hash') !== $this->cartHash($checkoutItems)) {
+                throw ValidationException::withMessages(['shipping_rate_id' => 'Keranjang berubah. Pilih ulang ongkir.']);
+            }
+
             $voucher = null;
             $discount = 0.0;
             $voucherCode = session('checkout.voucher_code');
@@ -241,7 +247,7 @@ class CheckoutService
                 'discount_amount' => $discount,
                 'shipping_cost' => (float) $rate['price'],
                 'service_fee' => $serviceFee,
-                'grand_total' => max(0, $subtotal + (float) $rate['price'] + $serviceFee - $discount),
+                'grand_total' => round(max(0, $subtotal + (float) $rate['price'] + $serviceFee - $discount), 0, PHP_ROUND_HALF_UP),
                 'voucher_id' => $voucher?->id,
                 'voucher_code' => $voucher?->code,
                 'payment_status' => 'pending',
@@ -281,10 +287,10 @@ class CheckoutService
                     'price' => $item->price_snapshot,
                     'quantity' => $item->quantity,
                     'subtotal' => (float) $item->price_snapshot * $item->quantity,
-                    'weight' => max(1, (int) $product->weight) * $item->quantity,
-                    'length' => $product->length,
-                    'width' => $product->width,
-                    'height' => $product->height,
+                    'weight' => $variant->weight * $item->quantity,
+                    'length' => $variant->length,
+                    'width' => $variant->width,
+                    'height' => $variant->height,
                     'product_image_url' => $variant->image_url ?? $product->primaryImage?->image_url,
                 ]);
                 $variant->increment('reserved_stock', $item->quantity);
@@ -325,15 +331,32 @@ class CheckoutService
                 ]);
             });
         } catch (\Throwable $exception) {
-            DB::transaction(function () use ($payment): void {
+            DB::transaction(function () use ($payment, $exception): void {
                 $order = $payment->order()->lockForUpdate()->firstOrFail();
-                $this->releaseStock->execute($order);
-                $this->releaseVoucher->execute($order);
-                $order->update(['payment_status' => 'failed', 'order_status' => 'payment_failed', 'cancelled_at' => now()]);
-                $payment->update(['transaction_status' => 'snap_failed', 'raw_response' => ['error' => $exception->getMessage()]]);
+                $payment = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
+
+                if ($order->payment_status !== 'pending') {
+                    return;
+                }
+
+                if ($exception instanceof ValidationException) {
+                    $this->releaseStock->execute($order);
+                    $this->releaseVoucher->execute($order);
+                    $order->update(['payment_status' => 'failed', 'order_status' => 'payment_failed', 'cancelled_at' => now()]);
+                    $payment->update(['transaction_status' => 'snap_failed', 'failure_reason' => $exception->getMessage(), 'raw_response' => ['error' => $exception->getMessage()]]);
+
+                    return;
+                }
+
+                $order->update(['payment_status' => 'manual_review']);
+                $payment->update([
+                    'transaction_status' => 'manual_review',
+                    'failure_reason' => 'Pembuatan pembayaran belum dapat dipastikan. Sinkronkan status Midtrans sebelum tindakan lebih lanjut.',
+                    'raw_response' => ['snap_creation_uncertain' => true, 'error' => $exception->getMessage()],
+                ]);
             });
 
-            throw ValidationException::withMessages(['payment' => 'Gagal membuat transaksi Midtrans. Silakan coba lagi.']);
+            throw ValidationException::withMessages(['payment' => 'Pembayaran belum tersedia. Periksa pesanan atau hubungi admin sebelum mencoba lagi.']);
         }
 
         $cart = Cart::query()->firstWhere('user_id', $user->id);
@@ -350,34 +373,37 @@ class CheckoutService
 
     private function cartItems(User $user): Collection
     {
-        return $this->cartQuery($user)
-            ->get()
-            ->map(function (CartItem $item): array {
-                $product = $item->product;
-                $variant = $item->variant;
-                $availableStock = $variant ? max(0, $variant->stock - $variant->reserved_stock) : 0;
+        return $this->checkoutItems($this->cartQuery($user)->get());
+    }
 
-                return [
-                    'id' => $item->id,
-                    'product_id' => $item->product_id,
-                    'product_variant_id' => $item->product_variant_id,
-                    'title' => $product?->name ?? 'Produk tidak tersedia',
-                    'sku' => $product?->sku,
-                    'variant_sku' => $variant?->sku,
-                    'color' => $variant?->color_name,
-                    'size' => $variant?->size,
-                    'image' => $variant?->image_url ?? $product?->primaryImage?->image_url,
-                    'price' => (float) $item->price_snapshot,
-                    'quantity' => $item->quantity,
-                    'weight' => max(1, (int) ($product?->weight ?? 1)) * $item->quantity,
-                    'length' => $product?->length,
-                    'width' => $product?->width,
-                    'height' => $product?->height,
-                    'available_stock' => $availableStock,
-                    'is_available' => $product?->status === 'published' && (bool) $variant?->is_active && $availableStock >= $item->quantity,
-                    'subtotal' => (float) $item->price_snapshot * $item->quantity,
-                ];
-            });
+    private function checkoutItems(Collection $items): Collection
+    {
+        return $items->map(function (CartItem $item): array {
+            $product = $item->product;
+            $variant = $item->variant;
+            $availableStock = $variant ? max(0, $variant->stock - $variant->reserved_stock) : 0;
+
+            return [
+                'id' => $item->id,
+                'product_id' => $item->product_id,
+                'product_variant_id' => $item->product_variant_id,
+                'title' => $product?->name ?? 'Produk tidak tersedia',
+                'sku' => $product?->sku,
+                'variant_sku' => $variant?->sku,
+                'color' => $variant?->color_name,
+                'size' => $variant?->size,
+                'image' => $variant?->image_url ?? $product?->primaryImage?->image_url,
+                'price' => (float) $item->price_snapshot,
+                'quantity' => $item->quantity,
+                'weight' => (int) ($variant?->weight ?? 0) * $item->quantity,
+                'length' => $variant?->length,
+                'width' => $variant?->width,
+                'height' => $variant?->height,
+                'available_stock' => $availableStock,
+                'is_available' => $product?->status === 'published' && (bool) $variant?->is_active && $availableStock >= $item->quantity,
+                'subtotal' => (float) $item->price_snapshot * $item->quantity,
+            ];
+        });
     }
 
     private function lockedCartItems(User $user): \Illuminate\Database\Eloquent\Collection
@@ -428,16 +454,31 @@ class CheckoutService
 
     private function biteshipItems(Collection $items): array
     {
+        $this->assertShippingDimensions($items);
+
         return $items->map(fn (array $item): array => array_filter([
             'name' => mb_substr($item['title'], 0, 100),
             'description' => $item['variant_sku'] ?? $item['sku'] ?? $item['title'],
             'value' => (int) round($item['price']),
             'quantity' => $item['quantity'],
-            'weight' => max(1, (int) ceil($item['weight'] / max(1, (int) $item['quantity']))),
+            'weight' => intdiv($item['weight'], max(1, (int) $item['quantity'])),
             'length' => $item['length'],
             'width' => $item['width'],
             'height' => $item['height'],
         ], fn ($value): bool => filled($value) || $value === 0))->values()->all();
+    }
+
+    private function assertShippingDimensions(Collection $items): void
+    {
+        foreach ($items as $item) {
+            foreach (['weight', 'length', 'width', 'height'] as $field) {
+                if ((int) $item[$field] < 1) {
+                    throw ValidationException::withMessages([
+                        'shipping' => "Ukuran pengiriman {$item['title']} ({$item['variant_sku']}) belum lengkap. Hubungi admin untuk melengkapi berat, panjang, lebar, dan tinggi varian.",
+                    ]);
+                }
+            }
+        }
     }
 
     private function validateSelectedShippingRate(User $user, int $addressId, string $rateId): void
@@ -459,7 +500,9 @@ class CheckoutService
             throw ValidationException::withMessages(['shipping_rate_id' => 'Pilih ulang ongkir untuk alamat ini.']);
         }
 
-        if ((string) ($binding['cart_hash'] ?? '') !== $this->cartHash($this->cartItems($user))) {
+        $items = $this->cartItems($user);
+        $this->assertShippingDimensions($items);
+        if ((string) ($binding['cart_hash'] ?? '') !== $this->cartHash($items)) {
             throw ValidationException::withMessages(['shipping_rate_id' => 'Keranjang berubah. Pilih ulang ongkir.']);
         }
 
@@ -479,12 +522,13 @@ class CheckoutService
             throw ValidationException::withMessages(['shipping_rate_id' => 'Pilih ulang ongkir.']);
         }
 
+        $items = $this->biteshipItems($this->cartItems($user));
         try {
             $freshRate = collect($this->biteship->shippingRates([
                 'postal_code' => $address->postal_code,
                 'latitude' => $address->latitude,
                 'longitude' => $address->longitude,
-            ], $this->biteshipItems($this->cartItems($user))))
+            ], $items))
                 ->firstWhere('id', $rateId);
         } catch (ValidationException $exception) {
             throw ValidationException::withMessages(['shipping_rate_id' => 'Gagal memvalidasi ongkir. Pilih ulang ongkir.']);
@@ -584,14 +628,18 @@ class CheckoutService
     private function summary(Collection $items, float $shipping, float $discount): array
     {
         $subtotal = (float) $items->sum('subtotal');
+        $serviceFee = (float) ($this->settings->first(['payment_service_fee'], '0') ?: 0);
+        $unrounded = max(0, $subtotal + $shipping + $serviceFee - $discount);
+        $total = round($unrounded, 0, PHP_ROUND_HALF_UP);
 
         return [
             'item_count' => (int) $items->sum('quantity'),
             'subtotal' => $subtotal,
             'shipping' => $shipping,
             'discount' => $discount,
-            'service_fee' => (float) ($this->settings->first(['payment_service_fee'], '0') ?: 0),
-            'total' => max(0, $subtotal + $shipping + (float) ($this->settings->first(['payment_service_fee'], '0') ?: 0) - $discount),
+            'service_fee' => $serviceFee,
+            'rounding_adjustment' => round($total - $unrounded, 2),
+            'total' => $total,
         ];
     }
 

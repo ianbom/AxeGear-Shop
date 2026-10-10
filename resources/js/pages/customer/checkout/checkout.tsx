@@ -41,7 +41,7 @@ const formatPrice = (price: number) =>
         style: 'currency',
         currency: 'IDR',
         minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
+        maximumFractionDigits: 2,
     })
         .format(price)
         .replace('Rp', 'Rp ');
@@ -252,8 +252,8 @@ function CheckoutScreen() {
                             Checkout
                         </h1>
                         <p className="mt-3 max-w-[560px] text-sm leading-6 font-medium text-[#707070] md:text-base">
-                            Pilih alamat, ongkir , voucher,
-                            lalu bayar sesuai harga.
+                            Pilih alamat, ongkir , voucher, lalu bayar sesuai
+                            harga.
                         </p>
                     </div>
                 </div>
@@ -557,6 +557,12 @@ function CheckoutScreen() {
                                     value={-summary.discount}
                                     danger
                                 />
+                                {!!summary.rounding_adjustment && (
+                                    <SummaryRow
+                                        label="Pembulatan"
+                                        value={summary.rounding_adjustment}
+                                    />
+                                )}
                                 {hasUnavailableItems && (
                                     <div className="mt-4 border border-[#C81E1E] bg-[#FFF6F6] px-4 py-3 text-[12px] font-bold text-[#C81E1E]">
                                         Ada item yang stoknya tidak tersedia.

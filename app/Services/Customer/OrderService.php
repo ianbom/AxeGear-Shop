@@ -3,12 +3,13 @@
 namespace App\Services\Customer;
 
 use App\Actions\Payments\ApplyMidtransPaymentStatusAction;
+use App\Actions\Payments\SyncMidtransPaymentAction;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\ShippingStatus;
 use App\Models\Order;
-use App\Models\Payment;
 use App\Services\Integrations\MidtransService;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +23,7 @@ class OrderService
     public function __construct(
         private readonly MidtransService $midtrans,
         private readonly ApplyMidtransPaymentStatusAction $applyPaymentStatus,
+        private readonly SyncMidtransPaymentAction $syncPayment,
     ) {}
 
     public function indexData(Request $request): array
@@ -108,10 +110,24 @@ class OrderService
             throw ValidationException::withMessages(['order' => 'Order hanya dapat dibatalkan sebelum pembayaran berhasil.']);
         }
 
-        $payload = $this->cancelMidtransOrLocal($order);
+        try {
+            $payload = $this->cancelMidtransOrLocal($order);
+        } catch (ConnectionException $exception) {
+            Log::warning('midtrans_customer_cancel_uncertain', ['order_id' => $order->id, 'message' => $exception->getMessage()]);
+
+            throw ValidationException::withMessages(['payment' => 'Status pembayaran belum dapat dipastikan. Coba periksa pesanan kembali atau hubungi admin.']);
+        }
 
         DB::transaction(function () use ($order, $payload): void {
-            $payment = Payment::query()->with('order')->whereKey($order->payment->id)->lockForUpdate()->firstOrFail();
+            $order = Order::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $payment = $order->payment()->lockForUpdate()->firstOrFail();
+            $payment->setRelation('order', $order);
+
+            if ($order->payment_status !== PaymentStatus::Pending->value
+                || ! $this->applyPaymentStatus->canApply($payment, 'cancel')) {
+                throw ValidationException::withMessages(['order' => 'Status pembayaran berubah. Muat ulang pesanan sebelum melanjutkan.']);
+            }
+
             $isLocalCancel = (bool) ($payload['local_cancel'] ?? false);
 
             $payment->logs()->create([
@@ -145,16 +161,40 @@ class OrderService
         $payment = $order->payment;
 
         if (! filled($payment->midtrans_order_id)) {
-            return $this->localCancelPayload($order, 'missing_midtrans_order_id');
+            throw ValidationException::withMessages(['payment' => 'Referensi pembayaran belum tersedia. Hubungi admin untuk pemeriksaan.']);
         }
 
-        if (blank($payment->payment_method) && blank($payment->midtrans_transaction_id)) {
-            return $this->localCancelPayload($order, 'payment_method_not_selected');
+        $status = $this->midtrans->findTransactionStatus((string) $payment->midtrans_order_id);
+
+        if ($status === null) {
+            if (blank($payment->midtrans_snap_token)) {
+                throw ValidationException::withMessages(['payment' => 'Sesi pembayaran belum dapat dipastikan. Hubungi admin sebelum membatalkan pesanan.']);
+            }
+
+            $this->midtrans->cancelSnapSession($payment->midtrans_snap_token);
+
+            return $this->localCancelPayload($order, 'snap_session_cancelled');
         }
 
-        Log::info('midtrans_order_id', ['data' => $payment->midtrans_order_id]);
+        if (($status['order_id'] ?? null) !== $payment->midtrans_order_id
+            || ! $this->midtrans->amountMatches($status['gross_amount'] ?? '', $payment)) {
+            throw ValidationException::withMessages(['payment' => 'Data Midtrans tidak cocok dengan pesanan. Hubungi admin.']);
+        }
 
-        return $this->midtrans->cancelTransaction((string) $payment->midtrans_order_id);
+        if (! in_array($status['transaction_status'], ['pending', 'authorize'], true)) {
+            $this->syncPayment->applyPayload($payment, $status, 'customer_cancel_status_sync');
+
+            throw ValidationException::withMessages(['order' => 'Status pembayaran telah diperbarui. Muat ulang pesanan sebelum melanjutkan.']);
+        }
+
+        $payload = $this->midtrans->cancelTransaction((string) $payment->midtrans_order_id);
+
+        if (($payload['order_id'] ?? null) !== $payment->midtrans_order_id
+            || ! $this->midtrans->amountMatches($payload['gross_amount'] ?? '', $payment)) {
+            throw ValidationException::withMessages(['payment' => 'Respons pembatalan tidak cocok dengan pesanan. Hubungi admin.']);
+        }
+
+        return $payload;
     }
 
     private function localCancelPayload(Order $order, string $reason): array

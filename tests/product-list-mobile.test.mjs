@@ -79,4 +79,9 @@ assert.ok(
 );
 assert.match(source, /aspect-square overflow-hidden bg-white p-2 md:p-6/);
 assert.match(source, /gap-2 text-\[16px\].*md:gap-4 md:text-\[18px\]/);
-console.log('Product list mobile layout checks passed.');
+const productTile = source.slice(source.indexOf('const ProductTile ='));
+assert.doesNotMatch(productTile, /product\.(sku|category)\b/);
+assert.doesNotMatch(productTile, /Performance Gear|AxeGear Edition/);
+assert.match(productTile, /product\.collection &&/);
+assert.match(productTile, /visibleColors\.length > 0 &&/);
+console.log('Product list mobile layout and card content checks passed.');

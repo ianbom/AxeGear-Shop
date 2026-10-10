@@ -1,9 +1,11 @@
 <?php
 
 use App\Actions\Payments\ApplyMidtransPaymentStatusAction;
+use App\Models\BiteshipWebhookLog;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Product;
+use App\Models\SiteSetting;
 use App\Models\User;
 use App\Services\Admin\OrderManagementService;
 use App\Services\Admin\ShipmentManagementService;
@@ -21,6 +23,59 @@ use Inertia\Testing\AssertableInertia as Assert;
 use Mockery\MockInterface;
 
 uses(RefreshDatabase::class);
+
+it('keeps failed Biteship receipts retryable and replays them atomically', function () {
+    config(['services.biteship.webhook_secret' => 'test-secret']);
+    $order = createFulfillmentOrder('shipped', 'paid', 'in_transit');
+    $payload = ['order_id' => $order->shipment->biteship_order_id, 'status' => 'lost'];
+    $this->partialMock(ShipmentManagementService::class, function (MockInterface $mock) {
+        $mock->shouldReceive('applyBiteshipPayload')->once()->andThrow(new RuntimeException('Tracking storage unavailable'));
+    });
+    $this->withHeader('X-Biteship-Webhook-Secret', 'test-secret')->postJson(route('shipments.biteship.webhook'), $payload)->assertInternalServerError();
+    expect(BiteshipWebhookLog::query()->sole()->processed_at)->toBeNull()
+        ->and($order->fresh()->shipping_status)->toBe('in_transit');
+    $this->app->forgetInstance(ShipmentManagementService::class);
+    $this->artisan('shipments:replay-biteship-webhooks')->assertSuccessful();
+    $this->artisan('shipments:replay-biteship-webhooks')->assertSuccessful();
+    expect(BiteshipWebhookLog::query()->sole()->processed_at)->not->toBeNull()
+        ->and($order->fresh()->shipping_status)->toBe('lost')
+        ->and($order->shipment->trackings()->count())->toBe(1);
+});
+
+it('reprocesses an unmatched Biteship receipt once booking identifiers are available', function () {
+    config(['services.biteship.webhook_secret' => 'test-secret']);
+    $payload = ['event' => 'order.status', 'order_id' => 'early-booking', 'status' => 'on_hold'];
+    $this->withHeader('X-Biteship-Webhook-Secret', 'test-secret')->postJson(route('shipments.biteship.webhook'), $payload)->assertOk();
+    $order = createFulfillmentOrder('ready_to_ship', 'paid', 'confirmed');
+    $order->shipment->update(['biteship_order_id' => 'early-booking']);
+    $this->postJson(route('shipments.biteship.webhook'), $payload)->assertOk();
+
+    expect($order->fresh()->shipping_status)->toBe('problem')
+        ->and(BiteshipWebhookLog::query()->sole()->processed_at)->not->toBeNull();
+    $this->postJson(route('shipments.biteship.webhook'), $payload)->assertOk()->assertJsonPath('duplicate', true);
+    expect($order->shipment->trackings()->count())->toBe(1);
+});
+
+it('replays an early lost-package webhook after booking and uses nested coordinates', function () {
+    $order = prepareOrderDetailBooking();
+    SiteSetting::query()->create(['key' => 'store_latitude', 'value' => '-7.2575']);
+    SiteSetting::query()->create(['key' => 'store_longitude', 'value' => '112.7521']);
+    $order->address()->update(['latitude' => -6.8841, 'longitude' => 107.6137]);
+    config(['services.biteship.webhook_secret' => 'test-secret']);
+    Http::fake(['api.biteship.com/v1/orders' => function (Request $request) {
+        $this->withHeader('X-Biteship-Webhook-Secret', 'test-secret')->postJson(route('shipments.biteship.webhook'), ['order_id' => 'early-lost', 'status' => 'on_hold'])->assertOk();
+        $this->withHeader('X-Biteship-Webhook-Secret', 'test-secret')->postJson(route('shipments.biteship.webhook'), ['order_id' => 'early-lost', 'status' => 'lost'])->assertOk();
+
+        return Http::response(['id' => 'early-lost', 'status' => 'confirmed']);
+    }]);
+    $this->actingAs(fulfillmentAdmin())->post(route('admin.orders.shipments.store', $order), ['source' => 'order_detail'])->assertSessionHasNoErrors();
+
+    expect($order->fresh()->shipping_status)->toBe('lost')
+        ->and(BiteshipWebhookLog::query()->whereNull('processed_at')->count())->toBe(0);
+    Http::assertSent(fn (Request $request): bool => $request['origin_coordinate'] === ['latitude' => -7.2575, 'longitude' => 112.7521]
+        && $request['destination_coordinate'] === ['latitude' => -6.8841, 'longitude' => 107.6137]
+        && ! isset($request['origin_latitude']) && ! isset($request['destination_latitude']));
+});
 
 beforeEach(function () {
     config(['inertia.ssr.enabled' => false]);

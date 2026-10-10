@@ -696,7 +696,6 @@ const ProductTile = memo(function ProductTile({
     const [isWishlisted, setIsWishlisted] = useState(product.is_wishlisted);
     const isSoldOut = product.available_stock <= 0;
     const productHref = detail.url({ query: { product: product.slug } });
-    const subtitle = product.collection ?? product.category ?? product.sku;
     const visibleColors = product.colors.slice(0, 4);
 
     const toggleWishlist = async (event: MouseEvent<HTMLButtonElement>) => {
@@ -800,25 +799,23 @@ const ProductTile = memo(function ProductTile({
                 <h3 className="line-clamp-1 text-[16px] leading-5 font-extrabold text-ink uppercase">
                     {product.title}
                 </h3>
-                <p className="mt-1 line-clamp-1 text-[14px] leading-5 text-body md:text-[15px]">
-                    {subtitle ?? 'Performance Gear'}
-                </p>
-                <div className="mt-1 flex min-h-5 flex-wrap items-center gap-1.5">
-                    {visibleColors.length > 0 ? (
-                        visibleColors.map((color, colorIndex) => (
+                {product.collection && (
+                    <p className="mt-1 line-clamp-1 text-[14px] leading-5 text-body md:text-[15px]">
+                        {product.collection}
+                    </p>
+                )}
+                {visibleColors.length > 0 && (
+                    <div className="mt-1 flex min-h-5 flex-wrap items-center gap-1.5">
+                        {visibleColors.map((color, colorIndex) => (
                             <span
                                 key={`${color.hex}-${color.name ?? colorIndex}`}
                                 aria-label={color.name ?? color.hex}
                                 className="size-4 border border-hairline-strong"
                                 style={{ backgroundColor: color.hex }}
                             />
-                        ))
-                    ) : (
-                        <span className="line-clamp-1 text-[14px] leading-5 text-body md:text-[15px]">
-                            {product.sku || 'AxeGear Edition'}
-                        </span>
-                    )}
-                </div>
+                        ))}
+                    </div>
+                )}
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-[16px] leading-none font-extrabold md:gap-4 md:text-[18px]">
                     {product.sale_price !== null && (
                         <span className="text-ink line-through decoration-1">

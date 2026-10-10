@@ -126,6 +126,15 @@ class BiteshipService
         }
 
         return collect($response->json('pricing', []))
+            ->filter(function (mixed $rate): bool {
+                if (! is_array($rate)) {
+                    return false;
+                }
+
+                $price = $rate['price'] ?? $rate['shipping_fee'] ?? null;
+
+                return is_numeric($price) && is_finite((float) $price) && (float) $price >= 0;
+            })
             ->map(function (array $rate): array {
                 $payload = [
                     'courier_company' => $rate['courier_company'] ?? $rate['company'] ?? $rate['courier_code'] ?? null,
@@ -133,7 +142,7 @@ class BiteshipService
                     'courier_service_name' => $rate['courier_service_name'] ?? null,
                     'description' => $rate['description'] ?? null,
                     'duration' => $rate['duration'] ?? null,
-                    'price' => (float) ($rate['price'] ?? $rate['shipping_fee'] ?? 0),
+                    'price' => (float) ($rate['price'] ?? $rate['shipping_fee']),
                     'raw' => $rate,
                 ];
 

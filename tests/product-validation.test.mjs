@@ -160,6 +160,84 @@ function harness(mode = 'create') {
 }
 
 for (const mode of ['create', 'edit']) {
+    const shipping = harness(mode);
+    for (const field of ['weight', 'length', 'width', 'height']) {
+        const group = elements(shipping.render()).find(
+            (node) =>
+                node.type === shipping.api.FieldGroup &&
+                node.props.field === field,
+        );
+        assert.equal(group.props.required, true);
+        assert.equal(
+            elements(group).find((node) => node.type === shipping.context.Input)
+                .props.required,
+            true,
+        );
+    }
+}
+
+const pricing = harness();
+elements(pricing.render())
+    .find(
+        (node) =>
+            node.type === pricing.context.Button &&
+            React.Children.toArray(node.props.children).includes('Add Variant'),
+    )
+    .props.onClick();
+function draftField(field) {
+    return elements(pricing.render()).find(
+        (node) =>
+            node.type === pricing.api.FieldGroup &&
+            node.props.field === 'variants.new.' + field,
+    );
+}
+function changeDraft(field, value) {
+    elements(draftField(field))
+        .find((node) => node.type === pricing.context.Input)
+        .props.onChange({ target: { value } });
+}
+function saveDraft() {
+    const dialog = elements(pricing.render()).find(
+        (node) => node.type === pricing.context.Dialog,
+    );
+    elements(dialog)
+        .find(
+            (node) =>
+                node.type === pricing.context.Button &&
+                React.Children.toArray(node.props.children).includes(
+                    'Add Variant',
+                ),
+        )
+        .props.onClick();
+}
+changeDraft('regular_price', '100000');
+changeDraft('sale_price', '100001');
+assert.equal(
+    draftField('sale_price').props.error,
+    'Harga diskon tidak boleh melebihi harga normal.',
+);
+saveDraft();
+assert.equal(pricing.form.data.variants.length, 0);
+changeDraft('regular_price', '100002');
+assert.equal(draftField('sale_price').props.error, undefined);
+changeDraft('regular_price', '100000');
+assert.equal(
+    draftField('sale_price').props.error,
+    'Harga diskon tidak boleh melebihi harga normal.',
+);
+changeDraft('sale_price', '100000');
+saveDraft();
+assert.equal(pricing.form.data.variants.length, 0);
+for (const field of ['weight', 'length', 'width', 'height']) {
+    assert.equal(draftField(field).props.required, true);
+    assert.ok(draftField(field).props.error);
+    changeDraft(field, '0');
+}
+saveDraft();
+assert.equal(pricing.form.data.variants.length, 1);
+assert.equal(pricing.form.data.variants[0].sale_price, '100000');
+
+for (const mode of ['create', 'edit']) {
     const test = harness(mode);
     const uploadedFile = { name: 'variant.jpg' };
     test.form.data.variants = [

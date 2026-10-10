@@ -39,14 +39,14 @@ class PaymentManagementService
                 ->withQueryString()
                 ->through(fn (Payment $payment): array => $this->row($payment)),
             'filters' => $filters,
-            'statuses' => ['pending', 'settlement', 'capture', 'expire', 'cancel', 'deny', 'failure'],
+            'statuses' => ['pending', 'manual_review', 'settlement', 'capture', 'expire', 'cancel', 'deny', 'failure'],
             'stats' => [
                 'total' => Payment::query()->count(),
                 'settled' => Payment::query()->whereIn('transaction_status', ['settlement', 'capture', 'paid', 'success'])->count(),
                 'pending' => Payment::query()->whereIn('transaction_status', ['pending', 'authorize'])->count(),
                 'challenge' => Payment::query()->where('fraud_status', 'challenge')->count(),
                 'failed' => Payment::query()->whereIn('transaction_status', ['deny', 'cancel', 'expire', 'expired', 'failure', 'failed'])->count(),
-                'manual_review' => Payment::query()->whereIn('fraud_status', ['challenge', 'deny'])->count(),
+                'manual_review' => Payment::query()->where(fn ($query) => $query->where('transaction_status', 'manual_review')->orWhereIn('fraud_status', ['challenge', 'deny']))->count(),
             ],
         ];
     }
@@ -63,6 +63,7 @@ class PaymentManagementService
                 'midtrans_redirect_url' => $payment->midtrans_redirect_url,
                 'currency' => $payment->currency,
                 'raw_response' => $payment->raw_response,
+                'failure_reason' => $payment->failure_reason,
                 'order' => $payment->order,
                 'logs' => $payment->logs->map(fn ($log): array => [
                     'id' => $log->id,

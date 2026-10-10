@@ -19,6 +19,10 @@ class FinalizeReservedStockAction
                 return;
             }
 
+            if ($order->stock_released_at) {
+                throw new DomainException('Reservasi stok order sudah dilepas. Pembayaran perlu diperiksa admin.');
+            }
+
             foreach ($order->items as $item) {
                 if (! $item->product_variant_id) {
                     continue;

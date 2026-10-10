@@ -72,8 +72,27 @@ export type CheckoutSummary = {
     shipping: number;
     discount: number;
     service_fee: number;
+    rounding_adjustment?: number;
     total: number;
 };
+
+function shippingSummary(
+    current: CheckoutSummary,
+    shipping: number,
+): CheckoutSummary {
+    const unrounded = Math.max(
+        0,
+        current.subtotal + shipping + current.service_fee - current.discount,
+    );
+    const total = Math.round(unrounded);
+
+    return {
+        ...current,
+        shipping,
+        total,
+        rounding_adjustment: Math.round((total - unrounded) * 100) / 100,
+    };
+}
 
 export type CheckoutStoreLocation = {
     latitude: string | null;
@@ -193,14 +212,7 @@ export function CheckoutProvider({
     const [idempotencyKey] = useState(checkoutIdempotencyKey);
 
     const resetShippingSummary = useCallback(() => {
-        setCurrentSummary((current) => ({
-            ...current,
-            shipping: 0,
-            total: Math.max(
-                0,
-                current.subtotal + current.service_fee - current.discount,
-            ),
-        }));
+        setCurrentSummary((current) => shippingSummary(current, 0));
     }, []);
 
     const loadShippingRates = useCallback(
@@ -276,17 +288,9 @@ export function CheckoutProvider({
                 shipping_rate_id: rate.id,
             });
             setCurrentRate(rate);
-            setCurrentSummary((current) => ({
-                ...current,
-                shipping: rate.price,
-                total: Math.max(
-                    0,
-                    current.subtotal +
-                        rate.price +
-                        current.service_fee -
-                        current.discount,
-                ),
-            }));
+            setCurrentSummary((current) =>
+                shippingSummary(current, rate.price),
+            );
         } catch (error) {
             setErrors(error as Record<string, string>);
         }

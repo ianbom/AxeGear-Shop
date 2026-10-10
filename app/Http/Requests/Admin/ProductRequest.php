@@ -43,9 +43,9 @@ class ProductRequest extends FormRequest
             'short_description' => ['nullable', 'string', 'max:1000'],
             'description' => ['nullable', 'string'],
             'weight' => ['required', 'integer', 'min:0'],
-            'length' => ['nullable', 'integer', 'min:0'],
-            'width' => ['nullable', 'integer', 'min:0'],
-            'height' => ['nullable', 'integer', 'min:0'],
+            'length' => ['required', 'integer', 'min:0'],
+            'width' => ['required', 'integer', 'min:0'],
+            'height' => ['required', 'integer', 'min:0'],
             'status' => ['required', Rule::in(['draft', 'published', 'archived'])],
             'is_featured' => ['sometimes', 'boolean'],
             'is_new_arrival' => ['sometimes', 'boolean'],
@@ -65,8 +65,8 @@ class ProductRequest extends FormRequest
             'variants.*.variant_name' => ['nullable', 'string', 'max:180'],
             'variants.*.size' => ['nullable', 'string', 'max:100'],
             'variants.*.package_type' => ['nullable', 'string', 'max:150'],
-            'variants.*.regular_price' => ['nullable', 'numeric', 'min:0'],
-            'variants.*.sale_price' => ['nullable', 'numeric', 'min:0'],
+            'variants.*.regular_price' => ['nullable', 'required_with:variants.*.sale_price', 'numeric', 'min:0'],
+            'variants.*.sale_price' => ['nullable', 'numeric', 'min:0', 'lte:variants.*.regular_price'],
             'variants.*.stock' => ['nullable', 'integer', 'min:0'],
             'variants.*.reserved_stock' => ['nullable', 'integer', 'min:0'],
             'variants.*.weight' => ['nullable', 'integer', 'min:0'],
@@ -98,6 +98,8 @@ class ProductRequest extends FormRequest
             'image' => ':attribute harus berupa file gambar, misalnya JPG, PNG, atau WEBP.',
             'not_regex' => ':attribute belum tersimpan. Unggah ulang file gambar.',
             'sale_price.lte' => 'Harga diskon tidak boleh melebihi harga normal.',
+            'variants.*.sale_price.lte' => 'Harga diskon varian :position tidak boleh melebihi harga normal varian tersebut.',
+            'variants.*.regular_price.required_with' => 'Harga normal varian :position wajib diisi jika harga diskon diisi.',
             'images.*.image.max' => 'Gambar produk maksimal 4 MB. Pilih file yang lebih kecil.',
             'variants.*.image.max' => 'Gambar varian maksimal 4 MB. Pilih file yang lebih kecil.',
         ];
@@ -127,6 +129,18 @@ class ProductRequest extends FormRequest
     {
         return [
             function ($validator): void {
+                foreach ((array) $this->input('variants', []) as $index => $variant) {
+                    if (! is_array($variant) || ! (bool) ($variant['is_active'] ?? false)) {
+                        continue;
+                    }
+
+                    foreach (['weight' => 'Berat', 'length' => 'Panjang', 'width' => 'Lebar', 'height' => 'Tinggi'] as $field => $label) {
+                        if ((int) ($variant[$field] ?? 0) < 1) {
+                            $validator->errors()->add("variants.{$index}.{$field}", "{$label} varian aktif wajib diisi dengan bilangan bulat minimal 1.");
+                        }
+                    }
+                }
+
                 if ($this->input('status') !== 'published') {
                     return;
                 }

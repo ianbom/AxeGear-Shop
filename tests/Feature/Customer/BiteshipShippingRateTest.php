@@ -6,9 +6,12 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\SiteSetting;
 use App\Models\User;
+use App\Models\Voucher;
+use App\Services\Customer\CheckoutService;
 use App\Services\Integrations\BiteshipService;
 use App\Services\Settings\SiteSettingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
@@ -16,6 +19,77 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
+
+it('discards invalid shipping prices while preserving explicit free shipping', function () {
+    $prices = [[], ['price' => null], ['price' => 'invalid'], ['price' => -1], ['price' => 0], ['shipping_fee' => 16000]];
+    Http::fake(['api.biteship.com/v1/rates/couriers' => Http::response([
+        'pricing' => array_map(fn ($price) => ['courier_company' => 'jne', 'courier_type' => 'reg', ...$price], $prices),
+    ])]);
+    $rates = app(BiteshipService::class)->shippingRates(['postal_code' => '40123', 'latitude' => -6.8, 'longitude' => 107.6], [['name' => 'Test', 'weight' => 100, 'quantity' => 1, 'value' => 100000]]);
+
+    expect(array_column($rates, 'price'))->toBe([0.0, 16000.0]);
+});
+
+it('preserves the cart and reservations when Snap creation is uncertain', function (string $outcome) {
+    $snapResponse = match ($outcome) {
+        'timeout' => fn () => throw new ConnectionException('Snap timeout'),
+        'server_error' => Http::response(['error' => 'Unavailable'], 503),
+        'malformed_rejection' => Http::response([], 400),
+        'duplicate_order' => Http::response(['error_messages' => ['order_id has already been taken']], 406),
+        'missing_redirect' => Http::response(['token' => 'test-token']),
+        'invalid_redirect' => Http::response(['token' => 'test-token', 'redirect_url' => 'not-a-url']),
+        default => Http::response([]),
+    };
+    [$customer, $address] = createCheckoutShippingCart([1], snapResponse: $snapResponse);
+    $voucher = Voucher::query()->create(['code' => 'REVIEW10', 'name' => 'Review test', 'discount_type' => 'percentage', 'discount_value' => 10, 'is_active' => true]);
+    $this->actingAs($customer)->postJson(route('checkout.voucher.apply'), ['voucher_code' => 'REVIEW10'])->assertOk();
+    $rate = $this->actingAs($customer)->postJson(route('checkout.shipping-rates'), ['customer_address_id' => $address->id])->assertOk()->json('rates.0');
+    $this->postJson(route('checkout.shipping-rate'), ['shipping_rate_id' => $rate['id']])->assertOk();
+    $payload = ['customer_address_id' => $address->id, 'shipping_rate_id' => $rate['id'], 'idempotency_key' => (string) Str::uuid(), 'no_return_refund_agreed' => true];
+
+    $this->postJson(route('checkout.place-order'), $payload)->assertUnprocessable()->assertJsonValidationErrors('payment');
+    $order = Order::query()->sole();
+    expect($order->payment_status)->toBe('manual_review')
+        ->and($order->payment->transaction_status)->toBe('manual_review')
+        ->and($order->stock_released_at)->toBeNull()
+        ->and($voucher->fresh()->used_count)->toBe(1)
+        ->and($order->items->first()->variant->reserved_stock)->toBe(1)
+        ->and(Cart::query()->sole()->items()->count())->toBe(1);
+    $this->postJson(route('checkout.place-order'), $payload)->assertUnprocessable();
+    expect(Order::query()->count())->toBe(1);
+})->with(['timeout', 'empty_response', 'server_error', 'malformed_rejection', 'duplicate_order', 'missing_redirect', 'invalid_redirect']);
+
+it('releases reservations only for a confirmed Snap rejection', function () {
+    [$customer, $address] = createCheckoutShippingCart([1], snapResponse: Http::response(['error_messages' => ['transaction_details.gross_amount is invalid']], 400));
+    $rate = $this->actingAs($customer)->postJson(route('checkout.shipping-rates'), ['customer_address_id' => $address->id])->assertOk()->json('rates.0');
+    $this->postJson(route('checkout.shipping-rate'), ['shipping_rate_id' => $rate['id']])->assertOk();
+    $this->postJson(route('checkout.place-order'), ['customer_address_id' => $address->id, 'shipping_rate_id' => $rate['id'], 'idempotency_key' => (string) Str::uuid(), 'no_return_refund_agreed' => true])->assertUnprocessable();
+
+    $order = Order::query()->sole();
+    expect($order->payment_status)->toBe('failed')
+        ->and($order->stock_released_at)->not->toBeNull()
+        ->and($order->items->first()->variant->reserved_stock)->toBe(0)
+        ->and(Cart::query()->sole()->items()->count())->toBe(1);
+});
+
+it('uses one rounded IDR total in checkout and the Snap item details', function () {
+    [$customer, $address, $products] = createCheckoutShippingCart([1]);
+    $products[0]->update(['regular_price' => 100001]);
+    Cart::query()->sole()->items()->update(['price_snapshot' => 100001]);
+    Voucher::query()->create(['code' => 'ROUND10', 'name' => 'Round test', 'discount_type' => 'percentage', 'discount_value' => 10, 'is_active' => true]);
+    $this->actingAs($customer)->postJson(route('checkout.voucher.apply'), ['voucher_code' => 'ROUND10'])->assertOk()->assertJsonPath('summary.total', 90001);
+    $rate = $this->actingAs($customer)->postJson(route('checkout.shipping-rates'), ['customer_address_id' => $address->id])->assertOk()->json('rates.0');
+    $this->postJson(route('checkout.shipping-rate'), ['shipping_rate_id' => $rate['id']])->assertOk();
+    $this->postJson(route('checkout.place-order'), ['customer_address_id' => $address->id, 'shipping_rate_id' => $rate['id'], 'idempotency_key' => (string) Str::uuid(), 'no_return_refund_agreed' => true])->assertSuccessful();
+
+    $order = Order::query()->sole();
+    expect($order->grand_total)->toBe('110001.00')->and($order->payment->gross_amount)->toBe('110001.00');
+    Http::assertSent(function (Request $request): bool {
+        return str_contains($request->url(), '/snap/v1/transactions')
+            && $request['transaction_details']['gross_amount'] === 110001
+            && collect($request['item_details'])->sum(fn ($item) => $item['price'] * $item['quantity']) === 110001;
+    });
+});
 
 beforeEach(function () {
     config(['services.biteship.api_key' => 'test-key', 'services.midtrans.server_key' => 'test-key']);
@@ -35,7 +109,7 @@ beforeEach(function () {
 
 });
 
-function createCheckoutShippingCart(array $quantities = [4], bool $withDimensions = true, int $nextRatePrice = 20000): array
+function createCheckoutShippingCart(array $quantities = [4], bool $withDimensions = true, int $nextRatePrice = 20000, mixed $snapResponse = null, ?Closure $onRateRefresh = null): array
 {
     $rate = [
         'courier_company' => 'jne',
@@ -44,11 +118,17 @@ function createCheckoutShippingCart(array $quantities = [4], bool $withDimension
         'duration' => '2 - 3 days',
         'price' => 20000,
     ];
+    $rateRequests = 0;
     Http::fake([
-        'api.biteship.com/v1/rates/couriers' => Http::sequence()
-            ->push(['pricing' => [$rate]])
-            ->push(['pricing' => [[...$rate, 'price' => $nextRatePrice]]]),
-        '*/snap/v1/transactions' => Http::response(['token' => 'test-token', 'redirect_url' => 'https://example.test/payment']),
+        'api.biteship.com/v1/rates/couriers' => function () use (&$rateRequests, $rate, $nextRatePrice, $onRateRefresh) {
+            $rateRequests++;
+            if ($rateRequests > 1 && $onRateRefresh) {
+                $onRateRefresh();
+            }
+
+            return Http::response(['pricing' => [[...$rate, 'price' => $rateRequests > 1 ? $nextRatePrice : $rate['price']]]]);
+        },
+        '*/snap/v1/transactions' => $snapResponse ?? Http::response(['token' => 'test-token', 'redirect_url' => 'https://example.test/payment']),
         'api.biteship.com/v1/orders' => Http::response(['id' => 'test-booking', 'status' => 'confirmed']),
     ]);
     $customer = User::factory()->create();
@@ -72,13 +152,19 @@ function createCheckoutShippingCart(array $quantities = [4], bool $withDimension
             'name' => 'Shipping product '.$index,
             'slug' => 'shipping-'.Str::uuid(),
             'regular_price' => 100000,
+            'weight' => 9999,
+            'length' => 99,
+            'width' => 99,
+            'height' => 99,
+            'status' => 'published',
+        ]);
+        $variant = $product->variants()->create([
+            'sku' => 'SHIP-'.Str::uuid(), 'stock' => 10, 'reserved_stock' => 0, 'is_active' => true,
             'weight' => 100 + $index * 150,
             'length' => $withDimensions ? 10 : null,
             'width' => $withDimensions ? 5 : null,
             'height' => $withDimensions ? 8 : null,
-            'status' => 'published',
         ]);
-        $variant = $product->variants()->create(['sku' => 'SHIP-'.Str::uuid(), 'stock' => 10, 'reserved_stock' => 0, 'is_active' => true]);
         $cart->items()->create([
             'product_id' => $product->id,
             'product_variant_id' => $variant->id,
@@ -171,8 +257,9 @@ it('quotes and books matching unit weights and dimensions from the order snapsho
     $order = Order::query()->findOrFail($result['order_id']);
 
     foreach ($products as $index => $product) {
-        expect($order->items()->where('product_id', $product->id)->firstOrFail()->weight)->toBe($product->weight * $quantities[$index]);
-        $product->update(['weight' => 9999, 'length' => 99, 'width' => 99, 'height' => 99]);
+        expect($order->items()->where('product_id', $product->id)->firstOrFail()->weight)->toBe((100 + $index * 150) * $quantities[$index]);
+        $product->update(['weight' => 8888, 'length' => 88, 'width' => 88, 'height' => 88]);
+        $product->variants()->update(['weight' => 7777, 'length' => 77, 'width' => 77, 'height' => 77]);
     }
 
     $order->update(['order_status' => 'ready_to_ship', 'payment_status' => 'paid']);
@@ -208,15 +295,14 @@ it('quotes and books matching unit weights and dimensions from the order snapsho
     'single item' => [[1], true],
     'reported quantity four' => [[4], true],
     'multiple products' => [[4, 2], true],
-    'no dimensions' => [[4], false],
 ]);
 
-it('rejects a selected rate when physical product attributes change', function (array $changes) {
+it('rejects a selected rate when variant shipping attributes change', function (array $changes) {
     [$customer, $address, $products] = createCheckoutShippingCart();
     $rate = $this->actingAs($customer)->postJson(route('checkout.shipping-rates'), ['customer_address_id' => $address->id])
         ->assertOk()->json('rates.0');
     $this->postJson(route('checkout.shipping-rate'), ['shipping_rate_id' => $rate['id']])->assertOk();
-    $products[0]->update($changes);
+    $products[0]->variants()->firstOrFail()->update($changes);
 
     $this->postJson(route('checkout.place-order'), [
         'customer_address_id' => $address->id,
@@ -234,6 +320,101 @@ it('rejects a selected rate when physical product attributes change', function (
     'width' => [['width' => 6]],
     'height' => [['height' => 9]],
 ]);
+
+it('rejects invalid variant dimensions before requesting rates without falling back to product dimensions', function (string $field, ?int $value) {
+    [$customer, $address, $products] = createCheckoutShippingCart();
+    $variant = $products[0]->variants()->sole();
+    $variant->update([$field => $value]);
+
+    $this->actingAs($customer)->postJson(route('checkout.shipping-rates'), ['customer_address_id' => $address->id])
+        ->assertUnprocessable()->assertJsonValidationErrors('shipping');
+
+    expect(Order::query()->count())->toBe(0)->and($variant->fresh()->reserved_stock)->toBe(0);
+    Http::assertNothingSent();
+})->with(['weight', 'length', 'width', 'height'])->with([null, 0, -1]);
+
+it('rejects invalid variant dimensions after selecting a rate without creating an order', function (string $field, ?int $value) {
+    [$customer, $address, $products] = createCheckoutShippingCart();
+    $rate = $this->actingAs($customer)->postJson(route('checkout.shipping-rates'), ['customer_address_id' => $address->id])->assertOk()->json('rates.0');
+    $this->postJson(route('checkout.shipping-rate'), ['shipping_rate_id' => $rate['id']])->assertOk();
+    $variant = $products[0]->variants()->sole();
+    $variant->update([$field => $value]);
+
+    $this->postJson(route('checkout.place-order'), [
+        'customer_address_id' => $address->id, 'shipping_rate_id' => $rate['id'],
+        'idempotency_key' => (string) Str::uuid(), 'no_return_refund_agreed' => true,
+    ])->assertUnprocessable()->assertJsonValidationErrors('shipping');
+
+    expect(Order::query()->count())->toBe(0)->and($variant->fresh()->reserved_stock)->toBe(0);
+    Http::assertSentCount(1);
+})->with(['weight', 'length', 'width', 'height'])->with([null, 0, -1]);
+
+it('does not invalidate a shipping quote when only product dimensions change', function () {
+    [$customer, $address, $products] = createCheckoutShippingCart();
+    $rate = $this->actingAs($customer)->postJson(route('checkout.shipping-rates'), ['customer_address_id' => $address->id])->assertOk()->json('rates.0');
+    $this->postJson(route('checkout.shipping-rate'), ['shipping_rate_id' => $rate['id']])->assertOk();
+    $products[0]->update(['weight' => 1, 'length' => 1, 'width' => 1, 'height' => 1]);
+
+    $this->postJson(route('checkout.place-order'), [
+        'customer_address_id' => $address->id, 'shipping_rate_id' => $rate['id'],
+        'idempotency_key' => (string) Str::uuid(), 'no_return_refund_agreed' => true,
+    ])->assertOk();
+
+    $item = Order::query()->sole()->items()->sole();
+    expect($item->weight)->toBe(400)->and($item->length)->toBe(10)->and($item->width)->toBe(5)->and($item->height)->toBe(8);
+});
+
+it('uses distinct sizes for two variants of the same product', function () {
+    [$customer, $address, $products] = createCheckoutShippingCart([4]);
+    $variant = $products[0]->variants()->create([
+        'sku' => 'SECOND-VARIANT', 'stock' => 10, 'is_active' => true,
+        'weight' => 350, 'length' => 20, 'width' => 15, 'height' => 12,
+    ]);
+    Cart::query()->sole()->items()->create([
+        'product_id' => $products[0]->id, 'product_variant_id' => $variant->id,
+        'quantity' => 2, 'price_snapshot' => 100000,
+    ]);
+    expect(collect(app(CheckoutService::class)->pageData($customer)['cartItems'])->sum('weight'))->toBe(1100);
+    $rate = $this->actingAs($customer)->postJson(route('checkout.shipping-rates'), ['customer_address_id' => $address->id])->assertOk()->json('rates.0');
+    $this->postJson(route('checkout.shipping-rate'), ['shipping_rate_id' => $rate['id']])->assertOk();
+    $this->postJson(route('checkout.place-order'), [
+        'customer_address_id' => $address->id, 'shipping_rate_id' => $rate['id'],
+        'idempotency_key' => (string) Str::uuid(), 'no_return_refund_agreed' => true,
+    ])->assertOk();
+
+    $item = Order::query()->sole()->items()->where('product_variant_id', $variant->id)->sole();
+    expect($item->weight)->toBe(700)->and($item->length)->toBe(20)->and($item->width)->toBe(15)->and($item->height)->toBe(12);
+    Http::assertSent(fn (Request $request): bool => str_contains($request->url(), '/rates/couriers')
+        && collect($request['items'])->firstWhere('description', 'SECOND-VARIANT')['weight'] === 350);
+
+    $order = Order::query()->sole();
+    $order->update(['order_status' => 'ready_to_ship', 'payment_status' => 'paid']);
+    $this->actingAs(User::factory()->create(['role' => 'admin', 'is_active' => true]))
+        ->post(route('admin.orders.shipments.store', $order), ['source' => 'order_detail'])->assertSessionHasNoErrors();
+    $booking = Http::recorded(fn (Request $request): bool => str_ends_with($request->url(), '/v1/orders'))->sole()[0];
+    $items = collect($booking['items'])->keyBy('sku');
+    expect($items['SECOND-VARIANT']['weight'])->toBe(350)->and($items['SECOND-VARIANT']['quantity'])->toBe(2)
+        ->and(Arr::only($items['SECOND-VARIANT'], ['length', 'width', 'height']))->toEqual(['length' => 20, 'width' => 15, 'height' => 12])
+        ->and($items[$products[0]->variants()->oldest('id')->firstOrFail()->sku]['weight'])->toBe(100);
+});
+
+it('rechecks locked variant dimensions after refreshing the provider quote', function (?int $weight) {
+    $variant = null;
+    [$customer, $address, $products] = createCheckoutShippingCart(onRateRefresh: function () use (&$variant, $weight) {
+        $variant->update(['weight' => $weight]);
+    });
+    $variant = $products[0]->variants()->sole();
+    $rate = $this->actingAs($customer)->postJson(route('checkout.shipping-rates'), ['customer_address_id' => $address->id])->assertOk()->json('rates.0');
+    $this->postJson(route('checkout.shipping-rate'), ['shipping_rate_id' => $rate['id']])->assertOk();
+
+    $this->postJson(route('checkout.place-order'), [
+        'customer_address_id' => $address->id, 'shipping_rate_id' => $rate['id'],
+        'idempotency_key' => (string) Str::uuid(), 'no_return_refund_agreed' => true,
+    ])->assertUnprocessable()->assertJsonValidationErrors($weight ? 'shipping_rate_id' : 'shipping');
+
+    expect(Order::query()->count())->toBe(0)->and($variant->fresh()->reserved_stock)->toBe(0);
+    Http::assertSentCount(2);
+})->with([101, null]);
 
 it('rejects a selected rate when Biteship changes the price before payment', function () {
     [$customer, $address] = createCheckoutShippingCart(nextRatePrice: 40000);

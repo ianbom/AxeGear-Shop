@@ -18,6 +18,7 @@ class ProductVariantRequest extends FormRequest
     public function rules(): array
     {
         $variant = $this->route('productVariant');
+        $dimensionRules = [Rule::requiredIf($this->boolean('is_active')), 'nullable', 'integer', 'min:'.($this->boolean('is_active') ? 1 : 0)];
 
         return [
             'product_id' => ['required', 'integer', 'exists:products,id'],
@@ -31,12 +32,26 @@ class ProductVariantRequest extends FormRequest
             'sale_price' => ['nullable', 'numeric', 'min:0'],
             'stock' => ['required', 'integer', 'min:0'],
             'reserved_stock' => ['required', 'integer', 'min:0', 'lte:stock'],
-            'weight' => ['nullable', 'integer', 'min:0'],
-            'length' => ['nullable', 'integer', 'min:0'],
-            'width' => ['nullable', 'integer', 'min:0'],
-            'height' => ['nullable', 'integer', 'min:0'],
+            'weight' => $dimensionRules,
+            'length' => $dimensionRules,
+            'width' => $dimensionRules,
+            'height' => $dimensionRules,
             'image' => ['nullable', 'file', 'image', 'max:2048'],
             'is_active' => ['sometimes', 'boolean'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'weight.required' => 'Berat varian aktif wajib diisi.',
+            'length.required' => 'Panjang varian aktif wajib diisi.',
+            'width.required' => 'Lebar varian aktif wajib diisi.',
+            'height.required' => 'Tinggi varian aktif wajib diisi.',
+            'weight.min' => 'Berat varian minimal :min gram.',
+            'length.min' => 'Panjang varian minimal :min cm.',
+            'width.min' => 'Lebar varian minimal :min cm.',
+            'height.min' => 'Tinggi varian minimal :min cm.',
         ];
     }
 }

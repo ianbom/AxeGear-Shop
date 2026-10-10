@@ -16,8 +16,10 @@ class SyncExpiredMidtransPaymentsAction
 
         Payment::query()
             ->with('order')
-            ->whereIn('transaction_status', ['pending', 'authorize'])
-            ->where('expires_at', '<=', now())
+            ->where(function ($query): void {
+                $query->where(fn ($pending) => $pending->whereIn('transaction_status', ['pending', 'authorize'])->where('expires_at', '<=', now()))
+                    ->orWhere(fn ($uncertain) => $uncertain->where('transaction_status', 'manual_review')->where('raw_response->snap_creation_uncertain', true));
+            })
             ->whereHas('order', fn ($query) => $query->whereIn('payment_status', [PaymentStatus::Pending->value, PaymentStatus::ManualReview->value]))
             ->orderBy('id')
             ->chunkById(50, function ($payments) use (&$stats): void {

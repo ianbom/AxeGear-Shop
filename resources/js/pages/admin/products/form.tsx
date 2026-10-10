@@ -271,6 +271,47 @@ const blankVariant = (): ProductVariantRow => ({
     is_active: true,
 });
 
+function variantValidationErrors(variant: ProductVariantRow) {
+    const errors: Partial<Record<keyof ProductVariantRow, string>> = {};
+
+    for (const field of ['weight', 'length', 'width', 'height'] as const) {
+        const value = String(variant[field] ?? '').trim();
+
+        if (!value) {
+            errors[field] = productFieldLabels[field] + ' varian wajib diisi.';
+        } else if (!Number.isInteger(Number(value)) || Number(value) < 0) {
+            errors[field] =
+                productFieldLabels[field] +
+                ' varian harus berupa bilangan bulat minimal 0.';
+        }
+    }
+
+    for (const field of ['regular_price', 'sale_price'] as const) {
+        const value = String(variant[field] ?? '').trim();
+
+        if (value && (!Number.isFinite(Number(value)) || Number(value) < 0)) {
+            errors[field] =
+                productFieldLabels[field] + ' harus berupa angka minimal 0.';
+        }
+    }
+
+    if (String(variant.sale_price ?? '').trim()) {
+        if (!String(variant.regular_price ?? '').trim()) {
+            errors.regular_price =
+                'Harga normal wajib diisi jika harga diskon diisi.';
+        } else if (
+            !errors.regular_price &&
+            !errors.sale_price &&
+            Number(variant.sale_price) > Number(variant.regular_price)
+        ) {
+            errors.sale_price =
+                'Harga diskon tidak boleh melebihi harga normal.';
+        }
+    }
+
+    return errors;
+}
+
 function SectionCard({
     title,
     description,
@@ -725,6 +766,8 @@ export default function ProductForm({ mode, product, options }: Props) {
     >(null);
     const [variantDraft, setVariantDraft] =
         useState<ProductVariantRow>(blankVariant());
+    const [variantSaveAttempted, setVariantSaveAttempted] = useState(false);
+    const variantDraftErrors = variantValidationErrors(variantDraft);
     const [variantDraftPreview, setVariantDraftPreview] = useState<
         string | null
     >(null);
@@ -785,6 +828,7 @@ export default function ProductForm({ mode, product, options }: Props) {
         const draft =
             index === null ? blankVariant() : { ...data.variants[index] };
         setVariantDraft(draft);
+        setVariantSaveAttempted(false);
         setVariantDraftPreview(
             index === null ? null : (variantPreviews[index] ?? null),
         );
@@ -808,6 +852,15 @@ export default function ProductForm({ mode, product, options }: Props) {
     };
 
     const saveVariantDraft = (close = true) => {
+        const invalidField = Object.keys(variantDraftErrors)[0];
+
+        if (close && invalidField) {
+            setVariantSaveAttempted(true);
+            setRequestedField(variantField(invalidField));
+
+            return;
+        }
+
         const draft = { ...variantDraft };
 
         if (editingVariantIndex === null) {
@@ -852,10 +905,22 @@ export default function ProductForm({ mode, product, options }: Props) {
         );
     };
 
-    const variantError = (field: string) =>
-        editingVariantIndex === null
+    const variantError = (field: keyof ProductVariantRow) => {
+        if (
+            variantDraftErrors[field] &&
+            (variantSaveAttempted ||
+                field === 'regular_price' ||
+                field === 'sale_price' ||
+                String(variantDraft[field] ?? '').trim())
+        ) {
+            return variantDraftErrors[field];
+        }
+
+        return editingVariantIndex === null ||
+            variantDraft[field] !== data.variants[editingVariantIndex]?.[field]
             ? undefined
             : fieldError('variants.' + editingVariantIndex + '.' + field);
+    };
     const variantField = (field: string) =>
         'variants.' + (editingVariantIndex ?? 'new') + '.' + field;
     const focusValidationError = (key: string) => {
@@ -1503,6 +1568,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                 type="number"
                                                 min="0"
                                                 value={data.weight}
+                                                required
                                                 onChange={(e) =>
                                                     setData(
                                                         'weight',
@@ -1523,6 +1589,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                 type="number"
                                                 min="0"
                                                 value={data.length}
+                                                required
                                                 onChange={(e) =>
                                                     setData(
                                                         'length',
@@ -1543,6 +1610,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                 type="number"
                                                 min="0"
                                                 value={data.width}
+                                                required
                                                 onChange={(e) =>
                                                     setData(
                                                         'width',
@@ -1563,6 +1631,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                                 type="number"
                                                 min="0"
                                                 value={data.height}
+                                                required
                                                 onChange={(e) =>
                                                     setData(
                                                         'height',
@@ -2955,6 +3024,11 @@ export default function ProductForm({ mode, product, options }: Props) {
                                     field={variantField('regular_price')}
                                     error={variantError('regular_price')}
                                     label="Regular Price"
+                                    required={
+                                        String(
+                                            variantDraft.sale_price ?? '',
+                                        ).trim() !== ''
+                                    }
                                 >
                                     <Input
                                         type="number"
@@ -3037,6 +3111,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                     <FieldGroup
                                         field={variantField(field)}
                                         error={variantError(field)}
+                                        required
                                         key={field}
                                         label={
                                             field === 'weight'
@@ -3048,6 +3123,7 @@ export default function ProductForm({ mode, product, options }: Props) {
                                             type="number"
                                             min="0"
                                             value={variantDraft[field]}
+                                            required
                                             onChange={(e) =>
                                                 setVariantDraft({
                                                     ...variantDraft,
