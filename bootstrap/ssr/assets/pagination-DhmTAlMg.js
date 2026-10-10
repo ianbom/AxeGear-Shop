@@ -1,0 +1,134 @@
+import { t as cn } from "./utils-DJjaB2Tv.js";
+import { router } from "@inertiajs/react";
+import "react";
+import { Fragment as Fragment$1, jsx, jsxs } from "react/jsx-runtime";
+import { CheckIcon, ChevronDownIcon, ChevronLeft, ChevronRight, ChevronUpIcon } from "lucide-react";
+import * as SelectPrimitive from "@radix-ui/react-select";
+//#region resources/js/components/ui/select.tsx
+function Select({ ...props }) {
+	return /* @__PURE__ */ jsx(SelectPrimitive.Root, {
+		"data-slot": "select",
+		...props
+	});
+}
+function SelectValue({ ...props }) {
+	return /* @__PURE__ */ jsx(SelectPrimitive.Value, {
+		"data-slot": "select-value",
+		...props
+	});
+}
+function SelectTrigger({ className, size = "default", children, ...props }) {
+	return /* @__PURE__ */ jsxs(SelectPrimitive.Trigger, {
+		"data-slot": "select-trigger",
+		"data-size": size,
+		className: cn("border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 dark:hover:bg-input/50 flex w-fit items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4", className),
+		...props,
+		children: [children, /* @__PURE__ */ jsx(SelectPrimitive.Icon, {
+			asChild: true,
+			children: /* @__PURE__ */ jsx(ChevronDownIcon, { className: "size-4 opacity-50" })
+		})]
+	});
+}
+function SelectContent({ className, children, position = "popper", side = "bottom", sideOffset = 4, align = "center", ...props }) {
+	return /* @__PURE__ */ jsx(SelectPrimitive.Portal, { children: /* @__PURE__ */ jsxs(SelectPrimitive.Content, {
+		"data-slot": "select-content",
+		className: cn("bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative z-50 max-h-(--radix-select-content-available-height) min-w-[8rem] origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border shadow-md", position === "popper" && "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1", className),
+		position,
+		side,
+		sideOffset,
+		avoidCollisions: false,
+		align,
+		...props,
+		children: [
+			/* @__PURE__ */ jsx(SelectScrollUpButton, {}),
+			/* @__PURE__ */ jsx(SelectPrimitive.Viewport, {
+				className: cn("p-1", position === "popper" && "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1"),
+				children
+			}),
+			/* @__PURE__ */ jsx(SelectScrollDownButton, {})
+		]
+	}) });
+}
+function SelectItem({ className, children, ...props }) {
+	return /* @__PURE__ */ jsxs(SelectPrimitive.Item, {
+		"data-slot": "select-item",
+		className: cn("focus:bg-accent focus:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2", className),
+		...props,
+		children: [/* @__PURE__ */ jsx("span", {
+			"data-slot": "select-item-indicator",
+			className: "absolute right-2 flex size-3.5 items-center justify-center",
+			children: /* @__PURE__ */ jsx(SelectPrimitive.ItemIndicator, { children: /* @__PURE__ */ jsx(CheckIcon, { className: "size-4" }) })
+		}), /* @__PURE__ */ jsx(SelectPrimitive.ItemText, { children })]
+	});
+}
+function SelectScrollUpButton({ className, ...props }) {
+	return /* @__PURE__ */ jsx(SelectPrimitive.ScrollUpButton, {
+		"data-slot": "select-scroll-up-button",
+		className: cn("flex cursor-default items-center justify-center py-1", className),
+		...props,
+		children: /* @__PURE__ */ jsx(ChevronUpIcon, { className: "size-4" })
+	});
+}
+function SelectScrollDownButton({ className, ...props }) {
+	return /* @__PURE__ */ jsx(SelectPrimitive.ScrollDownButton, {
+		"data-slot": "select-scroll-down-button",
+		className: cn("flex cursor-default items-center justify-center py-1", className),
+		...props,
+		children: /* @__PURE__ */ jsx(ChevronDownIcon, { className: "size-4" })
+	});
+}
+//#endregion
+//#region resources/js/lib/pagination.ts
+function getPaginationDirection(label) {
+	const normalized = label.trim().toLowerCase();
+	if (/(?:^|\s)(?:pagination\.)?previous(?:\s|$)|&laquo;|«|←/.test(normalized)) return "previous";
+	if (/(?:^|\s)(?:pagination\.)?next(?:\s|$)|&raquo;|»|→/.test(normalized)) return "next";
+	return null;
+}
+//#endregion
+//#region resources/js/pages/admin/pagination.tsx
+var perPageOptions = [
+	10,
+	50,
+	100
+];
+function PaginationLabel({ label }) {
+	const direction = getPaginationDirection(label);
+	if (!direction) return /* @__PURE__ */ jsx("span", { children: label.replace(/&hellip;|&#8230;/g, "…") });
+	return /* @__PURE__ */ jsxs(Fragment$1, { children: [/* @__PURE__ */ jsx(direction === "previous" ? ChevronLeft : ChevronRight, {
+		className: "h-3.5 w-3.5",
+		"aria-hidden": "true"
+	}), /* @__PURE__ */ jsx("span", {
+		className: "sr-only",
+		children: direction === "previous" ? "Previous page" : "Next page"
+	})] });
+}
+function PerPageSelect({ paginator }) {
+	return /* @__PURE__ */ jsxs(Select, {
+		value: String(paginator.per_page ?? 10),
+		onValueChange: (value) => {
+			const url = new URL(window.location.href);
+			url.searchParams.set("per_page", value);
+			url.searchParams.set("page", "1");
+			router.get(`${url.pathname}${url.search}`, {}, {
+				preserveState: true,
+				replace: true
+			});
+		},
+		children: [/* @__PURE__ */ jsx(SelectTrigger, {
+			className: "h-8 w-[92px] rounded-lg border-zinc-200 bg-white text-xs text-zinc-600 shadow-none",
+			children: /* @__PURE__ */ jsx(SelectValue, {})
+		}), /* @__PURE__ */ jsx(SelectContent, {
+			align: "end",
+			side: "top",
+			children: perPageOptions.map((perPage) => /* @__PURE__ */ jsxs(SelectItem, {
+				value: String(perPage),
+				children: [perPage, "/page"]
+			}, perPage))
+		})]
+	});
+}
+//#endregion
+export { SelectItem as a, SelectContent as i, PerPageSelect as n, SelectTrigger as o, Select as r, SelectValue as s, PaginationLabel as t };
+
+//# sourceMappingURL=pagination-DhmTAlMg.js.map
