@@ -24,17 +24,16 @@ type Payment = {
     customer: string | null;
     payment_provider: string;
     payment_method: string | null;
-    midtrans_order_id: string | null;
-    midtrans_transaction_id: string | null;
-    midtrans_snap_token: string | null;
-    midtrans_redirect_url: string | null;
+    payment_method_label: string | null;
+    provider_reference: string;
+    create_request_id: string;
+    expires_at: string | null;
+    last_synced_at: string | null;
     gross_amount: string;
     currency: string;
     transaction_status: string | null;
-    fraud_status: string | null;
     paid_at: string | null;
     expired_at: string | null;
-    raw_response: unknown;
     failure_reason: string | null;
     logs: {
         id: number;
@@ -51,15 +50,15 @@ export default function PaymentShow({ payment }: Props) {
     return (
         <>
             <Head
-                title={`Payment ${payment.midtrans_order_id ?? payment.id}`}
+                title={`Payment ${payment.provider_reference ?? payment.id}`}
             />
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
                 <PageHeader
                     eyebrow="Sales Management"
                     title={
-                        payment.midtrans_order_id ?? `Payment #${payment.id}`
+                        payment.provider_reference ?? `Payment #${payment.id}`
                     }
-                    description="Detail transaksi Midtrans, related order, raw response, dan payment logs."
+                    description="Detail pembayaran DOKU, referensi invoice, status rekonsiliasi, dan audit pembayaran."
                     action={
                         <Button
                             type="button"
@@ -86,10 +85,17 @@ export default function PaymentShow({ payment }: Props) {
                             <StatusBadge status={payment.transaction_status} />
                         }
                     />
-                    <Metric label="Fraud" value={payment.fraud_status ?? '-'} />
+                    <Metric
+                        label="Last Sync"
+                        value={payment.last_synced_at ?? '-'}
+                    />
                     <Metric
                         label="Method"
-                        value={payment.payment_method ?? '-'}
+                        value={
+                            payment.payment_method_label ??
+                            payment.payment_method ??
+                            '-'
+                        }
                     />
                 </div>
                 <div className="grid gap-6 lg:grid-cols-2">
@@ -117,8 +123,8 @@ export default function PaymentShow({ payment }: Props) {
                                 value={payment.customer ?? '-'}
                             />
                             <Row
-                                label="Transaction ID"
-                                value={payment.midtrans_transaction_id ?? '-'}
+                                label="Create Request ID"
+                                value={payment.create_request_id}
                             />
                             {payment.failure_reason && (
                                 <Row
@@ -135,20 +141,20 @@ export default function PaymentShow({ payment }: Props) {
                                 value={payment.expired_at ?? '-'}
                             />
                             <Row
-                                label="Redirect URL"
-                                value={payment.midtrans_redirect_url ?? '-'}
+                                label="Payment Deadline"
+                                value={payment.expires_at ?? '-'}
                             />
                         </CardContent>
                     </Card>
                     <Card>
                         <CardHeader>
-                            <CardTitle>Raw Response</CardTitle>
-                            <CardDescription>
-                                Payload terakhir yang tersimpan.
-                            </CardDescription>
+                            <CardTitle>Rekonsiliasi DOKU</CardTitle>
                         </CardHeader>
-                        <CardContent>
-                            <JsonBlock value={payment.raw_response} />
+                        <CardContent className="text-sm">
+                            Deadline lokal dan percobaan gagal bukan bukti
+                            invoice berakhir. Status belum pasti ditahan untuk
+                            pemeriksaan; sinkronisasi tidak membatalkan
+                            pembayaran atau melepas reservasi.
                         </CardContent>
                     </Card>
                 </div>
@@ -173,6 +179,7 @@ export default function PaymentShow({ payment }: Props) {
                                 <p className="mt-1 text-xs text-muted-foreground">
                                     {log.processed_at ?? '-'}
                                 </p>
+                                <JsonBlock value={log.payload} />
                             </div>
                         ))}
                     </CardContent>

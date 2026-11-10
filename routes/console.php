@@ -9,7 +9,7 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command('payments:sync-expired-midtrans')->everyTenMinutes()->withoutOverlapping();
+Schedule::command('payments:sync-expired-doku')->everyTenMinutes()->withoutOverlapping();
 
 Artisan::command('shipments:replay-biteship-webhooks', function (ShipmentManagementService $shipments) {
     $this->info('Processed: '.$shipments->replayWebhooks());

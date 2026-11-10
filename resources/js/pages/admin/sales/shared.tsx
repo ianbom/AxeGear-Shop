@@ -21,13 +21,7 @@ export function StatusBadge({
     const resolvedTone =
         tone !== 'neutral'
             ? tone
-            : [
-                    'paid',
-                    'settlement',
-                    'capture',
-                    'completed',
-                    'delivered',
-                ].includes(value)
+            : ['paid', 'success', 'completed', 'delivered'].includes(value)
               ? 'good'
               : [
                       'pending',

@@ -147,7 +147,7 @@ export default function AdminSettingsIndex({
                         <CardHeader>
                             <CardTitle>{current.title}</CardTitle>
                             <CardDescription>
-                                Sensitive API keys seperti Midtrans server key
+                                Sensitive API keys seperti DOKU secret key
                                 dan Biteship API key tetap dikelola dari file
                                 environment.
                             </CardDescription>

@@ -75,14 +75,14 @@ interface Payment {
     id: number;
     payment_provider?: string | null;
     payment_method?: string | null;
-    midtrans_order_id?: string | null;
-    midtrans_transaction_id?: string | null;
+    payment_method_label?: string | null;
+    provider_reference?: string | null;
     transaction_status?: string | null;
-    fraud_status?: string | null;
+    expires_at?: string | null;
+    last_synced_at?: string | null;
     gross_amount?: string | number | null;
     paid_at?: string | null;
     expired_at?: string | null;
-    raw_response?: unknown;
 }
 
 interface Shipment {
@@ -626,9 +626,7 @@ function PageHeader({
                 )}
                 {!nextStatus &&
                     order.payment &&
-                    ['pending', 'manual_review'].includes(
-                        order.payment_status,
-                    ) && (
+                    order.payment_status === 'pending' && (
                         <Button asChild>
                             <Link href={paymentShow.url(order.payment.id)}>
                                 Periksa pembayaran
@@ -998,13 +996,9 @@ function BannerStatus({
 }
 
 function StatusBadge({ value, display }: { value: string; display?: string }) {
-    const positive = [
-        'paid',
-        'completed',
-        'delivered',
-        'settlement',
-        'capture',
-    ].includes(value);
+    const positive = ['paid', 'completed', 'delivered', 'success'].includes(
+        value,
+    );
     const negative = [
         'failed',
         'cancelled',
@@ -1102,7 +1096,7 @@ function Overview({
                                     packing selesai.
                                 </p>
                                 <p className="text-sm text-[#555]">
-                                    Pembayaran mengikuti Midtrans, pengiriman
+                                    Pembayaran mengikuti DOKU, pengiriman
                                     mengikuti Biteship. Pesanan hanya dapat
                                     diselesaikan setelah pembayaran lunas dan
                                     barang terkirim.
@@ -1406,13 +1400,13 @@ function PaymentTab({ order }: { order: Order }) {
                                 );
                             }}
                         >
-                            {syncing
-                                ? 'Menyinkronkan...'
-                                : 'Sinkronkan Midtrans'}
+                            {syncing ? 'Menyinkronkan...' : 'Sinkronkan DOKU'}
                         </Button>
                         <p className="w-full text-sm text-[#555]">
-                            Pembatalan dan refund diproses melalui Midtrans,
-                            lalu sinkronkan status di sini.
+                            Pembatalan pembayaran DOKU dinonaktifkan sementara.
+                            Status belum pasti memerlukan pemeriksaan;
+                            sinkronisasi tidak membatalkan pembayaran atau
+                            melepas reservasi.
                         </p>
                         {syncError && (
                             <p
@@ -1430,25 +1424,27 @@ function PaymentTab({ order }: { order: Order }) {
                             {payment.payment_provider ?? '—'}
                         </Detail>
                         <Detail label="Method">
-                            {payment.payment_method ?? '—'}
+                            {payment.payment_method_label ??
+                                payment.payment_method ??
+                                '—'}
                         </Detail>
                         <Detail label="Transaction Status">
                             <InlineStatus
                                 value={payment.transaction_status ?? 'unknown'}
                             />
                         </Detail>
-                        <Detail label="Fraud Status">
-                            {payment.fraud_status ?? '—'}
+                        <Detail label="Last Sync">
+                            {date(payment.last_synced_at)}
                         </Detail>
                         <Detail label="Gross Amount">
                             {money(payment.gross_amount)}
                         </Detail>
                         <Detail label="Paid At">{date(payment.paid_at)}</Detail>
-                        <Detail label="Midtrans Order ID">
-                            {payment.midtrans_order_id ?? '—'}
+                        <Detail label="Invoice DOKU">
+                            {payment.provider_reference ?? '—'}
                         </Detail>
-                        <Detail label="Transaction ID">
-                            {payment.midtrans_transaction_id ?? '—'}
+                        <Detail label="Payment Deadline">
+                            {date(payment.expires_at)}
                         </Detail>
                     </div>
                 ) : (

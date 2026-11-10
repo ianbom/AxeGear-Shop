@@ -57,7 +57,7 @@ type Order = {
         service: string | null;
     };
     payment: {
-        midtrans_redirect_url: string | null;
+        checkout_url: string | null;
     };
 };
 
@@ -332,31 +332,18 @@ export default function ListOrder({ orders, filters }: Props) {
                                 </div>
 
                                 <div className="mt-4 flex w-full shrink-0 flex-row gap-3 lg:mt-0 lg:w-[200px] lg:flex-col">
-                                    {order.order_status ===
-                                        'pending_payment' && (
-                                        <a
-                                            href={
-                                                order.payment
-                                                    .midtrans_redirect_url ??
-                                                '/checkout'
-                                            }
-                                            target={
-                                                order.payment
-                                                    .midtrans_redirect_url
-                                                    ? '_blank'
-                                                    : undefined
-                                            }
-                                            rel={
-                                                order.payment
-                                                    .midtrans_redirect_url
-                                                    ? 'noreferrer'
-                                                    : undefined
-                                            }
-                                            className="flex-1 rounded-[6px] bg-primary py-2.5 text-center text-[12px] font-bold text-white transition-colors hover:bg-[#E67312] lg:w-full"
-                                        >
-                                            Bayar Sekarang
-                                        </a>
-                                    )}
+                                    {order.payment_status === 'pending' &&
+                                        order.payment.checkout_url && (
+                                            <a
+                                                href={
+                                                    order.payment.checkout_url
+                                                }
+                                                rel="noreferrer"
+                                                className="flex-1 rounded-[6px] bg-primary py-2.5 text-center text-[12px] font-bold text-white transition-colors hover:bg-[#E67312] lg:w-full"
+                                            >
+                                                Bayar Sekarang
+                                            </a>
+                                        )}
                                     {order.order_status === 'shipped' && (
                                         <Link
                                             href={orderShow.url(order.id)}

@@ -60,7 +60,7 @@ function renderCell(value: string | number | boolean | null) {
     const normalized = value.toLowerCase();
 
     if (
-        ['paid', 'published', 'completed', 'delivered', 'settlement'].includes(
+        ['paid', 'published', 'completed', 'delivered', 'success'].includes(
             normalized,
         )
     ) {

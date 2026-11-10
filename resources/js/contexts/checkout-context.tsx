@@ -6,6 +6,7 @@ import {
     useState,
 } from 'react';
 import type { ReactNode } from 'react';
+import { myOrder } from '@/routes';
 import {
     placeOrder as placeOrderRoute,
     shippingRate,
@@ -167,11 +168,20 @@ async function jsonRequest(
     const payload = await response.json().catch(() => ({}));
 
     if (!response.ok) {
+        if (response.status === 422 && payload.retry_allowed === true) {
+            window.sessionStorage.removeItem('checkout.idempotency_key');
+        }
+
         const errors = payload.errors ?? {
             checkout: payload.message ?? 'Request failed.',
         };
 
-        throw errors;
+        throw Object.fromEntries(
+            Object.entries(errors).map(([field, messages]) => [
+                field,
+                Array.isArray(messages) ? messages[0] : messages,
+            ]),
+        );
     }
 
     return payload;
@@ -209,7 +219,6 @@ export function CheckoutProvider({
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [shippingRatesLoading, setShippingRatesLoading] = useState(false);
     const [placingOrder, setPlacingOrder] = useState(false);
-    const [idempotencyKey] = useState(checkoutIdempotencyKey);
 
     const resetShippingSummary = useCallback(() => {
         setCurrentSummary((current) => shippingSummary(current, 0));
@@ -341,7 +350,8 @@ export function CheckoutProvider({
                     {
                         customer_address_id: currentAddressId,
                         shipping_rate_id: currentRate.id,
-                        idempotency_key: idempotencyKey,
+                        payment_method: 'qris',
+                        idempotency_key: checkoutIdempotencyKey(),
                         voucher_code: currentVoucher?.code ?? null,
                         notes,
                         no_return_refund_agreed: agreed,
@@ -350,7 +360,7 @@ export function CheckoutProvider({
 
                 window.sessionStorage.removeItem('checkout.idempotency_key');
 
-                return payload.redirect_url ?? null;
+                return payload.redirect_url ?? myOrder.url();
             } catch (error) {
                 const errors = error as Record<string, string>;
                 setErrors(errors);
@@ -368,13 +378,7 @@ export function CheckoutProvider({
                 setPlacingOrder(false);
             }
         },
-        [
-            currentAddressId,
-            currentRate,
-            currentVoucher,
-            idempotencyKey,
-            placingOrder,
-        ],
+        [currentAddressId, currentRate, currentVoucher, placingOrder],
     );
 
     const value = useMemo<CheckoutContextValue>(

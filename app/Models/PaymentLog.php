@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'payment_id',
     'order_id',
     'provider',
+    'notification_request_id',
     'event_type',
     'transaction_status',
     'payload_hash',

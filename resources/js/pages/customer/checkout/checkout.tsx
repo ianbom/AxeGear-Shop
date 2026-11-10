@@ -350,6 +350,14 @@ function CheckoutScreen() {
                                         {errors.customer_address_id}
                                     </p>
                                 )}
+                                {errors.shipping_rate_id && (
+                                    <p
+                                        role="alert"
+                                        className="mb-3 text-[12px] font-semibold text-[#C81E1E]"
+                                    >
+                                        {errors.shipping_rate_id}
+                                    </p>
+                                )}
                                 {shippingRatesLoading ? (
                                     <div className="border border-dashed border-[#CFCFCF] bg-[#F8F8F8] p-6 text-[12px] font-semibold text-[#707070]">
                                         Memuat harga ongkir...
@@ -592,8 +600,24 @@ function CheckoutScreen() {
                                     <Lock size={16} className="mr-2" />
                                     {placingOrder
                                         ? 'Membuat Pembayaran...'
-                                        : 'Bayar dengan Midtrans'}
+                                        : 'Bayar dengan QRIS'}
                                 </button>
+                                {errors.payment && (
+                                    <p
+                                        role="alert"
+                                        className="mt-2 text-[12px] font-semibold text-[#C81E1E]"
+                                    >
+                                        {errors.payment}
+                                    </p>
+                                )}
+                                {errors.payment_method && (
+                                    <p
+                                        role="alert"
+                                        className="mt-2 text-[12px] font-semibold text-[#C81E1E]"
+                                    >
+                                        {errors.payment_method}
+                                    </p>
+                                )}
                                 <div className="mt-8 space-y-4 border-t border-[#CFCFCF] pt-6">
                                     <CheckoutRouteMap
                                         destinationAddress={selectedAddress}

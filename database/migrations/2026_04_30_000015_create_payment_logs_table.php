@@ -12,7 +12,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('payment_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('order_id')->nullable()->constrained()->nullOnDelete();
-            $table->string('provider', 50)->default('midtrans');
+            $table->string('provider', 50)->default('doku');
+            $table->string('notification_request_id', 128)->nullable();
+            $table->unique(['provider', 'notification_request_id']);
             $table->string('event_type', 100)->nullable();
             $table->string('transaction_status', 50)->nullable();
             $table->json('payload');

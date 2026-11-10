@@ -1,4 +1,4 @@
-import { Link, router } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import {
     Check,
     ClipboardList,
@@ -14,13 +14,12 @@ import {
     UserRound,
     WalletCards,
 } from 'lucide-react';
-import { useState } from 'react';
 import type { ComponentType, ReactNode } from 'react';
+import { index as orderIndex } from '@/actions/App/Http/Controllers/Customer/OrderController';
 import {
-    cancel as orderCancel,
-    index as orderIndex,
-} from '@/actions/App/Http/Controllers/Customer/OrderController';
-import { show as productShow } from '@/actions/App/Http/Controllers/Customer/ProductController';
+    index as productIndex,
+    show as productShow,
+} from '@/actions/App/Http/Controllers/Customer/ProductController';
 import ProfileLayout from '@/layouts/profile-layout';
 import type { ShippingIssue } from '@/lib/order-workflow';
 
@@ -61,12 +60,11 @@ type Address = {
 type Payment = {
     payment_provider: string;
     payment_method: string | null;
-    midtrans_order_id: string | null;
-    midtrans_transaction_id: string | null;
-    midtrans_snap_token: string | null;
-    midtrans_redirect_url: string | null;
+    payment_method_label?: string | null;
+    provider_reference: string;
+    checkout_url: string | null;
+    expires_at: string | null;
     transaction_status: string | null;
-    fraud_status: string | null;
     gross_amount: number;
     currency: string;
     paid_at: string | null;
@@ -146,9 +144,12 @@ const FALLBACK_IMAGE = '/img/hasan-almasi-_X2UAmIcpko-unsplash.webp';
 const formatPrice = (amount: number) =>
     `Rp ${new Intl.NumberFormat('id-ID').format(amount)}`;
 
-const formatDateTime = (value: string | null) => {
+const formatDateTime = (
+    value: string | null,
+    fallback = 'Tanggal belum tersedia',
+) => {
     if (!value) {
-        return '-';
+        return fallback;
     }
 
     return new Intl.DateTimeFormat('id-ID', {
@@ -162,7 +163,7 @@ const formatDateTime = (value: string | null) => {
 
 const labelStatus = (status: string | null) => {
     if (!status) {
-        return '-';
+        return 'Status belum tersedia';
     }
 
     const labels: Record<string, string> = {
@@ -198,9 +199,7 @@ const labelStatus = (status: string | null) => {
         payment_expired: 'Pembayaran kedaluwarsa',
         refunded: 'Pembayaran dikembalikan',
         partially_refunded: 'Pembayaran dikembalikan sebagian',
-        manual_review: 'Menunggu pemeriksaan pembayaran',
-        settlement: 'Pembayaran berhasil',
-        capture: 'Pembayaran diterima',
+        success: 'Pembayaran berhasil',
     };
 
     return labels[status] ?? 'Status perlu diperiksa';
@@ -276,6 +275,7 @@ function ActionButton({
     onClick,
     disabled = false,
     external = false,
+    sameTab = false,
     tone = 'default',
 }: {
     icon: IconComponent;
@@ -284,6 +284,7 @@ function ActionButton({
     onClick?: () => void;
     disabled?: boolean;
     external?: boolean;
+    sameTab?: boolean;
     tone?: 'default' | 'danger';
 }) {
     const base =
@@ -324,7 +325,7 @@ function ActionButton({
         return (
             <a
                 href={href}
-                target="_blank"
+                target={sameTab ? undefined : '_blank'}
                 rel="noreferrer"
                 className={`${base} ${toneClass}`}
             >
@@ -362,7 +363,7 @@ function InfoLine({
                 {label}
             </span>
             <span className="min-w-0 text-sm font-medium break-words text-ink">
-                {value || '-'}
+                {value || 'Belum tersedia'}
             </span>
         </div>
     );
@@ -402,9 +403,8 @@ function buildProgress(order: Order) {
     const paidAt =
         order.paid_at ??
         order.payment?.paid_at ??
-        order.payment_logs.find(
-            (log) => log.transaction_status === 'settlement',
-        )?.processed_at ??
+        order.payment_logs.find((log) => log.transaction_status === 'success')
+            ?.processed_at ??
         null;
     const current = order.order_status;
     const rank: Record<string, number> = {
@@ -447,28 +447,46 @@ function buildProgress(order: Order) {
         {
             icon: Check,
             label: 'Payment',
-            time: formatDateTime(paidAt),
+            time: formatDateTime(
+                paidAt,
+                ['paid', 'refunded', 'partially_refunded'].includes(
+                    order.payment_status,
+                )
+                    ? 'Tanggal pembayaran belum tersedia'
+                    : 'Belum dibayar',
+            ),
             complete: currentRank >= 1,
             active: currentRank === 1,
         },
         {
             icon: ShieldCheck,
             label: 'Processing',
-            time: currentRank >= 2 ? labelStatus(order.order_status) : '-',
+            time:
+                currentRank >= 2
+                    ? labelStatus(order.order_status)
+                    : 'Belum diproses',
             complete: currentRank >= 2,
             active: currentRank === 2,
         },
         {
             icon: Package,
             label: 'Packed',
-            time: currentRank >= 3 ? labelStatus(order.order_status) : '-',
+            time:
+                currentRank >= 3
+                    ? labelStatus(order.order_status)
+                    : 'Belum dikemas',
             complete: currentRank >= 3,
             active: currentRank === 3,
         },
         {
             icon: Truck,
             label: 'Shipped',
-            time: formatDateTime(order.shipment?.shipped_at ?? null),
+            time: formatDateTime(
+                order.shipment?.shipped_at ?? null,
+                currentRank >= 4
+                    ? 'Tanggal pengiriman belum tersedia'
+                    : 'Belum dikirim',
+            ),
             complete: currentRank >= 4,
             active: currentRank === 4,
         },
@@ -477,6 +495,9 @@ function buildProgress(order: Order) {
             label: 'Delivered',
             time: formatDateTime(
                 order.shipment?.delivered_at ?? order.completed_at,
+                currentRank >= 5
+                    ? 'Tanggal penerimaan belum tersedia'
+                    : 'Belum diterima',
             ),
             complete: currentRank >= 5,
             active: currentRank >= 5,
@@ -512,25 +533,7 @@ function getBiteshipTrackingUrl(shipment: Shipment | null): string | null {
     }
 }
 
-function getMidtransReceiptUrl(payment: Payment | null): string | null {
-    if (!payment) {
-        return null;
-    }
-
-    if (payment.midtrans_redirect_url) {
-        return payment.midtrans_redirect_url;
-    }
-
-    if (payment.midtrans_snap_token) {
-        return `https://app.midtrans.com/snap/v2/vtweb/${payment.midtrans_snap_token}`;
-    }
-
-    return null;
-}
-
 export default function DetailOrder({ order, supportPhone }: Props) {
-    const [isCancelling, setIsCancelling] = useState(false);
-    const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
     const progressSteps = buildProgress(order);
     const courier = [
         order.shipment?.courier_company,
@@ -541,15 +544,25 @@ export default function DetailOrder({ order, supportPhone }: Props) {
     const address = order.address;
     const method = order.payment?.payment_method?.trim();
     const paymentMethod =
-        method === 'bank_transfer'
+        order.payment?.payment_method_label?.trim() ||
+        (method === 'bank_transfer'
             ? 'Bank Transfer'
             : method === 'qris'
               ? 'QRIS'
-              : method?.replaceAll('_', ' ') || '-';
+              : method?.replaceAll('_', ' ') ||
+                'Metode pembayaran belum tersedia');
     const transactionId =
-        order.payment?.midtrans_transaction_id ??
-        order.payment?.midtrans_order_id ??
-        '-';
+        order.payment?.provider_reference || 'Transaksi belum tersedia';
+    const waybill =
+        order.shipment?.waybill_id?.trim() ||
+        (!order.shipment ||
+        (!order.shipment.biteship_order_id &&
+            !order.shipment.biteship_tracking_id &&
+            ['not_created', 'failed'].includes(
+                order.shipment.shipping_status ?? 'not_created',
+            ))
+            ? 'Pengiriman belum dibuat'
+            : 'No. resi belum tersedia');
     const trackingUrl = getBiteshipTrackingUrl(order.shipment);
     const phoneDigits = (supportPhone ?? '').replace(/[\s()+.-]/g, '');
     const internationalPhone = phoneDigits.startsWith('0')
@@ -558,43 +571,8 @@ export default function DetailOrder({ order, supportPhone }: Props) {
     const supportUrl = /^[1-9]\d{7,14}$/.test(internationalPhone)
         ? `https://wa.me/${internationalPhone}`
         : null;
-    const isPaymentTerminal = [
-        'cancelled',
-        'expired',
-        'failed',
-        'refunded',
-        'partially_refunded',
-    ].includes(order.payment_status);
-    const paymentReceiptUrl = isPaymentTerminal
-        ? null
-        : getMidtransReceiptUrl(order.payment);
-    const canPay = order.payment_status === 'pending' && !!paymentReceiptUrl;
-    const canCancelOrder = order.payment_status === 'pending';
-
-    const cancelOrder = () => {
-        if (isCancelling) {
-            return;
-        }
-
-        router.post(
-            orderCancel.url(order.id),
-            {},
-            {
-                preserveScroll: true,
-                onStart: () => setIsCancelling(true),
-                onSuccess: () => setIsCancelModalOpen(false),
-                onError: (errors) => {
-                    const message = Object.values(errors).join('\n');
-
-                    alert(
-                        message ||
-                            'Gagal membatalkan order. Cek status pembayaran atau coba lagi.',
-                    );
-                },
-                onFinish: () => setIsCancelling(false),
-            },
-        );
-    };
+    const checkoutUrl =
+        order.payment_status === 'pending' ? order.payment?.checkout_url : null;
 
     return (
         <ProfileLayout
@@ -624,35 +602,18 @@ export default function DetailOrder({ order, supportPhone }: Props) {
                                         {order.order_number}
                                     </h2>
                                     <p className="mt-1 text-xs text-muted-foreground">
-                                        {order.created_date ?? '-'} &bull;{' '}
-                                        {order.created_time ?? '-'}
+                                        {order.created_date ||
+                                            'Tanggal pesanan belum tersedia'}{' '}
+                                        &bull;{' '}
+                                        {order.created_time ||
+                                            'Waktu pesanan belum tersedia'}
                                     </p>
                                 </div>
                                 <div className="flex flex-wrap gap-2">
                                     <StatusPill
-                                        tone={statusTone(order.payment_status)}
-                                    >
-                                        {labelStatus(order.payment_status)}
-                                    </StatusPill>
-                                    <StatusPill
                                         tone={statusTone(order.order_status)}
                                     >
                                         {labelStatus(order.order_status)}
-                                    </StatusPill>
-                                    <StatusPill
-                                        tone={statusTone(
-                                            order.shipping_issue?.status ??
-                                                order.shipment
-                                                    ?.shipping_status ??
-                                                order.shipping_status,
-                                        )}
-                                    >
-                                        {order.shipping_issue?.label ??
-                                            labelStatus(
-                                                order.shipment
-                                                    ?.shipping_status ??
-                                                    order.shipping_status,
-                                            )}
                                     </StatusPill>
                                 </div>
                             </div>
@@ -661,10 +622,11 @@ export default function DetailOrder({ order, supportPhone }: Props) {
                                     {paymentMethod}
                                 </MetaChip>
                                 <MetaChip label="Estimasi Tiba">
-                                    {order.shipment?.estimated_delivery ?? '-'}
+                                    {order.shipment?.estimated_delivery ||
+                                        'Estimasi belum tersedia'}
                                 </MetaChip>
-                                <MetaChip label="No. Resi">
-                                    {order.shipment?.waybill_id ?? '-'}
+                                <MetaChip label="No. Resi Pengiriman">
+                                    {waybill}
                                 </MetaChip>
                             </div>
                         </div>
@@ -676,34 +638,16 @@ export default function DetailOrder({ order, supportPhone }: Props) {
                                 label="Lacak Pesanan"
                             />
                             <ActionButton
-                                href={canCancelOrder ? undefined : '/list'}
-                                onClick={
-                                    canCancelOrder
-                                        ? () => setIsCancelModalOpen(true)
-                                        : undefined
-                                }
-                                disabled={isCancelling}
-                                icon={
-                                    canCancelOrder ? ClipboardList : RefreshCcw
-                                }
-                                tone={canCancelOrder ? 'danger' : 'default'}
-                                label={
-                                    isCancelling
-                                        ? 'Membatalkan...'
-                                        : canCancelOrder
-                                          ? 'Batalkan Pesanan'
-                                          : 'Beli Lagi'
-                                }
+                                href={productIndex.url()}
+                                icon={RefreshCcw}
+                                label="Beli Lagi"
                             />
                             <ActionButton
-                                href={paymentReceiptUrl}
+                                href={checkoutUrl}
                                 external
+                                sameTab
                                 icon={ReceiptText}
-                                label={
-                                    canPay
-                                        ? 'Bayar Sekarang'
-                                        : 'Bukti Pembayaran'
-                                }
+                                label="Lanjut Bayar"
                             />
                             <ActionButton
                                 href={supportUrl}
@@ -712,6 +656,14 @@ export default function DetailOrder({ order, supportPhone }: Props) {
                                 label="Dukungan"
                             />
                         </div>
+                        {order.payment_status === 'pending' && (
+                            <p className="px-4 pb-4 text-xs text-muted-foreground sm:px-5">
+                                Pembatalan pembayaran DOKU dinonaktifkan
+                                sementara. Jika pembayaran belum dapat
+                                dilanjutkan, hubungi toko untuk pemeriksaan
+                                status. Jangan membuat pembayaran baru.
+                            </p>
+                        )}
                         {!supportUrl && (
                             <p className="px-4 pb-4 text-xs text-muted-foreground sm:px-5">
                                 Nomor WhatsApp toko belum tersedia.
@@ -842,9 +794,9 @@ export default function DetailOrder({ order, supportPhone }: Props) {
                                                                 </Link>
                                                                 <p className="mt-0.5 text-[11px] text-muted-foreground">
                                                                     SKU:{' '}
-                                                                    {item.variant_sku ??
-                                                                        item.product_sku ??
-                                                                        '-'}
+                                                                    {item.variant_sku ||
+                                                                        item.product_sku ||
+                                                                        'SKU belum tersedia'}
                                                                 </p>
                                                             </div>
                                                         </div>
@@ -854,15 +806,15 @@ export default function DetailOrder({ order, supportPhone }: Props) {
                                                             <p>
                                                                 Warna:{' '}
                                                                 <span className="font-semibold text-ink">
-                                                                    {item.color_name ??
-                                                                        '-'}
+                                                                    {item.color_name ||
+                                                                        'Warna belum tersedia'}
                                                                 </span>
                                                             </p>
                                                             <p>
                                                                 Ukuran:{' '}
                                                                 <span className="font-semibold text-ink">
-                                                                    {item.size ??
-                                                                        '-'}
+                                                                    {item.size ||
+                                                                        'Ukuran belum tersedia'}
                                                                 </span>
                                                             </p>
                                                             <p>
@@ -870,7 +822,7 @@ export default function DetailOrder({ order, supportPhone }: Props) {
                                                                 <span className="font-semibold text-ink">
                                                                     {item.weight
                                                                         ? `${item.weight} gr`
-                                                                        : '-'}
+                                                                        : 'Berat belum tersedia'}
                                                                 </span>
                                                             </p>
                                                         </div>
@@ -959,9 +911,9 @@ export default function DetailOrder({ order, supportPhone }: Props) {
                                             </div>
                                             <p className="mt-0.5 text-[11px] text-muted-foreground">
                                                 SKU:{' '}
-                                                {item.variant_sku ??
-                                                    item.product_sku ??
-                                                    '-'}
+                                                {item.variant_sku ||
+                                                    item.product_sku ||
+                                                    'SKU belum tersedia'}
                                             </p>
                                             <div className="mt-2.5 flex items-center justify-between">
                                                 <span className="text-xs text-muted-foreground">
@@ -1007,23 +959,26 @@ export default function DetailOrder({ order, supportPhone }: Props) {
                                     value={
                                         address
                                             ? `${address.full_address}, ${address.district}, ${address.city}, ${address.province} ${address.postal_code}`
-                                            : '-'
+                                            : 'Alamat belum tersedia'
                                     }
                                 />
                                 <InfoLine
                                     icon={Truck}
                                     label="Kurir"
-                                    value={courier || '-'}
+                                    value={courier || 'Kurir belum tersedia'}
                                 />
                                 <InfoLine
                                     icon={ReceiptText}
                                     label="No. Resi"
-                                    value={order.shipment?.waybill_id ?? '-'}
+                                    value={waybill}
                                 />
                                 <InfoLine
                                     icon={FileText}
                                     label="Catatan Pengiriman"
-                                    value={address?.note ?? '-'}
+                                    value={
+                                        address?.note?.trim() ||
+                                        'Tidak ada catatan pengiriman'
+                                    }
                                 />
                             </div>
                         </SectionCard>
@@ -1046,6 +1001,13 @@ export default function DetailOrder({ order, supportPhone }: Props) {
                                         order.paid_at ??
                                             order.payment?.paid_at ??
                                             null,
+                                        [
+                                            'paid',
+                                            'refunded',
+                                            'partially_refunded',
+                                        ].includes(order.payment_status)
+                                            ? 'Tanggal pembayaran belum tersedia'
+                                            : 'Belum dibayar',
                                     )}
                                 />
                                 <div className="flex items-center gap-3 py-2.5">
@@ -1118,68 +1080,6 @@ export default function DetailOrder({ order, supportPhone }: Props) {
                     </SectionCard>
                 </aside>
             </div>
-
-            {isCancelModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 backdrop-blur-sm">
-                    <div className="w-full max-w-md overflow-hidden rounded-[8px] border border-red-100 bg-white">
-                        <div className="border-b border-red-100 bg-red-50 px-6 py-5">
-                            <div className="flex items-start gap-4">
-                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-700">
-                                    <ClipboardList
-                                        size={22}
-                                        strokeWidth={1.8}
-                                    />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-semibold tracking-[0.2em] text-red-500 uppercase">
-                                        Batalkan Pesanan
-                                    </p>
-                                    <h2 className="mt-1 text-xl leading-tight text-ink">
-                                        Batalkan order ini?
-                                    </h2>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4 px-6 py-5">
-                            <p className="text-sm leading-6 text-muted-foreground">
-                                Order belum dibayar. Jika dibatalkan, transaksi
-                                pembayaran akan dibuat tidak bisa dibayar lagi
-                                dan stok yang tertahan akan dilepaskan.
-                            </p>
-                            <div className="rounded-[8px] border border-hairline-strong bg-surface-soft px-4 py-3">
-                                <p className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
-                                    Nomor Pesanan
-                                </p>
-                                <p className="mt-1 font-mono text-sm font-semibold text-ink">
-                                    {order.order_number}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="grid gap-3 border-t border-hairline-strong px-6 py-5 sm:grid-cols-2">
-                            <button
-                                type="button"
-                                onClick={() => setIsCancelModalOpen(false)}
-                                disabled={isCancelling}
-                                className="hover:bg-primary-soft rounded-[6px] border border-hairline-strong bg-white px-4 py-2.5 text-[12px] font-semibold text-ink transition disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                Kembali
-                            </button>
-                            <button
-                                type="button"
-                                onClick={cancelOrder}
-                                disabled={isCancelling}
-                                className="rounded-[6px] border border-red-600 bg-red-600 px-4 py-2.5 text-[12px] font-semibold text-white transition hover:border-red-700 hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                {isCancelling
-                                    ? 'Membatalkan...'
-                                    : 'Ya, batalkan order'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </ProfileLayout>
     );
 }

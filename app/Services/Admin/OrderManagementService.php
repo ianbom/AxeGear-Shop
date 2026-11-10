@@ -9,6 +9,7 @@ use App\Models\AdminActivityLog;
 use App\Models\Order;
 use App\Models\Shipment;
 use App\Models\StockLog;
+use App\Services\Integrations\DokuService;
 use App\Services\Notifications\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -90,7 +91,7 @@ class OrderManagementService
 
     public function allowedStatuses(Order $order): array
     {
-        if ($order->payment_status !== PaymentStatus::Paid->value) {
+        if ($order->payment_status !== PaymentStatus::Paid->value || ($order->stock_reserved_at && ! $order->stock_finalized_at)) {
             return [];
         }
 
@@ -242,7 +243,10 @@ class OrderManagementService
                 ])->values()->all(),
             ])->values(),
             'address' => $order->address,
-            'payment' => $order->payment,
+            'payment' => $order->payment ? [...$order->payment->only([
+                'id', 'payment_provider', 'payment_method', 'provider_reference', 'transaction_status',
+                'gross_amount', 'currency', 'paid_at', 'expired_at', 'expires_at', 'failure_reason', 'last_synced_at',
+            ]), 'payment_method_label' => DokuService::PAYMENT_METHODS[$order->payment->payment_method]['label'] ?? $order->payment->payment_method] : null,
             'payment_logs' => $order->payment?->logs?->map(fn ($log): array => [
                 'id' => $log->id,
                 'event_type' => $log->event_type,

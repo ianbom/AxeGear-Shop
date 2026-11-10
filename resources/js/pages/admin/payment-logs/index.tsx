@@ -47,7 +47,7 @@ export default function PaymentLogsIndex({ logs, filters }: Props) {
                 <PageHeader
                     eyebrow="Sales Management"
                     title="Payment Logs"
-                    description="Audit webhook/payment notification Midtrans. Data read-only untuk debugging."
+                    description="Audit webhook/payment notification DOKU. Data read-only untuk debugging."
                 />
                 <TableShell
                     title="Webhook Logs"

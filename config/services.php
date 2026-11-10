@@ -51,9 +51,10 @@ return [
         'origin_area_id' => env('BITESHIP_ORIGIN_AREA_ID'),
     ],
 
-    'midtrans' => [
-        'server_key' => env('MIDTRANS_SERVER_KEY'),
-        'client_key' => env('MIDTRANS_CLIENT_KEY'),
+    'doku' => [
+        'client_id' => env('DOKU_CLIENT_ID'),
+        'secret_key' => env('DOKU_SECRET_KEY'),
+        'is_production' => env('DOKU_IS_PRODUCTION', false),
     ],
 
     'checkout' => [
