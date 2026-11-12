@@ -7,9 +7,11 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\PaymentLog;
 use App\Services\Integrations\DokuService;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use JsonException;
+use RuntimeException;
 
 class DokuWebhookService
 {
@@ -33,7 +35,26 @@ class DokuWebhookService
         $requestId = $headers['request-id'];
         $requestId = is_array($requestId) ? $requestId[0] : $requestId;
         $hash = hash('sha256', $rawBody);
-        $conflict = DB::transaction(function () use ($payload, $requestId, $hash): bool|string {
+        $existing = PaymentLog::query()->where('provider', 'doku')->where('notification_request_id', $requestId)->first();
+        if ($existing && hash_equals($existing->payload_hash, $hash)) {
+            return;
+        }
+        $lookup = null;
+        $expiry = data_get($payload, 'transaction.status') !== 'SUCCESS'
+            && (data_get($payload, 'transaction.status') === 'EXPIRED'
+                || in_array(data_get($payload, 'order.status'), ['ORDER_EXPIRED', 'EXPIRED'], true));
+        if (! $existing && $expiry && (data_get($payload, 'order.amount') === null
+            || in_array(data_get($payload, 'service.id'), [null, ''], true)
+            || in_array(data_get($payload, 'channel.id'), [null, ''], true))) {
+            $candidate = Payment::query()->where('payment_provider', 'doku')->where('provider_reference', $payload['order']['invoice_number'])->firstOrFail();
+            try {
+                $lookup = $this->doku->findTransactionStatus($candidate->provider_reference);
+            } catch (RuntimeException|ConnectionException) {
+                abort(503, 'Status kedaluwarsa DOKU belum dapat diverifikasi. Coba kirim notifikasi kembali.');
+            }
+            abort_if($lookup === null, 503, 'Status DOKU belum tersedia.');
+        }
+        $conflict = DB::transaction(function () use ($payload, $requestId, $hash, $lookup): bool|string {
             $candidate = Payment::query()->where('payment_provider', 'doku')->where('provider_reference', $payload['order']['invoice_number'])->firstOrFail();
             $order = Order::query()->whereKey($candidate->order_id)->lockForUpdate()->firstOrFail();
             $payment = Payment::query()->whereKey($candidate->id)->lockForUpdate()->firstOrFail();
@@ -50,7 +71,14 @@ class DokuWebhookService
                 return true;
             }
             try {
-                $status = $this->doku->paymentStatus($payment, $payload);
+                $facts = $payload;
+                if ($lookup !== null && data_get($facts, 'order.amount') === null) {
+                    data_set($facts, 'order.amount', data_get($lookup, 'order.amount'));
+                }
+                $status = $this->doku->paymentStatus($payment, $facts, requireService: $lookup === null);
+                if ($lookup !== null) {
+                    $status = $this->doku->paymentStatus($payment, $lookup, requireService: false);
+                }
             } catch (ValidationException) {
                 $payment->logs()->firstOrCreate([
                     'provider' => 'doku', 'event_type' => 'notification_rejected', 'payload_hash' => $hash,
@@ -64,7 +92,11 @@ class DokuWebhookService
                 'event_type' => 'payment_notification', 'transaction_status' => $status,
                 'payload_hash' => $hash, 'payload' => $safePayload, 'processed_at' => now(),
             ]);
-            $payment->update(['raw_response' => [...($payment->raw_response ?? []), 'notification' => $safePayload]]);
+            $response = [...($payment->raw_response ?? []), 'notification' => $safePayload];
+            if ($lookup !== null) {
+                $response['status_lookup'] = $this->doku->auditPayload($lookup);
+            }
+            $payment->update(['raw_response' => $response]);
             $this->applyStatus->execute($payment, $status);
 
             return false;

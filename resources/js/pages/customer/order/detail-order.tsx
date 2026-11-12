@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePoll } from '@inertiajs/react';
 import {
     Check,
     ClipboardList,
@@ -29,6 +29,12 @@ type IconComponent = ComponentType<{
     strokeWidth?: number;
 }>;
 type StatusTone = 'green' | 'blue' | 'amber' | 'red' | 'gray';
+
+function PendingPaymentPoll() {
+    usePoll(60_000, { only: ['order'] });
+
+    return null;
+}
 
 type OrderItem = {
     id: number;
@@ -587,6 +593,7 @@ export default function DetailOrder({ order, supportPhone }: Props) {
                 { label: order.order_number },
             ]}
         >
+            {order.payment_status === 'pending' && <PendingPaymentPoll />}
             <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
                 {/* Left column */}
                 <div className="space-y-5">

@@ -8,10 +8,12 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\StockLog;
 use App\Models\User;
+use App\Models\Voucher;
 use App\Services\Admin\OrderManagementService;
 use App\Services\Admin\ShipmentManagementService;
 use App\Services\Notifications\NotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
@@ -174,7 +176,110 @@ it('retains reservations for failed attempts unknown status and unproven expiry'
         ->and($payment->order->fresh()->payment_status)->toBe('pending')
         ->and($payment->order->fresh()->stock_released_at)->toBeNull()
         ->and(ProductVariant::query()->pluck('reserved_stock')->all())->toBe([2, 2]);
-})->with(['FAILED', 'EXPIRED', 'NOT_FOUND', 'REFUNDED']);
+})->with(['FAILED', 'NOT_FOUND', 'REFUNDED']);
+
+it('expires QRIS and releases stock and voucher reservations exactly once', function (string $service, string $channel) {
+    $payment = createDokuPayment();
+    $voucher = Voucher::query()->create(['code' => 'EXPIRE10', 'name' => 'Expiry voucher', 'discount_type' => 'percentage', 'discount_value' => 10, 'used_count' => 1]);
+    $payment->order->update(['voucher_id' => $voucher->id]);
+    $overrides = ['service' => ['id' => $service], 'channel' => ['id' => $channel], 'transaction' => ['status' => 'EXPIRED']];
+    sendDokuNotification($this, $payment, $overrides)->assertOk();
+    $expiredAt = $payment->fresh()->expired_at;
+    sendDokuNotification($this, $payment, $overrides)->assertOk();
+    sendDokuNotification($this, $payment, $overrides, 'expired-again')->assertOk();
+
+    expect($payment->fresh()->transaction_status)->toBe('expired')
+        ->and($payment->fresh()->expired_at)->toEqual($expiredAt)
+        ->and($payment->fresh()->expired_at)->not->toBeNull()
+        ->and($payment->order->fresh()->payment_status)->toBe('expired')
+        ->and($payment->order->fresh()->order_status)->toBe('payment_expired')
+        ->and($payment->order->fresh()->expired_at)->not->toBeNull()
+        ->and(ProductVariant::query()->pluck('reserved_stock')->all())->toBe([0, 0])
+        ->and(ProductVariant::query()->pluck('stock')->all())->toBe([10, 10])
+        ->and($voucher->fresh()->used_count)->toBe(0);
+    Http::assertNothingSent();
+})->with([['QRIS', 'QRIS_DOKU'], ['SCAN_CODE', 'QRIS']]);
+
+it('verifies sparse expiry notifications through the authenticated status API', function (string $providerStatus) {
+    $payment = createDokuPayment();
+    Http::fake(['api-sandbox.doku.com/*' => Http::response(dokuPayload($payment, ['transaction' => ['status' => $providerStatus], 'service' => ['id' => 'SCAN_CODE'], 'channel' => ['id' => 'QRIS']]))]);
+    $body = json_encode(['order' => ['invoice_number' => $payment->provider_reference, 'status' => 'ORDER_EXPIRED']], JSON_THROW_ON_ERROR);
+    foreach ([1, 2] as $_) {
+        $this->call('POST', '/api/payments/doku/notification', [], [], [], dokuHeaders($body), $body)->assertOk();
+    }
+    expect($payment->fresh()->transaction_status)->toBe($providerStatus === 'SUCCESS' ? 'success' : 'expired')
+        ->and($payment->order->fresh()->payment_status)->toBe($providerStatus === 'SUCCESS' ? 'paid' : 'expired');
+    Http::assertSentCount(1);
+})->with(['EXPIRED', 'SUCCESS']);
+
+it('retains reservations when sparse expiry lookup is still pending', function () {
+    $payment = createDokuPayment();
+    Http::fake(['api-sandbox.doku.com/*' => Http::response(dokuPayload($payment, ['transaction' => ['status' => 'PENDING']]))]);
+    $body = json_encode(['order' => ['invoice_number' => $payment->provider_reference, 'status' => 'ORDER_EXPIRED']], JSON_THROW_ON_ERROR);
+    $this->call('POST', '/api/payments/doku/notification', [], [], [], dokuHeaders($body), $body)->assertOk();
+    expect($payment->fresh()->transaction_status)->toBe('pending')
+        ->and(ProductVariant::query()->pluck('reserved_stock')->all())->toBe([2, 2]);
+});
+
+it('accepts the sandbox captured expiry shape without service or channel', function () {
+    $payment = createDokuPayment();
+    $transactionLevel = DB::transactionLevel();
+    Http::fake(function () use ($payment, $transactionLevel) {
+        expect(DB::transactionLevel())->toBe($transactionLevel);
+
+        return Http::response(dokuPayload($payment, ['transaction' => ['status' => 'EXPIRED'], 'service' => ['id' => 'SCAN_CODE'], 'channel' => ['id' => 'QRIS']]));
+    });
+    $body = json_encode([
+        'order' => ['invoice_number' => $payment->provider_reference, 'amount' => 102000, 'currency' => 'IDR', 'status' => 'EXPIRED'],
+        'transaction' => ['status' => 'EXPIRED', 'date' => '2026-11-10T10:57:39Z'],
+    ], JSON_THROW_ON_ERROR);
+    $this->call('POST', '/api/payments/doku/notification', [], [], [], dokuHeaders($body), $body)->assertOk();
+    expect($payment->fresh()->transaction_status)->toBe('expired')
+        ->and($payment->order->fresh()->payment_status)->toBe('expired');
+    Http::assertSentCount(1);
+});
+
+it('rejects supplied mismatches in sparse expiry even with a valid lookup', function (array $facts) {
+    $payment = createDokuPayment();
+    Http::fake(['api-sandbox.doku.com/*' => Http::response(dokuPayload($payment, ['transaction' => ['status' => 'EXPIRED']]))]);
+    $body = json_encode(array_replace_recursive(['order' => ['invoice_number' => $payment->provider_reference, 'status' => 'ORDER_EXPIRED']], $facts), JSON_THROW_ON_ERROR);
+    $this->call('POST', '/api/payments/doku/notification', [], [], [], dokuHeaders($body), $body)->assertUnprocessable();
+    expect($payment->fresh()->transaction_status)->toBe('pending')
+        ->and(ProductVariant::query()->pluck('reserved_stock')->all())->toBe([2, 2])
+        ->and(PaymentLog::where('event_type', 'payment_notification')->count())->toBe(0);
+})->with([
+    [['order' => ['amount' => 1]]], [['order' => ['currency' => 'USD']]],
+    [['service' => ['id' => 'VIRTUAL_ACCOUNT']]], [['channel' => ['id' => 'VIRTUAL_ACCOUNT_BCA']]],
+]);
+
+it('records late success after expiry without fulfilling released stock', function () {
+    $payment = createDokuPayment();
+    sendDokuNotification($this, $payment, ['transaction' => ['status' => 'EXPIRED']])->assertOk();
+    sendDokuNotification($this, $payment, [], 'late-success')->assertOk();
+    expect($payment->fresh()->transaction_status)->toBe('success')
+        ->and($payment->order->fresh()->payment_status)->toBe('paid')
+        ->and($payment->order->fresh()->order_status)->toBe('payment_expired')
+        ->and($payment->fresh()->failure_reason)->not->toBeNull()
+        ->and(app(ShipmentManagementService::class)->canCreateShipment($payment->order->fresh(), null))->toBeFalse()
+        ->and(ProductVariant::query()->pluck('stock')->all())->toBe([10, 10]);
+});
+
+it('prioritizes transaction success over an expired checkout order', function () {
+    $payment = createDokuPayment();
+    sendDokuNotification($this, $payment, ['order' => ['status' => 'ORDER_EXPIRED']])->assertOk();
+    expect($payment->fresh()->transaction_status)->toBe('success')
+        ->and($payment->order->fresh()->stock_released_at)->toBeNull();
+});
+
+it('requests a retry when sparse expiry cannot be verified', function (bool $connectionFailure) {
+    $payment = createDokuPayment();
+    Http::fake(['api-sandbox.doku.com/*' => $connectionFailure ? Http::failedConnection() : Http::response([], 503)]);
+    $body = json_encode(['order' => ['invoice_number' => $payment->provider_reference, 'status' => 'ORDER_EXPIRED']], JSON_THROW_ON_ERROR);
+    $this->call('POST', '/api/payments/doku/notification', [], [], [], dokuHeaders($body), $body)->assertStatus(503);
+    expect($payment->fresh()->transaction_status)->toBe('pending')
+        ->and($payment->order->fresh()->stock_released_at)->toBeNull()
+        ->and(PaymentLog::where('event_type', 'payment_notification')->count())->toBe(0);
+})->with([false, true]);
 
 it('never downgrades money evidence after success', function (string $status) {
     $payment = createDokuPayment();

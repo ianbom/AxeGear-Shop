@@ -85,7 +85,24 @@ it('never releases QRIS reservations from local expiry or nonfinal provider stat
     expect($payment->order->fresh()->stock_released_at)->toBeNull()->and($payment->fresh()->paid_at)->toBeNull()
         ->and($payment->order->items->first()->variant->fresh()->reserved_stock)->toBe(2)
         ->and($payment->fresh()->transaction_status)->toBe('pending');
-})->with(['PENDING', 'FAILED', 'EXPIRED', 'UNKNOWN']);
+})->with(['PENDING', 'FAILED', 'UNKNOWN']);
+
+it('reconciles transaction and order expiry from hosted QRIS status responses', function (bool $orderExpiry) {
+    $payment = reconciliationPayment();
+    $payload = reconciliationPayload($payment, $orderExpiry ? 'PENDING' : 'EXPIRED');
+    $payload['service']['id'] = $orderExpiry ? '' : 'SCAN_CODE';
+    $payload['channel']['id'] = $orderExpiry ? '' : 'QRIS';
+    if ($orderExpiry) {
+        $payload['order']['status'] = 'ORDER_EXPIRED';
+    }
+    Http::fake(['api-sandbox.doku.com/*' => Http::response($payload)]);
+    app(SyncDokuPaymentAction::class)->execute($payment);
+    app(SyncDokuPaymentAction::class)->execute($payment);
+    expect($payment->fresh()->transaction_status)->toBe('expired')
+        ->and($payment->order->fresh()->order_status)->toBe('payment_expired')
+        ->and($payment->order->items->first()->variant->fresh()->reserved_stock)->toBe(0)
+        ->and($payment->order->items->first()->variant->fresh()->stock)->toBe(10);
+})->with([false, true]);
 
 it('records lookup failures for review and retries them in the next batch', function (string $failure) {
     $payment = reconciliationPayment();
@@ -104,6 +121,7 @@ it('records lookup failures for review and retries them in the next batch', func
     Http::swap(new Factory);
     Http::preventStrayRequests();
     Http::fake(['api-sandbox.doku.com/*' => Http::response(reconciliationPayload($payment))]);
+    $this->travel(61)->seconds();
     expect(app(SyncExpiredDokuPaymentsAction::class)->execute())->toBe(['checked' => 1, 'synced' => 1, 'failed' => 0]);
     expect($payment->fresh()->transaction_status)->toBe('success');
 })->with(['timeout', 'not-found', 'server', 'malformed']);
@@ -156,6 +174,39 @@ it('ignores forged finish status for an existing payment', function () {
     $payment = reconciliationPayment();
     $this->actingAs($payment->order->user)->get(route('payments.doku.finish', ['invoice_number' => $payment->provider_reference, 'transaction_status' => 'SUCCESS']))->assertRedirect(route('my-order'));
     expect($payment->fresh()->paid_at)->toBeNull()->and($payment->order->fresh()->payment_status)->toBe('pending');
+});
+
+it('shares the automatic lookup cooldown between customer detail and scheduler', function () {
+    $payment = reconciliationPayment();
+    Http::fake(['api-sandbox.doku.com/*' => Http::response(reconciliationPayload($payment, 'PENDING'))]);
+    $request = Request::create('/my-order/'.$payment->order_id);
+    $request->setUserResolver(fn () => $payment->order->user);
+    $service = app(OrderService::class);
+    expect($service->detailData($request, $payment->order)['order']['payment_status'])->toBe('pending');
+    $service->detailData($request, $payment->order);
+    expect(app(SyncExpiredDokuPaymentsAction::class)->execute()['synced'])->toBe(0);
+    Http::assertSentCount(1);
+    $this->travel(61)->seconds();
+    expect(app(SyncExpiredDokuPaymentsAction::class)->execute()['synced'])->toBe(1);
+    Http::assertSentCount(2);
+});
+
+it('keeps customer detail usable on provider failure and throttles retries', function () {
+    $payment = reconciliationPayment();
+    Http::fake(['api-sandbox.doku.com/*' => Http::failedConnection()]);
+    $request = Request::create('/my-order/'.$payment->order_id);
+    $request->setUserResolver(fn () => $payment->order->user);
+    $service = app(OrderService::class);
+    expect($service->detailData($request, $payment->order)['order']['payment_status'])->toBe('pending');
+    $service->detailData($request, $payment->order);
+    expect(PaymentLog::where('event_type', 'sync_error')->count())->toBe(1)
+        ->and($payment->order->fresh()->stock_released_at)->toBeNull();
+});
+
+it('does not query DOKU for another customers order', function () {
+    $payment = reconciliationPayment();
+    $this->actingAs(User::factory()->create())->get('/my-order/'.$payment->order_id)->assertNotFound();
+    Http::assertNothingSent();
 });
 
 it('rejects VA status responses for a QRIS payment', function (string $channel) {

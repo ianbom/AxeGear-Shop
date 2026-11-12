@@ -144,7 +144,7 @@ Register.layout = {
         { label: 'Register' },
     ],
     heroImage: {
-        src: '/img/login-image.png',
+        src: '/img/login-image.webp',
         alt: 'AxeGear athlete wearing mirrored performance eyewear',
     },
 

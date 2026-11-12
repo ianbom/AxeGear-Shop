@@ -706,3 +706,84 @@ yang tidak menyiapkan schema database. Verifikasi browser baru tertahan dialog
 izin remote debugging Chrome. Transaksi simulator baru dan produksi belum
 diverifikasi pada perubahan ini; bukti runtime bagian 15 tetap berlaku hanya
 untuk perbaikan webhook sebelumnya.
+
+## 17. Kedaluwarsa QRIS dan notifikasi expired — 10 November 2026
+
+Penyebab pesanan 29 tetap pending: handler hanya menerapkan SUCCESS/PENDING,
+validator menolak pasangan hosted QRIS `SCAN_CODE` / `QRIS`, dan Expired
+Notification di dashboard sandbox belum aktif. API status DOKU mengonfirmasi
+invoice tersebut EXPIRED, sementara data lokal belum pernah disinkronkan.
+
+Perbaikan:
+
+- Terima pasangan `QRIS` / `QRIS_DOKU` dan `SCAN_CODE` / `QRIS`.
+  Pasangan campuran serta channel VA tetap ditolak. Lookup autentik boleh
+  tidak memiliki service/channel sebelum metode dipilih.
+- Terapkan `transaction.status=EXPIRED`, `order.status=EXPIRED`, atau
+  `order.status=ORDER_EXPIRED`. SUCCESS memiliki prioritas atas order expiry.
+  Payment menjadi `expired`; pesanan menjadi `expired` / `payment_expired`,
+  dengan timestamp kedaluwarsa. Reservasi stok dan voucher dilepas satu kali
+  di dalam transaksi dengan urutan lock order lalu payment.
+- Signature body asli, invoice, nominal, currency, channel, deduplikasi,
+  dan proteksi pembayaran paid/refunded tetap diperiksa. SUCCESS terlambat
+  tetap mencatat dana; fulfillment diblokir jika stok sudah dilepas.
+- Notifikasi expiry tanpa nominal atau service/channel diverifikasi lewat
+  GET status autentik sebelum mengambil lock database. Fakta salah yang
+  disertakan pada notifikasi tetap ditolak. Timeout/error provider membalas
+  HTTP 503 tanpa menandai notifikasi selesai sehingga pengiriman bisa diulang.
+  Audit menyimpan fakta aman notifikasi dan hasil lookup, tanpa data pelanggan.
+- Rekonsiliasi berjalan setiap menit. Detail pesanan milik pelanggan juga
+  memicu lookup jika lewat deadline; scheduler dan detail berbagi lock cache
+  dan cooldown 60 detik, termasuk saat lookup gagal. Deadline lokal hanya
+  memicu pemeriksaan, bukan bukti untuk melepas reservasi.
+- Detail pembayaran pending memuat ulang prop `order` melalui Inertia setiap
+  60 detik. Polling berhenti ketika status pembayaran bukan pending.
+
+Konfigurasi sandbox sudah disimpan dan diverifikasi setelah memuat ulang
+dashboard: Settings → Checkout Appearance → Pengaturan Kadaluwarsa,
+Aktifkan Notifikasi Kedaluwarsa **ON**, Recover Abandoned Cart **OFF**.
+URL mengikuti instruksi pengguna untuk memakai tunnel yang sedang aktif:
+`https://improper-uranium-carrousel.ngrok-free.dev/api/payments/doku/notification`.
+Dashboard menerima URL tersebut. Ganti URL bila tunnel berubah. Produksi
+memerlukan pengaturan notifikasi yang sama pada dashboard produksi dengan
+URL HTTPS aplikasi produksi; `.env` tetap memilih API melalui
+`DOKU_IS_PRODUCTION` dan kredensial lingkungan yang sesuai.
+
+`composer run dev` kini menyertakan `php artisan schedule:work`.
+Scheduler lokal juga sudah dijalankan pada sesi ini; lognya berada di
+`storage/logs/doku-scheduler.stdout.log` dan `doku-scheduler.stderr.log`.
+Untuk produksi, jalankan scheduler Laravel melalui cron per menit:
+
+```cron
+* * * * * cd /path/to/app && php artisan schedule:run >> /dev/null 2>&1
+```
+
+Verifikasi runtime:
+
+- Pesanan **29** dipulihkan menggunakan `SyncDokuPaymentAction` dan API
+  sandbox, tanpa menulis status secara langsung. Status menjadi
+  `expired` / `payment_expired`; browser menampilkan **Pembayaran kedaluwarsa**.
+  Sinkronisasi ulang mempertahankan timestamp dan angka stok/reservasi.
+- Dibuat satu pesanan uji sandbox **30**, invoice
+  `EXPIRY-TEST-20261110105739`, Rp10.001, deadline satu menit, tanpa produk
+  atau pengiriman sehingga tidak mengubah inventori.
+- DOKU mengirim webhook nyata pukul **17:58:39 WIB**, dengan
+  `order.status=EXPIRED` dan `transaction.status=EXPIRED`, tanpa service/channel.
+  Handler memverifikasi lookup `SCAN_CODE` / `QRIS` lalu membalas **HTTP 200**.
+  Payment dan order berubah menjadi expired melalui satu log
+  `payment_notification`; tidak ada sinkronisasi manual pada pesanan uji.
+  Browser detail pesanan 30 juga menampilkan status kedaluwarsa.
+- **264 tes PHP, 1349 assertions lulus**: integrasi DOKU, webhook,
+  rekonsiliasi, finish redirect, checkout/voucher/ongkir, detail pelanggan,
+  dan workflow fulfillment. Regression test memakai bentuk webhook sandbox
+  di atas, termasuk pemeriksaan lookup di luar transaksi handler.
+- Pint terarah, ESLint/Prettier halaman detail, TypeScript, pemeriksaan Node
+  order-tracking, build Vite, serta `git diff --check` lulus. Hasil build
+  verifikasi dikembalikan agar diff tetap berisi source. Pengujian provider
+  nyata dilakukan di sandbox; transaksi produksi tidak dijalankan.
+
+Referensi resmi:
+
+- https://developers.doku.com/accept-payments/doku-checkout/order-and-notification-handling/expired-notification
+- https://developers.doku.com/accept-payments/doku-checkout/order-and-notification-handling/order-status-for-checkout-page
+- https://developers.doku.com/get-started-with-doku-api/check-status-api/non-snap

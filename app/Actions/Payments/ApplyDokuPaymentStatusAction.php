@@ -3,6 +3,8 @@
 namespace App\Actions\Payments;
 
 use App\Actions\Stock\FinalizeReservedStockAction;
+use App\Actions\Stock\ReleaseStockReservationAction;
+use App\Actions\Vouchers\ReleaseVoucherReservationAction;
 use App\Models\Payment;
 use App\Services\Notifications\NotificationService;
 use DomainException;
@@ -13,6 +15,8 @@ class ApplyDokuPaymentStatusAction
     public function __construct(
         private readonly FinalizeReservedStockAction $finalizeStock,
         private readonly NotificationService $notifications,
+        private readonly ReleaseStockReservationAction $releaseStock,
+        private readonly ReleaseVoucherReservationAction $releaseVoucher,
     ) {}
 
     // Caller holds order then payment locks and has authenticated/validated the provider facts.
@@ -44,7 +48,14 @@ class ApplyDokuPaymentStatusAction
         if ($status === 'PENDING') {
             return;
         }
-        // ponytail: QRIS terminal-expiry contract is unverified; retain reservations until provider finality is established.
+        if ($status === 'EXPIRED') {
+            $payment->update(['transaction_status' => 'expired', 'expired_at' => now(), 'failure_reason' => null]);
+            $order->update(['payment_status' => 'expired', 'order_status' => 'payment_expired', 'expired_at' => now()]);
+            $this->releaseStock->execute($order);
+            $this->releaseVoucher->execute($order);
+
+            return;
+        }
         $payment->update(['failure_reason' => 'Status DOKU belum membuktikan invoice berakhir. Sinkronisasi akan dicoba kembali.']);
     }
 

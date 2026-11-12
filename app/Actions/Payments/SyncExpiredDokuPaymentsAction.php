@@ -23,8 +23,9 @@ class SyncExpiredDokuPaymentsAction
                 foreach ($payments as $payment) {
                     $stats['checked']++;
                     try {
-                        $this->syncPayment->execute($payment, 'scheduled_expiry_sync');
-                        $stats['synced']++;
+                        if ($this->syncPayment->syncIfDue($payment, 'scheduled_expiry_sync')) {
+                            $stats['synced']++;
+                        }
                     } catch (Throwable) {
                         $stats['failed']++;
                         Log::warning('doku_status_sync_failed', ['payment_id' => $payment->id]);

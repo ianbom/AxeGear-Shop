@@ -4,6 +4,7 @@ namespace App\Actions\Payments;
 
 use App\Models\Payment;
 use App\Services\Integrations\DokuService;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -14,6 +15,23 @@ class SyncDokuPaymentAction
         private readonly DokuService $doku,
         private readonly ApplyDokuPaymentStatusAction $applyStatus,
     ) {}
+
+    public function syncIfDue(Payment $payment, string $eventType = 'customer_expiry_sync'): bool
+    {
+        return Cache::lock('doku-status-sync:'.$payment->id, 30)->get(function () use ($payment, $eventType): bool {
+            $payment = $payment->fresh('order');
+            if ($payment->payment_provider !== 'doku' || $payment->payment_method !== 'qris'
+                || $payment->paid_at !== null || $payment->transaction_status !== 'pending'
+                || $payment->order->payment_status !== 'pending'
+                || (! $payment->expires_at?->isPast() && $payment->failure_reason === null)
+                || $payment->last_synced_at?->gt(now()->subMinute())) {
+                return false;
+            }
+            $this->execute($payment, $eventType);
+
+            return true;
+        }) === true;
+    }
 
     public function execute(Payment $payment, string $eventType = 'admin_sync'): void
     {

@@ -2,6 +2,7 @@
 
 namespace App\Services\Customer;
 
+use App\Actions\Payments\SyncDokuPaymentAction;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\ShippingStatus;
@@ -15,7 +16,10 @@ class OrderService
 {
     public const SORTS = ['created_at', 'order_number', 'grand_total', 'payment_status', 'order_status'];
 
-    public function __construct(private readonly DokuService $doku) {}
+    public function __construct(
+        private readonly DokuService $doku,
+        private readonly SyncDokuPaymentAction $syncPayment,
+    ) {}
 
     public function indexData(Request $request): array
     {
@@ -70,6 +74,14 @@ class OrderService
     {
         abort_unless((int) $order->user_id === (int) $request->user()->id, 404);
 
+        if ($order->payment) {
+            try {
+                $this->syncPayment->syncIfDue($order->payment);
+            } catch (ValidationException) {
+                // Keep the order visible while DOKU is unavailable; the scheduler retries after the cooldown.
+            }
+            $order->refresh();
+        }
         $order->load([
             'items' => fn ($query) => $query->with('product:id,slug')->oldest('id'),
             'address',

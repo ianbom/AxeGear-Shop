@@ -24,7 +24,7 @@ export default function AuthLayout({
 }: AuthLayoutProps) {
     const resolvedHeroImage =
         heroImage ?? {
-            src: '/img/login-image.png',
+            src: '/img/login-image.webp',
             alt: 'AxeGear athlete wearing mirrored performance eyewear',
         };
 

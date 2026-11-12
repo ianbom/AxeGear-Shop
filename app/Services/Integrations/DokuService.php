@@ -155,15 +155,19 @@ class DokuService
         $service = data_get($payload, 'service.id');
         $channel = data_get($payload, 'channel.id');
         $method = self::PAYMENT_METHODS[$payment->payment_method] ?? null;
-        $expectedService = 'QRIS';
-        $expectedChannel = 'QRIS_DOKU';
+        $matchesChannel = collect([['QRIS', 'QRIS_DOKU'], ['SCAN_CODE', 'QRIS']])->contains(
+            fn ($pair) => ($service === $pair[0] || (! $requireService && in_array($service, [null, ''], true)))
+                && ($channel === $pair[1] || (! $requireService && in_array($channel, [null, ''], true)))
+        );
+        if ($status !== 'SUCCESS' && in_array(data_get($payload, 'order.status'), ['ORDER_EXPIRED', 'EXPIRED'], true)) {
+            $status = 'EXPIRED';
+        }
         if ($payment->payment_provider !== 'doku'
             || $method === null
             || data_get($payload, 'order.invoice_number') !== $payment->provider_reference
             || ! $this->amountMatches($payment, data_get($payload, 'order.amount'))
             || (data_get($payload, 'order.currency') !== null && data_get($payload, 'order.currency') !== 'IDR')
-            || (($requireService || $service !== null) && $service !== $expectedService)
-            || (($requireService || $channel !== null) && $channel !== $expectedChannel)
+            || ! $matchesChannel
             || ! is_string($status) || $status === '' || strlen($status) > 50) {
             throw ValidationException::withMessages(['payment' => 'Data status DOKU tidak sesuai pembayaran.']);
         }
@@ -174,7 +178,7 @@ class DokuService
     public function auditPayload(array $payload): array
     {
         $safe = [];
-        foreach (['order.invoice_number', 'order.amount', 'order.currency', 'service.id', 'channel.id', 'transaction.status', 'transaction.date'] as $key) {
+        foreach (['order.invoice_number', 'order.amount', 'order.currency', 'order.status', 'service.id', 'channel.id', 'transaction.status', 'transaction.date'] as $key) {
             $value = data_get($payload, $key);
             if (is_string($value) || is_int($value) || (is_float($value) && is_finite($value))) {
                 data_set($safe, $key, $value);
