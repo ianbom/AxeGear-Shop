@@ -5,6 +5,8 @@ namespace App\Actions\Payments;
 use App\Actions\Stock\FinalizeReservedStockAction;
 use App\Actions\Stock\ReleaseStockReservationAction;
 use App\Actions\Vouchers\ReleaseVoucherReservationAction;
+use App\Jobs\SendPaidOrderNotificationJob;
+use App\Models\EmailNotification;
 use App\Models\Payment;
 use App\Services\Notifications\NotificationService;
 use DomainException;
@@ -42,6 +44,9 @@ class ApplyDokuPaymentStatusAction
                 'order_status' => $order->order_status === 'pending_payment' ? 'paid' : $order->order_status,
             ]);
             $this->notifications->forOrder($order, 'Pembayaran berhasil', "Pembayaran order {$order->order_number} berhasil diterima.", 'payment');
+            foreach (EmailNotification::query()->where('is_active', true)->get(['id', 'email']) as $recipient) {
+                SendPaidOrderNotificationJob::dispatch($order->id, $recipient->id, $recipient->email);
+            }
 
             return;
         }

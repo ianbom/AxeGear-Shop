@@ -2,6 +2,8 @@
 
 use App\Actions\Payments\SyncDokuPaymentAction;
 use App\Actions\Payments\SyncExpiredDokuPaymentsAction;
+use App\Jobs\SendPaidOrderNotificationJob;
+use App\Models\EmailNotification;
 use App\Models\Notification;
 use App\Models\Order;
 use App\Models\Payment;
@@ -16,6 +18,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -50,6 +53,17 @@ function reconciliationPayload(Payment $payment, string $status = 'SUCCESS'): ar
     // Documentation-shaped status response; not a sandbox capture.
     return ['order' => ['invoice_number' => $payment->provider_reference, 'amount' => 100000], 'transaction' => ['status' => $status]];
 }
+
+it('queues purchase email when reconciliation first confirms success', function (string $source) {
+    $payment = reconciliationPayment();
+    $recipient = EmailNotification::query()->create(['email' => 'owner@example.test']);
+    Queue::fake();
+    Http::fake(['api-sandbox.doku.com/*' => Http::response(reconciliationPayload($payment))]);
+    app(SyncDokuPaymentAction::class)->execute($payment, $source);
+    app(SyncDokuPaymentAction::class)->execute($payment, $source);
+    Queue::assertPushed(SendPaidOrderNotificationJob::class, 1);
+    Queue::assertPushed(SendPaidOrderNotificationJob::class, fn ($job) => $job->orderId === $payment->order_id && $job->recipientId === $recipient->id);
+})->with(['admin_sync', 'scheduled_expiry_sync', 'customer_expiry_sync']);
 
 it('reconciles success once and preserves paid status against later observations', function () {
     $payment = reconciliationPayment();

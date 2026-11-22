@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -12,20 +11,9 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
         $this->call([
+            AxeGearSqlSeeder::class,
             UserSeeder::class,
-            CategorySeeder::class,
-            CollectionSeeder::class,
-            AxeGearSeeder::class,
-            BannerSeeder::class,
-            PageSeeder::class,
-            NewProductPageSeeder::class,
-            BlogArticleSeeder::class,
-            GallerySeeder::class,
-            SiteSettingSeeder::class,
         ]);
     }
 }
-

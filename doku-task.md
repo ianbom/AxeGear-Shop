@@ -787,3 +787,71 @@ Referensi resmi:
 - https://developers.doku.com/accept-payments/doku-checkout/order-and-notification-handling/expired-notification
 - https://developers.doku.com/accept-payments/doku-checkout/order-and-notification-handling/order-status-for-checkout-page
 - https://developers.doku.com/get-started-with-doku-api/check-status-api/non-snap
+
+## 18. Email admin untuk pembelian lunas — 12 November 2026
+
+Model `EmailNotification` memakai tabel singular `email_notification`: `id`,
+`email` unik (maksimum 254 karakter), `is_active` default true, dan timestamps.
+Migration baru menambah tabel tanpa mengubah migration lama atau mereset data.
+Menu **Sistem → Email Notifikasi Pembelian** di `/admin/email-notifications`
+menyediakan daftar/pencarian/pagination, tambah, edit status aktif, dan hapus
+dengan konfirmasi. Semua endpoint hanya dapat diakses admin aktif. Email
+dinormalisasi menjadi lowercase dan trim sebelum validasi keunikan.
+Tambah penerima memakai modal pada halaman daftar, tanpa berpindah halaman.
+Modal mempertahankan form ketika validasi gagal dan menutup setelah berhasil
+disimpan. Form edit tetap tersedia pada halaman edit.
+Verifikasi modal di browser: URL tetap di daftar, email duplikat menampilkan
+error di dalam modal, penyimpanan menutup modal dan memperbarui daftar.
+Data penerima uji sudah dihapus. Tes CRUD/job (15 tes, 84 assertions), lint,
+format, dan TypeScript lulus setelah perubahan modal.
+
+Pada transisi pertama pembayaran DOKU menjadi SUCCESS, handler bersama
+webhook dan sinkronisasi mengantrekan `SendPaidOrderNotificationJob` per
+penerima aktif, setelah transaksi commit. Guard pembayaran yang sudah lunas
+mencegah webhook berulang atau sinkronisasi ulang mengantrekan email kembali.
+Transaksi rollback tidak melepas job. Tidak ada pengiriman retroaktif untuk
+pesanan yang sebelumnya sudah lunas.
+
+Job memeriksa ulang bahwa penerima masih ada, aktif, dan alamatnya sama
+dengan saat diantrekan. Pesanan harus masih ada dan memiliki `paid_at`.
+Mailable dikirim di dalam job, tanpa antrean email kedua. Ringkasan berisi
+nomor pesanan, pembeli, produk/varian/jumlah, total, waktu bayar WIB, dan link
+detail admin. SUCCESS terlambat tetap memberi tahu admin; kegagalan finalisasi
+stok ditampilkan sebagai kebutuhan pemeriksaan sebelum fulfillment.
+
+Job memakai tiga percobaan, backoff 10/60 detik, timeout 60 detik; SMTP
+dibatasi 20 detik. Kegagalan dicatat sebagai `paid_order_notification_failed`
+dengan ID pesanan/penerima dan kelas exception, tanpa secret atau alamat email.
+Kegagalan SMTP tidak mengubah pembayaran yang sudah lunas. Queue dan SMTP
+tidak menjamin pengiriman tepat satu kali ketika server menerima email tetapi
+koneksi terputus sebelum worker mencatat keberhasilan.
+
+Konfigurasi saat implementasi: `QUEUE_CONNECTION=database`, `MAIL_MAILER=log`.
+Mode log menulis email ke log aplikasi, bukan inbox. Untuk pengiriman nyata,
+isi konfigurasi mail Laravel dari provider yang digunakan:
+
+```dotenv
+MAIL_MAILER=smtp
+MAIL_SCHEME=smtps
+MAIL_HOST=smtp.example.com
+MAIL_PORT=465
+MAIL_USERNAME=your-smtp-username
+MAIL_PASSWORD=your-smtp-password
+MAIL_FROM_ADDRESS=verified-sender@example.com
+MAIL_FROM_NAME="AxeGear"
+```
+
+Gunakan scheme/port sesuai provider; `smtp` port 587 mendukung STARTTLS.
+Jangan memakai kredensial contoh di atas. Setelah mengubah konfigurasi,
+jalankan `php artisan config:clear` pada lokal atau bangun ulang config cache
+produksi, kemudian restart worker. `composer run dev` sudah menjalankan
+queue listener. Produksi memerlukan worker yang terus hidup, misalnya
+`php artisan queue:work --tries=3 --timeout=60`; periksa kegagalan melalui
+`php artisan queue:failed`, lalu retry job setelah penyebabnya diperbaiki.
+Pastikan `APP_URL` menunjuk domain aplikasi agar tautan admin dalam email benar.
+
+Verifikasi: 289 tes terarah / 1463 assertions lulus pada CRUD, otorisasi,
+keunikan email, job, database queue nyata dengan fake mail, commit/rollback,
+webhook/sinkronisasi berulang, expiry, checkout dan fulfillment. Pengujian
+tidak mengirim email ke alamat nyata; SMTP produksi tetap memerlukan
+konfigurasi provider pengguna.

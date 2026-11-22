@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\CollectionController;
 use App\Http\Controllers\Admin\CustomerAddressController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\EmailNotificationController;
 use App\Http\Controllers\Admin\GalleryImageController;
 use App\Http\Controllers\Admin\NewProductPageController;
 use App\Http\Controllers\Admin\OrderController;
@@ -186,6 +187,10 @@ Route::middleware(['auth', 'admin', 'admin.activity'])->prefix('admin')->name('a
     Route::get('notifications', [AdminNotificationController::class, 'index'])->name('notifications.index');
     Route::get('notifications/create', [AdminNotificationController::class, 'create'])->name('notifications.create');
     Route::post('notifications', [AdminNotificationController::class, 'store'])->name('notifications.store');
+
+    Route::resource('email-notifications', EmailNotificationController::class)
+        ->parameters(['email-notifications' => 'emailNotification'])
+        ->except('show');
 
     Route::get('wishlists', [WishlistInsightController::class, 'index'])->name('wishlists.index');
 

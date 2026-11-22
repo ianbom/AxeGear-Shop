@@ -1,5 +1,8 @@
 <?php
 
+use App\Jobs\SendPaidOrderNotificationJob;
+use App\Mail\PaidOrderNotificationMail;
+use App\Models\EmailNotification;
 use App\Models\Notification;
 use App\Models\Order;
 use App\Models\Payment;
@@ -15,6 +18,7 @@ use App\Services\Notifications\NotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
@@ -70,6 +74,41 @@ function sendDokuNotification($test, Payment $payment, array $overrides = [], st
 
     return $test->call('POST', '/api/payments/doku/notification', [], [], [], dokuHeaders($body, $id), $body);
 }
+
+it('queues paid purchase emails only once for active recipients', function () {
+    $payment = createDokuPayment();
+    $owner = EmailNotification::query()->create(['email' => 'owner@example.test']);
+    $sales = EmailNotification::query()->create(['email' => 'sales@example.test']);
+    EmailNotification::query()->create(['email' => 'inactive@example.test', 'is_active' => false]);
+    Queue::fake();
+    sendDokuNotification($this, $payment)->assertOk();
+    sendDokuNotification($this, $payment)->assertOk();
+    sendDokuNotification($this, $payment, [], 'duplicate-success')->assertOk();
+    Queue::assertPushed(SendPaidOrderNotificationJob::class, 2);
+    foreach ([$owner, $sales] as $recipient) {
+        Queue::assertPushed(SendPaidOrderNotificationJob::class, fn ($job) => $job->orderId === $payment->order_id && $job->recipientId === $recipient->id && $job->email === $recipient->email && $job->afterCommit === true);
+    }
+});
+
+it('does not queue purchase emails for non-success or invalid notifications', function (string $status) {
+    $payment = createDokuPayment();
+    EmailNotification::query()->create(['email' => 'owner@example.test']);
+    Queue::fake();
+    sendDokuNotification($this, $payment, ['transaction' => ['status' => $status]])->assertOk();
+    sendDokuNotification($this, $payment, ['order' => ['amount' => 1]], 'wrong-amount')->assertUnprocessable();
+    Queue::assertNothingPushed();
+})->with(['PENDING', 'EXPIRED', 'FAILED']);
+
+it('queues purchase email on late success even when stock was released', function () {
+    $payment = createDokuPayment();
+    EmailNotification::query()->create(['email' => 'owner@example.test']);
+    Queue::fake();
+    sendDokuNotification($this, $payment, ['transaction' => ['status' => 'EXPIRED']])->assertOk();
+    sendDokuNotification($this, $payment, [], 'late-success-email')->assertOk();
+    Queue::assertPushed(SendPaidOrderNotificationJob::class, 1);
+    $mail = new PaidOrderNotificationMail($payment->order->fresh());
+    $mail->assertSeeInHtml('memerlukan pemeriksaan admin');
+});
 
 it('applies DOKU success once across duplicate bodies and request ids', function () {
     $payment = createDokuPayment();

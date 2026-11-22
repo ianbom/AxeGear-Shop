@@ -82,6 +82,65 @@ it('cannot update address that belongs to another user', function () {
         ->assertNotFound();
 });
 
+it('shows actionable Indonesian errors for missing address fields', function (string $method) {
+    app()->setLocale('id');
+    $user = User::factory()->create();
+    $address = $method === 'put' ? createAddress($user) : null;
+    $original = $address?->fresh()->getAttributes();
+    $url = $address ? route('manage-address.update', $address) : route('manage-address.store');
+
+    $this->actingAs($user)
+        ->from(route('manage-address'))
+        ->{$method}($url, ['label' => 'Alamat percobaan'])
+        ->assertRedirect(route('manage-address'))
+        ->assertSessionHasInput('label', 'Alamat percobaan')
+        ->assertSessionHasErrors([
+            'recipient_name' => 'Nama penerima wajib diisi.',
+            'recipient_phone' => 'Nomor telepon wajib diisi.',
+            'province' => 'Pilih area dari hasil pencarian kode pos untuk mengisi provinsi.',
+            'city' => 'Pilih area dari hasil pencarian kode pos untuk mengisi kota.',
+            'district' => 'Pilih area dari hasil pencarian kode pos untuk mengisi kecamatan.',
+            'postal_code' => 'Pilih area dari hasil pencarian kode pos untuk mengisi kode pos.',
+            'biteship_area_id' => 'Pilih area pengiriman dari hasil pencarian kode pos.',
+            'full_address' => 'Alamat lengkap wajib diisi.',
+        ]);
+
+    $this->assertDatabaseCount('customer_addresses', $address ? 1 : 0);
+    if ($address) {
+        expect($address->fresh()->getAttributes())->toBe($original);
+    }
+})->with(['post', 'put']);
+
+it('explains invalid address values in Indonesian', function (string $method, string $field, mixed $value, string $message) {
+    app()->setLocale('id');
+    $user = User::factory()->create();
+    $address = $method === 'put' ? createAddress($user) : null;
+    $original = $address?->fresh()->getAttributes();
+    $url = $address ? route('manage-address.update', $address) : route('manage-address.store');
+
+    $this->actingAs($user)
+        ->from(route('manage-address'))
+        ->{$method}($url, addressPayload([$field => $value]))
+        ->assertRedirect(route('manage-address'))
+        ->assertSessionHasErrors([$field => $message]);
+
+    $this->assertDatabaseCount('customer_addresses', $address ? 1 : 0);
+    if ($address) {
+        expect($address->fresh()->getAttributes())->toBe($original);
+    }
+})->with(['post', 'put'])->with([
+    'recipient type' => ['recipient_name', ['invalid'], 'Nama penerima harus berupa teks.'],
+    'recipient length' => ['recipient_name', str_repeat('a', 151), 'Nama penerima maksimal 150 karakter.'],
+    'phone length' => ['recipient_phone', str_repeat('1', 31), 'Nomor telepon maksimal 30 karakter.'],
+    'address length' => ['full_address', str_repeat('a', 5001), 'Alamat lengkap maksimal 5000 karakter.'],
+    'note length' => ['note', str_repeat('a', 2001), 'Catatan alamat maksimal 2000 karakter.'],
+    'latitude type' => ['latitude', 'invalid', 'Koordinat lintang harus berupa angka.'],
+    'latitude range' => ['latitude', 91, 'Koordinat lintang harus berada di antara -90 dan 90.'],
+    'longitude type' => ['longitude', 'invalid', 'Koordinat bujur harus berupa angka.'],
+    'longitude range' => ['longitude', -181, 'Koordinat bujur harus berada di antara -180 dan 180.'],
+    'default choice' => ['is_default', 'invalid', 'Pilihan alamat utama harus berupa pilihan ya atau tidak.'],
+]);
+
 it('allows deleting address even when it is referenced by order', function () {
     $user = User::factory()->create();
     $address = createAddress($user, ['is_default' => true]);

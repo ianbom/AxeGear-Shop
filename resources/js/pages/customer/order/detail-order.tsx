@@ -663,14 +663,6 @@ export default function DetailOrder({ order, supportPhone }: Props) {
                                 label="Dukungan"
                             />
                         </div>
-                        {order.payment_status === 'pending' && (
-                            <p className="px-4 pb-4 text-xs text-muted-foreground sm:px-5">
-                                Pembatalan pembayaran DOKU dinonaktifkan
-                                sementara. Jika pembayaran belum dapat
-                                dilanjutkan, hubungi toko untuk pemeriksaan
-                                status. Jangan membuat pembayaran baru.
-                            </p>
-                        )}
                         {!supportUrl && (
                             <p className="px-4 pb-4 text-xs text-muted-foreground sm:px-5">
                                 Nomor WhatsApp toko belum tersedia.

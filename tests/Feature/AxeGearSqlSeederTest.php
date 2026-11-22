@@ -17,6 +17,7 @@ const AXE_GEAR_SQL_COUNTS = [
     'gallery_images' => 1,
     'new_product_gallery_images' => 7,
     'new_product_pages' => 1,
+    'pages' => 6,
     'products' => 66,
     'product_collections' => 28,
     'product_images' => 346,
@@ -50,23 +51,30 @@ function axeGearSqlFixtureSeeder(string $path, string $inserts): AxeGearSqlSeede
     };
 }
 
-it('imports all fourteen tables from the actual dump without importing private or transactional tables', function () {
-    $user = User::factory()->create();
-    $this->seed(AxeGearSqlSeeder::class);
+it('seeds the default database from the actual dump without importing private or transactional tables', function () {
+    $this->seed();
 
     foreach (AXE_GEAR_SQL_COUNTS as $table => $count) {
         $this->assertDatabaseCount($table, $count);
     }
 
-    $this->assertDatabaseCount('users', 1);
-    $this->assertDatabaseHas('users', ['id' => $user->id, 'email' => $user->email]);
-    foreach (['orders', 'order_items', 'payments', 'payment_logs', 'customer_addresses', 'stock_logs', 'pages'] as $table) {
+    $this->assertDatabaseCount('users', 2);
+    $this->assertDatabaseHas('users', ['role' => 'admin']);
+    $this->assertDatabaseHas('pages', ['slug' => 'care-guide']);
+    expect(DB::table('product_variants')->where('reserved_stock', '!=', 0)->count())->toBe(0);
+
+    foreach ([
+        'admin_activity_logs', 'biteship_webhook_logs', 'carts', 'cart_items', 'customer_addresses',
+        'notifications', 'orders', 'order_addresses', 'order_items', 'payments', 'payment_logs',
+        'password_reset_tokens', 'personal_access_tokens', 'product_reviews', 'sessions', 'shipments',
+        'shipment_trackings', 'stock_logs', 'vouchers', 'voucher_categories', 'voucher_products', 'wishlists',
+    ] as $table) {
         $this->assertDatabaseCount($table, 0);
     }
     expect(DB::select('PRAGMA foreign_key_check'))->toBe([]);
 });
 
-it('preserves ids, hierarchy, dimensions, stock, timestamps, soft deletes and pivot relations', function () {
+it('preserves catalog data and clears stock reservations from the dump', function () {
     $seeder = axeGearSqlFixtureSeeder($this->sqlPath, <<<'SQL'
 INSERT INTO `categories` (`id`, `parent_id`, `name`, `slug`) VALUES
 (12, 11, 'Child', 'child'), (11, NULL, 'Parent', 'parent');
@@ -89,7 +97,7 @@ SQL);
 
     $this->assertDatabaseHas('categories', ['id' => 12, 'parent_id' => 11]);
     $this->assertDatabaseHas('products', ['id' => 31, 'category_id' => 12, 'regular_price' => 199999.99, 'sale_price' => null, 'weight' => 101, 'created_at' => '2026-10-01 01:02:03', 'updated_at' => '2026-10-02 04:05:06', 'deleted_at' => '2026-10-03 07:08:09']);
-    $this->assertDatabaseHas('product_variants', ['id' => 41, 'product_id' => 31, 'stock' => 50, 'reserved_stock' => 3, 'weight' => 202, 'length' => 21, 'width' => 22, 'height' => 23, 'is_active' => 1]);
+    $this->assertDatabaseHas('product_variants', ['id' => 41, 'product_id' => 31, 'stock' => 50, 'reserved_stock' => 0, 'weight' => 202, 'length' => 21, 'width' => 22, 'height' => 23, 'is_active' => 1]);
     $this->assertDatabaseHas('product_images', ['id' => 51, 'product_id' => 31, 'is_primary' => 1]);
     $this->assertDatabaseHas('product_collections', ['id' => 61, 'product_id' => 31, 'collection_id' => 21, 'sort_order' => 7]);
     $this->assertDatabaseHas('gallery_category_image', ['gallery_image_id' => 81, 'gallery_category_id' => 71]);
@@ -131,19 +139,20 @@ SQL);
 it('replaces existing rows and is repeatable without duplicates or leftovers', function () {
     DB::table('banners')->insert(['id' => 700, 'title' => 'Old', 'image_desktop_url' => 'https://example.test/old.webp']);
     DB::table('site_settings')->insert(['id' => 700, 'key' => 'old_fixture', 'value' => 'old', 'type' => 'text']);
-    $this->seed(AxeGearSqlSeeder::class);
+    $this->seed();
     $first = [];
     foreach (array_keys(AXE_GEAR_SQL_COUNTS) as $table) {
         $first[$table] = DB::table($table)->get()->toArray();
     }
 
-    $this->seed(AxeGearSqlSeeder::class);
+    $this->seed();
 
     foreach ($first as $table => $rows) {
         expect(DB::table($table)->get()->toArray())->toEqual($rows);
     }
     $this->assertDatabaseMissing('banners', ['id' => 700]);
     $this->assertDatabaseMissing('site_settings', ['key' => 'old_fixture']);
+    $this->assertDatabaseCount('users', 2);
 });
 
 it('refuses replacement when external data references the catalog', function (string $table) {
