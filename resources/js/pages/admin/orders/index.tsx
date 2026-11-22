@@ -104,16 +104,7 @@ const fmt = (v: string | number) =>
 const getStatusConfig = (status: string) => {
     const s = status.toLowerCase();
 
-    if (
-        [
-            'paid',
-            'completed',
-            'settlement',
-            'capture',
-            'accept',
-            'delivered',
-        ].includes(s)
-    ) {
+    if (['paid', 'completed', 'success', 'accept', 'delivered'].includes(s)) {
         return {
             label: status.replace(/_/g, ' '),
             dot: 'bg-emerald-400',

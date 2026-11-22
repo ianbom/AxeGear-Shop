@@ -15,7 +15,7 @@ class AxeGearSqlSeeder extends Seeder
     private const TABLES = [
         'categories', 'collections', 'products', 'product_variants', 'product_images', 'product_collections',
         'gallery_categories', 'gallery_images', 'gallery_category_image',
-        'new_product_pages', 'new_product_gallery_images', 'banners', 'blog_articles', 'site_settings',
+        'new_product_pages', 'new_product_gallery_images', 'banners', 'blog_articles', 'pages', 'site_settings',
     ];
 
     private const REFERENCES = [
@@ -59,6 +59,8 @@ class AxeGearSqlSeeder extends Seeder
                         $values = $row;
                         if ($table === 'categories') {
                             $values['parent_id'] = null;
+                        } elseif ($table === 'product_variants') {
+                            $values['reserved_stock'] = 0;
                         }
                         DB::table($table)->insert($values);
                     }
@@ -142,8 +144,9 @@ class AxeGearSqlSeeder extends Seeder
             } while (true);
         }
 
-        if (array_diff(self::TABLES, array_keys($seen)) !== []) {
-            throw new RuntimeException('Dump SQL tidak lengkap: seluruh 14 tabel harus tersedia.');
+        $missingTables = array_diff(self::TABLES, array_keys($seen));
+        if ($missingTables !== []) {
+            throw new RuntimeException('Dump SQL tidak lengkap. Tabel yang tidak ditemukan: '.implode(', ', $missingTables));
         }
 
         return $data;

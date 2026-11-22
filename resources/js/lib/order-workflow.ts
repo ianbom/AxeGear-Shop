@@ -43,8 +43,6 @@ const paymentIssues: Record<string, string> = {
     failed: orderIssues.payment_failed,
     expired: orderIssues.payment_expired,
     cancelled: 'Pembayaran dibatalkan.',
-    manual_review:
-        'Pembayaran memerlukan pemeriksaan sebelum pesanan diproses.',
     refunded: orderIssues.refunded,
     partially_refunded:
         'Pembayaran dikembalikan sebagian. Periksa detail pembayaran.',

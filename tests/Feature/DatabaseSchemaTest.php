@@ -48,3 +48,30 @@ it('matches the ecommerce database specification', function () {
         'stock_finalized_at',
     ]))->toBeTrue();
 });
+
+it('preserves configured payment expiry when defaults are seeded again', function () {
+    \Illuminate\Support\Facades\DB::table('site_settings')->insert([
+        'key' => 'payment_expiry_duration', 'value' => '30', 'type' => 'integer',
+    ]);
+    $this->seed(\Database\Seeders\SiteSettingSeeder::class);
+    expect(\Illuminate\Support\Facades\DB::table('site_settings')->where('key', 'payment_expiry_duration')->value('value'))->toBe('30');
+});
+
+it('stores DOKU payment identities without legacy gateway columns', function () {
+    expect(Schema::hasColumns('payments', [
+        'provider_reference', 'create_request_id', 'checkout_url', 'expires_at', 'last_synced_at',
+    ]))->toBeTrue();
+
+    foreach (['midtrans_order_id', 'midtrans_transaction_id', 'midtrans_snap_token', 'midtrans_redirect_url', 'fraud_status'] as $column) {
+        expect(Schema::hasColumn('payments', $column))->toBeFalse();
+    }
+
+    expect(Schema::hasColumn('payment_logs', 'notification_request_id'))->toBeTrue();
+    $indexes = collect(Schema::getIndexes('payments'));
+    foreach ([['order_id'], ['provider_reference'], ['create_request_id']] as $columns) {
+        expect($indexes->contains(fn (array $index) => $index['unique'] && $index['columns'] === $columns))->toBeTrue();
+    }
+    expect(collect(Schema::getIndexes('payment_logs'))->contains(
+        fn (array $index) => $index['unique'] && $index['columns'] === ['provider', 'notification_request_id'],
+    ))->toBeTrue();
+});

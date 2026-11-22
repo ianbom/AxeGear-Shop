@@ -41,6 +41,11 @@ class SiteSettingSeeder extends Seeder
 
         ];
 
+        $settings = array_values(array_filter($settings, fn (array $setting): bool =>
+            $setting['key'] !== 'payment_expiry_duration'
+            || ! DB::table('site_settings')->where('key', 'payment_expiry_duration')->exists()
+        ));
+
         foreach ($settings as &$setting) {
             $setting['created_at'] = $now;
             $setting['updated_at'] = $now;

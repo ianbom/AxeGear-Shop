@@ -15,7 +15,7 @@ it('appends a consistent small load-test dataset', function () {
         ->and(DB::table('product_images')->where('image_url', 'like', 'https://placehold.co/%')->count())->toBeGreaterThanOrEqual(3)
         ->and(DB::table('orders')->where('order_number', 'like', 'LT-%')->count())->toBe(5)
         ->and(DB::table('order_items')->count())->toBeGreaterThanOrEqual(5)
-        ->and(DB::table('payments')->where('midtrans_order_id', 'like', 'LT-%')->count())->toBe(5)
+        ->and(DB::table('payments')->where('provider_reference', 'like', 'LT-%')->count())->toBe(5)
         ->and(DB::table('order_addresses')->count())->toBe(5)
         ->and(DB::table('product_variants')->whereColumn('reserved_stock', '>', 'stock')->count())->toBe(0)
         ->and(DB::table('orders')->whereColumn('grand_total', '<=', '0')->count())->toBe(0)

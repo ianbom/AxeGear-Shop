@@ -33,4 +33,41 @@ class UpsertAddressRequest extends FormRequest
             'is_default' => ['sometimes', 'boolean'],
         ];
     }
+
+    public function messages(): array
+    {
+        return [
+            'required' => ':attribute wajib diisi.',
+            'string' => ':attribute harus berupa teks.',
+            'max' => ':attribute maksimal :max karakter.',
+            'numeric' => ':attribute harus berupa angka.',
+            'between' => ':attribute harus berada di antara :min dan :max.',
+            'boolean' => ':attribute harus berupa pilihan ya atau tidak.',
+            'province.required' => 'Pilih area dari hasil pencarian kode pos untuk mengisi provinsi.',
+            'city.required' => 'Pilih area dari hasil pencarian kode pos untuk mengisi kota.',
+            'district.required' => 'Pilih area dari hasil pencarian kode pos untuk mengisi kecamatan.',
+            'postal_code.required' => 'Pilih area dari hasil pencarian kode pos untuk mengisi kode pos.',
+            'biteship_area_id.required' => 'Pilih area pengiriman dari hasil pencarian kode pos.',
+        ];
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'recipient_name' => 'Nama penerima',
+            'recipient_phone' => 'Nomor telepon',
+            'label' => 'Label alamat',
+            'province' => 'Provinsi',
+            'city' => 'Kota',
+            'district' => 'Kecamatan',
+            'subdistrict' => 'Kelurahan',
+            'postal_code' => 'Kode pos',
+            'biteship_area_id' => 'Area pengiriman',
+            'latitude' => 'Koordinat lintang',
+            'longitude' => 'Koordinat bujur',
+            'full_address' => 'Alamat lengkap',
+            'note' => 'Catatan alamat',
+            'is_default' => 'Pilihan alamat utama',
+        ];
+    }
 }

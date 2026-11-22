@@ -70,15 +70,15 @@ class AdminPageController extends Controller
             'title' => 'Payments',
             'group' => 'Sales Management',
             'table' => 'payments',
-            'description' => 'Monitor Midtrans payment transactions and settlement status.',
-            'columns' => ['order_number', 'midtrans_order_id', 'payment_method', 'gross_amount', 'transaction_status', 'paid_at'],
+            'description' => 'Monitor DOKU QRIS payment transactions and payment status.',
+            'columns' => ['order_number', 'provider_reference', 'payment_method', 'gross_amount', 'transaction_status', 'paid_at'],
             'readonly' => true,
         ],
         'payment-logs' => [
             'title' => 'Payment Logs',
             'group' => 'Sales Management',
             'table' => 'payment_logs',
-            'description' => 'Read webhook payloads and Midtrans audit logs.',
+            'description' => 'Read webhook payloads and DOKU audit logs.',
             'columns' => ['provider', 'event_type', 'transaction_status', 'order_number', 'processed_at', 'created_at'],
             'readonly' => true,
         ],
@@ -374,17 +374,16 @@ class AdminPageController extends Controller
             ->leftJoin('orders', 'orders.id', '=', 'payments.order_id')
             ->select([
                 'payments.id',
-                'payments.midtrans_order_id',
+                'payments.provider_reference',
                 'payments.payment_method',
                 'payments.gross_amount',
                 'payments.transaction_status',
-                'payments.fraud_status',
                 'payments.paid_at',
                 DB::raw('orders.order_number as order_number'),
             ])
             ->latest('payments.created_at');
 
-        return $this->search($query, $request, $this->definition('payments'), ['orders.order_number', 'payments.midtrans_order_id', 'payments.midtrans_transaction_id'])->limit(50)->get();
+        return $this->search($query, $request, $this->definition('payments'), ['orders.order_number', 'payments.provider_reference'])->limit(50)->get();
     }
 
     private function paymentLogs(Request $request): Collection

@@ -1,6 +1,7 @@
 <?php
 
-use App\Actions\Payments\ApplyMidtransPaymentStatusAction;
+use App\Actions\Payments\ApplyDokuPaymentStatusAction;
+use App\Actions\Payments\SyncDokuPaymentAction;
 use App\Models\BiteshipWebhookLog;
 use App\Models\Order;
 use App\Models\Payment;
@@ -9,9 +10,7 @@ use App\Models\SiteSetting;
 use App\Models\User;
 use App\Services\Admin\OrderManagementService;
 use App\Services\Admin\ShipmentManagementService;
-use App\Services\Customer\MidtransWebhookService;
 use App\Services\Integrations\BiteshipService;
-use App\Services\Integrations\MidtransService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
@@ -192,17 +191,18 @@ it('preserves precise UTC timestamps in the order detail without changing the li
     $order->update(['paid_at' => now(), 'no_return_refund_agreed_at' => now()]);
     $payment = Payment::query()->create([
         'order_id' => $order->id,
-        'payment_provider' => 'midtrans',
-        'midtrans_order_id' => $order->order_number,
-        'transaction_status' => 'settlement',
+        'payment_provider' => 'doku',
+        'provider_reference' => $order->order_number,
+        'create_request_id' => (string) Str::uuid(),
+        'transaction_status' => 'success',
         'gross_amount' => 116000,
     ]);
     $payment->logs()->create([
         'order_id' => $order->id,
-        'provider' => 'midtrans',
-        'event_type' => 'settlement',
+        'provider' => 'doku',
+        'event_type' => 'notification',
         'processed_at' => now(),
-        'payload' => ['transaction_status' => 'settlement'],
+        'payload' => ['transaction_status' => 'success'],
     ]);
     $order->shipment->trackings()->create(['status' => 'confirmed', 'happened_at' => now()]);
 
@@ -312,13 +312,14 @@ it('does not regress fulfillment on repeated successful payment notifications', 
     $order = createFulfillmentOrder($status);
     $payment = Payment::query()->create([
         'order_id' => $order->id,
-        'payment_provider' => 'midtrans',
-        'midtrans_order_id' => $order->order_number,
-        'transaction_status' => 'settlement',
+        'payment_provider' => 'doku',
+        'provider_reference' => $order->order_number,
+        'create_request_id' => (string) Str::uuid(),
+        'transaction_status' => 'success',
         'gross_amount' => 116000,
     ]);
 
-    app(ApplyMidtransPaymentStatusAction::class)->execute($payment, 'settlement');
+    app(ApplyDokuPaymentStatusAction::class)->execute($payment, 'SUCCESS');
 
     expect($order->fresh()->order_status)->toBe($status);
 })->with(['processing', 'completed', 'shipment_problem']);
@@ -426,16 +427,17 @@ it('does not downgrade a full refund', function (string $incoming) {
     $order = createFulfillmentOrder('refunded', 'refunded');
     $payment = Payment::query()->create([
         'order_id' => $order->id,
-        'payment_provider' => 'midtrans',
-        'midtrans_order_id' => $order->order_number,
-        'transaction_status' => 'refund',
+        'payment_provider' => 'doku',
+        'provider_reference' => $order->order_number,
+        'create_request_id' => (string) Str::uuid(),
+        'transaction_status' => 'success',
         'gross_amount' => 116000,
     ]);
 
-    app(ApplyMidtransPaymentStatusAction::class)->execute($payment, $incoming);
+    app(ApplyDokuPaymentStatusAction::class)->execute($payment, $incoming);
 
     expect($order->fresh()->payment_status)->toBe('refunded')->and($order->fresh()->order_status)->toBe('refunded');
-})->with(['partial_refund', 'settlement', 'pending']);
+})->with(['FAILED', 'SUCCESS', 'PENDING']);
 
 it('does not automatically retry an uncertain Biteship booking', function () {
     config(['services.biteship.api_key' => 'test-key']);
@@ -741,28 +743,23 @@ it('preserves the payment record when a stale gateway event arrives', function (
     $order = createFulfillmentOrder('processing', $paymentStatus);
     $payment = Payment::query()->create([
         'order_id' => $order->id,
-        'payment_provider' => 'midtrans',
-        'midtrans_order_id' => $order->order_number,
+        'payment_provider' => 'doku',
+        'provider_reference' => $order->order_number,
+        'create_request_id' => (string) Str::uuid(),
         'transaction_status' => $storedStatus,
         'gross_amount' => 116000,
     ]);
-    $this->mock(MidtransService::class, function (MockInterface $mock) {
-        $mock->shouldReceive('validateNotificationSignature')->once()->andReturnTrue();
-        $mock->shouldReceive('amountMatches')->once()->andReturnTrue();
-    });
-
-    app(MidtransWebhookService::class)->handle([
-        'order_id' => $order->order_number,
-        'transaction_status' => $incoming,
-        'status_code' => '200',
-        'gross_amount' => '116000.00',
-        'signature_key' => 'test-signature',
+    app(SyncDokuPaymentAction::class)->applyPayload($payment, [
+        'order' => ['invoice_number' => $order->order_number, 'amount' => 116000, 'currency' => 'IDR'],
+        'service' => ['id' => 'QRIS'],
+        'transaction' => ['status' => $incoming],
     ]);
 
     expect($payment->fresh()->transaction_status)->toBe($storedStatus)
         ->and($order->fresh()->payment_status)->toBe($paymentStatus)
         ->and($payment->logs()->count())->toBe(1);
 })->with([
-    ['paid', 'settlement', 'pending'],
-    ['refunded', 'refund', 'partial_refund'],
+    ['paid', 'success', 'PENDING'],
+    ['refunded', 'success', 'FAILED'],
+    ['partially_refunded', 'success', 'SUCCESS'],
 ]);

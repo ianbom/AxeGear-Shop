@@ -126,7 +126,7 @@ it('audits and notifies confirmed failures without financial or inventory change
     $order->items()->create(['product_id' => $product->id, 'product_variant_id' => $variant->id, 'product_name' => 'Issue product', 'quantity' => 1, 'price' => 100000, 'subtotal' => 100000]);
     $voucher = Voucher::query()->create(['code' => 'ISSUE-'.Str::uuid(), 'name' => 'Issue voucher', 'discount_type' => 'fixed', 'discount_value' => 10000, 'used_count' => 1, 'is_active' => true]);
     $order->update(['voucher_id' => $voucher->id, 'voucher_code' => $voucher->code]);
-    $payment = $order->payment()->create(['payment_provider' => 'midtrans', 'payment_method' => 'bank_transfer', 'transaction_status' => 'settlement', 'gross_amount' => 110000, 'paid_at' => now()]);
+    $payment = $order->payment()->create(['payment_provider' => 'doku', 'payment_method' => 'qris', 'provider_reference' => $order->order_number, 'create_request_id' => (string) Str::uuid(), 'transaction_status' => 'success', 'gross_amount' => 110000, 'paid_at' => now()]);
     app(ShipmentManagementService::class)->applyBiteshipPayload($order->shipment, ['status' => $status]);
     $admin = User::factory()->create(['role' => 'admin', 'is_active' => true]);
     $reason = 'Kurir telah memastikan paket tidak dapat diterima customer.';
@@ -134,7 +134,7 @@ it('audits and notifies confirmed failures without financial or inventory change
     expect($order->fresh()->order_status)->toBe('shipment_failed')->and($order->fresh()->payment_status)->toBe('paid')
         ->and($variant->fresh()->stock)->toBe(8)->and($variant->fresh()->reserved_stock)->toBe(2)
         ->and($voucher->fresh()->used_count)->toBe(1)->and($order->fresh()->stock_released_at)->toBeNull()
-        ->and($order->fresh()->voucher_released_at)->toBeNull()->and($payment->fresh()->transaction_status)->toBe('settlement');
+        ->and($order->fresh()->voucher_released_at)->toBeNull()->and($payment->fresh()->transaction_status)->toBe('success');
     $this->assertDatabaseHas('admin_activity_logs', ['user_id' => $admin->id, 'reference_type' => 'admin.orders.status', 'reference_id' => $order->id]);
     expect(AdminActivityLog::query()->where('reference_type', 'admin.orders.status')->latest('id')->first()->new_values['reason'])->toBe($reason);
     $this->assertDatabaseHas('notifications', ['user_id' => $order->user_id, 'title' => 'Pesanan gagal dikirim']);

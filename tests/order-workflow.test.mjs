@@ -78,7 +78,6 @@ for (const status of [
     'failed',
     'expired',
     'cancelled',
-    'manual_review',
     'refunded',
     'partially_refunded',
 ]) {

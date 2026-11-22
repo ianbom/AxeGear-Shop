@@ -28,10 +28,11 @@ const context = {
     useState: (initial) => [initial, () => {}],
     ProfileLayout: 'qa-layout',
     orderIndex: { url: () => '/orders' },
-    orderCancel: { url: () => '/orders/cancel' },
+    productIndex: { url: () => '/list' },
     productShow: { url: () => '/detail' },
     router: { post() {} },
 };
+
 for (const declaration of imports) {
     if (declaration.moduleSpecifier.text === 'lucide-react') {
         for (const icon of declaration.importClause.namedBindings.elements) {
@@ -39,6 +40,7 @@ for (const declaration of imports) {
         }
     }
 }
+
 const code = parsed.statements
     .filter((statement) => !ts.isImportDeclaration(statement))
     .map((statement) => statement.getText(parsed))
@@ -55,7 +57,10 @@ const { DetailOrder, getBiteshipTrackingUrl, ActionButton } = runInNewContext(
     context,
 );
 function elements(element) {
-    if (!React.isValidElement(element)) return [];
+    if (!React.isValidElement(element)) {
+return [];
+}
+
     return [
         element,
         ...React.Children.toArray(element.props.children).flatMap(elements),
@@ -70,6 +75,7 @@ assert.equal(
     getBiteshipTrackingUrl(shipment('http://example.com/track')),
     'http://example.com/track',
 );
+
 for (const value of [
     null,
     '',
@@ -81,7 +87,9 @@ for (const value of [
 ]) {
     assert.equal(getBiteshipTrackingUrl(shipment(value)), null);
 }
+
 assert.equal(getBiteshipTrackingUrl(null), null);
+
 for (const status of [
     'pending_payment',
     'shipped',
@@ -109,6 +117,7 @@ for (const status of [
             (element) => element.props.label === 'Lacak Pesanan',
         );
         const rendered = ActionButton(action.props);
+
         if (link?.startsWith('https:')) {
             assert.ok(!rendered.props.disabled);
             assert.equal(rendered.type, 'a');
@@ -119,12 +128,14 @@ for (const status of [
             assert.equal(rendered.props.disabled, true);
             assert.equal(rendered.props.onClick, undefined);
         }
+
         const region = tree.find(
             (element) => element.props['aria-label'] === 'Riwayat Pengiriman',
         );
         assert.equal(region, undefined);
     }
 }
+
 const populated = elements(
     DetailOrder({
         order: {
@@ -151,6 +162,7 @@ assert.ok(
     !populated.some((element) => element.props.children === 'Dalam perjalanan'),
 );
 assert.ok(!populated.some((element) => element.props.children === 'Makassar'));
+
 for (const [supportPhone, expected] of [
     ['0857 8064-5938', 'https://wa.me/6285780645938'],
     ['+62 (857) 8064-5938', 'https://wa.me/6285780645938'],
@@ -178,6 +190,7 @@ for (const [supportPhone, expected] of [
     );
     const action = tree.find((element) => element.props.label === 'Dukungan');
     const rendered = ActionButton(action.props);
+
     if (expected) {
         assert.equal(rendered.type, 'a');
         assert.equal(rendered.props.href, expected);
@@ -195,16 +208,20 @@ for (const [supportPhone, expected] of [
         );
     }
 }
+
 assert.doesNotMatch(
     source,
     /Riwayat Pengiriman|showTrackingHistory|trackingHistoryRef/,
 );
+
 for (const [method, expected] of [
     ['bank_transfer', 'Bank Transfer'],
     ['qris', 'QRIS'],
+    ['va_bca', 'VA BCA'],
+    ['va_bsi', 'VA BSI'],
     ['credit_card', 'credit card'],
-    [null, '-'],
-    [' ', '-'],
+    [null, 'Metode pembayaran belum tersedia'],
+    [' ', 'Metode pembayaran belum tersedia'],
 ]) {
     const tree = elements(
         DetailOrder({
@@ -213,8 +230,9 @@ for (const [method, expected] of [
                 order_status: 'shipped',
                 payment_status: 'paid',
                 payment: {
-                    payment_provider: 'midtrans',
+                    payment_provider: 'doku',
                     payment_method: method,
+                    payment_method_label: method === 'va_bca' ? 'VA BCA' : method === 'va_bsi' ? 'VA BSI' : undefined,
                 },
                 payment_logs: [],
                 shipment: null,
@@ -233,5 +251,58 @@ for (const [method, expected] of [
         expected,
     );
 }
-assert.doesNotMatch(source, /pembayaran Midtrans/);
-console.log('Order tracking, support and payment method checks passed.');
+
+for (const [shipmentDetails, expectedWaybill] of [
+    [null, 'Pengiriman belum dibuat'],
+    [{ shipping_status: 'not_created' }, 'Pengiriman belum dibuat'],
+    [{ shipping_status: 'confirmed', biteship_order_id: 'booking-1' }, 'No. resi belum tersedia'],
+    [{ shipping_status: 'confirmed', waybill_id: 'RESI-123' }, 'RESI-123'],
+]) {
+    const tree = elements(DetailOrder({ order: {
+        id: 1, order_status: 'pending_payment', payment_status: 'pending',
+        shipping_status: 'not_created', payment: null, payment_logs: [],
+        shipment: shipmentDetails, items: [], trackings: [], address: null,
+    } }));
+    const statuses = tree.filter((element) => element.type.name === 'StatusPill');
+    assert.equal(statuses.length, 2);
+    assert.equal(statuses[0].props.children, 'Menunggu pembayaran');
+    assert.equal(tree.find((element) => element.props.label === 'No. Resi Pengiriman').props.children, expectedWaybill);
+    assert.equal(tree.find((element) => element.props.label === 'No. Resi').props.value, expectedWaybill);
+    assert.equal(tree.find((element) => element.props.label === 'Tanggal Pembayaran').props.value, 'Belum dibayar');
+    assert.equal(tree.find((element) => element.props.label === 'Catatan Pengiriman').props.value, 'Tidak ada catatan pengiriman');
+}
+
+const paidOrder = elements(DetailOrder({ order: {
+    id: 1, order_status: 'shipped', payment_status: 'paid',
+    paid_at: '2026-11-10T10:30:00Z', payment: null, payment_logs: [],
+    shipment: { shipping_status: 'in_transit', waybill_id: 'RESI-123' },
+    items: [], trackings: [], address: { note: 'Titip di pos satpam' },
+} }));
+assert.equal(paidOrder.filter((element) => element.type.name === 'StatusPill')[0].props.children, 'Sedang dikirim');
+assert.notEqual(paidOrder.find((element) => element.props.label === 'Tanggal Pembayaran').props.value, 'Belum dibayar');
+assert.equal(paidOrder.find((element) => element.props.label === 'Catatan Pengiriman').props.value, 'Titip di pos satpam');
+
+for (const checkoutUrl of ['https://sandbox.doku.com/pay', null]) {
+    const tree = elements(DetailOrder({ order: {
+        id: 1, order_status: 'pending_payment', payment_status: 'pending',
+        payment: { payment_provider: 'doku', payment_method: 'qris', checkout_url: checkoutUrl },
+        payment_logs: [], shipment: null, items: [], trackings: [],
+    } }));
+    const pay = tree.find((element) => element.props.label === 'Lanjut Bayar');
+    assert.ok(pay, 'DOKU payment continuation must be visible');
+    const rendered = ActionButton(pay.props);
+
+    if (checkoutUrl) {
+        assert.equal(rendered.type, 'a');
+        assert.equal(rendered.props.href, checkoutUrl);
+        assert.equal(rendered.props.target, undefined, 'Payment must stay in the same tab');
+    } else {
+        assert.equal(rendered.props.disabled, true);
+    }
+
+    assert.ok(!tree.some((element) => element.props.label === 'Batalkan Pesanan'));
+    assert.ok(tree.some((element) => typeof element.props.children === 'string' && element.props.children.includes('Pembatalan pembayaran DOKU dinonaktifkan sementara')));
+}
+
+assert.doesNotMatch(source, /midtrans|Bukti Pembayaran/i);
+console.log('Order tracking, support and QRIS continuation checks passed.');

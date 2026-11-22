@@ -2,13 +2,11 @@ import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
     CheckCircle2,
     Clock,
-    CreditCard,
     Eye,
     MoreVertical,
     RefreshCw,
     RotateCcw,
     Search,
-    ShieldAlert,
     Wallet,
     XCircle,
 } from 'lucide-react';
@@ -30,18 +28,18 @@ import {
 } from '@/components/ui/select';
 import type { Paginated } from '@/pages/admin/sales/shared';
 import { formatPrice } from '@/pages/admin/sales/shared';
+import { index, show, sync } from '@/routes/admin/payments';
 import { PaginationLabel, PerPageSelect } from '../pagination';
 
 type Payment = {
     id: number;
     order_number: string | null;
     customer: string | null;
-    midtrans_order_id: string | null;
-    midtrans_transaction_id: string | null;
+    provider_reference: string;
     payment_method: string | null;
+    payment_method_label: string | null;
     gross_amount: string;
     transaction_status: string | null;
-    fraud_status: string | null;
     paid_at: string | null;
     expired_at: string | null;
     created_at: string | null;
@@ -53,11 +51,9 @@ type Props = {
     statuses: string[];
     stats: {
         total: number;
-        settled: number;
+        success: number;
         pending: number;
-        challenge: number;
         failed: number;
-        manual_review: number;
     };
 };
 
@@ -65,7 +61,7 @@ const getStatusConfig = (status: string | null) => {
     const safeStatus = status ?? 'unknown';
     const s = safeStatus.toLowerCase();
 
-    if (['settlement', 'capture', 'paid', 'success'].includes(s)) {
+    if (['paid', 'success'].includes(s)) {
         return {
             label: safeStatus.replace(/_/g, ' '),
             dot: 'bg-emerald-400',
@@ -74,7 +70,7 @@ const getStatusConfig = (status: string | null) => {
         };
     }
 
-    if (['pending', 'authorize'].includes(s)) {
+    if (['pending'].includes(s)) {
         return {
             label: safeStatus.replace(/_/g, ' '),
             dot: 'bg-amber-400',
@@ -83,18 +79,7 @@ const getStatusConfig = (status: string | null) => {
         };
     }
 
-    if (['challenge'].includes(s)) {
-        return {
-            label: safeStatus.replace(/_/g, ' '),
-            dot: 'bg-blue-400',
-            text: 'text-blue-700',
-            bg: 'bg-blue-50 border-blue-100',
-        };
-    }
-
-    if (
-        ['deny', 'cancel', 'expire', 'expired', 'failure', 'failed'].includes(s)
-    ) {
+    if (['expired', 'failed'].includes(s)) {
         return {
             label: safeStatus.replace(/_/g, ' '),
             dot: 'bg-rose-400',
@@ -145,11 +130,11 @@ export default function PaymentsIndex({
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        get('/admin/payments', { preserveState: true, replace: true });
+        get(index.url(), { preserveState: true, replace: true });
     };
 
     const resetFilters = () => {
-        router.get('/admin/payments', {}, { preserveState: false });
+        router.get(index.url(), {}, { preserveState: false });
     };
 
     const stats = [
@@ -168,8 +153,8 @@ export default function PaymentsIndex({
             featured: true,
         },
         {
-            title: 'Settled',
-            val: totals.settled,
+            title: 'Success',
+            val: totals.success,
             sub: 'payment confirmed',
             icon: CheckCircle2,
             iconBg: 'bg-emerald-100',
@@ -196,20 +181,6 @@ export default function PaymentsIndex({
             featured: false,
         },
         {
-            title: 'Challenge',
-            val: totals.challenge,
-            sub: 'fraud flagged',
-            icon: ShieldAlert,
-            iconBg: 'bg-blue-100',
-            iconColor: 'text-blue-500',
-            cardBg: 'bg-white',
-            subColor: 'text-zinc-400',
-            valColor: 'text-blue-500',
-            titleColor: 'text-zinc-700',
-            accent: '',
-            featured: false,
-        },
-        {
             title: 'Failed',
             val: totals.failed,
             sub: 'expired/denied',
@@ -221,20 +192,6 @@ export default function PaymentsIndex({
             valColor: 'text-rose-500',
             titleColor: 'text-zinc-700',
             accent: 'from-rose-400 to-red-500',
-            featured: false,
-        },
-        {
-            title: 'Manual Review',
-            val: totals.manual_review,
-            sub: 'need sync/check',
-            icon: CreditCard,
-            iconBg: 'bg-purple-100',
-            iconColor: 'text-purple-500',
-            cardBg: 'bg-white',
-            subColor: 'text-zinc-400',
-            valColor: 'text-purple-500',
-            titleColor: 'text-zinc-700',
-            accent: 'from-purple-400 to-purple-600',
             featured: false,
         },
     ];
@@ -253,13 +210,13 @@ export default function PaymentsIndex({
                             Payments
                         </h1>
                         <p className="mt-1 text-sm text-zinc-400">
-                            Pantau transaksi Midtrans, status settlement, fraud
-                            status, dan lakukan manual sync.
+                            Pantau pembayaran QRIS dan VA DOKU, status
+                            rekonsiliasi, dan lakukan sinkronisasi manual.
                         </p>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                     {stats.map((m, i) => (
                         <div
                             key={i}
@@ -473,7 +430,7 @@ export default function PaymentsIndex({
                                         Order
                                     </th>
                                     <th className="px-4 py-3 text-[11px] font-semibold tracking-wider text-zinc-400 uppercase">
-                                        Midtrans
+                                        DOKU
                                     </th>
                                     <th className="px-4 py-3 text-[11px] font-semibold tracking-wider text-zinc-400 uppercase">
                                         Method
@@ -520,9 +477,6 @@ export default function PaymentsIndex({
                                     const statusConfig = getStatusConfig(
                                         payment.transaction_status,
                                     );
-                                    const fraudConfig = getStatusConfig(
-                                        payment.fraud_status,
-                                    );
 
                                     return (
                                         <tr
@@ -535,7 +489,9 @@ export default function PaymentsIndex({
                                             <td className="px-4 py-3.5">
                                                 <div className="flex flex-col gap-1">
                                                     <Link
-                                                        href={`/admin/payments/${payment.id}`}
+                                                        href={show.url(
+                                                            payment.id,
+                                                        )}
                                                         className="font-medium text-zinc-900 transition-colors hover:text-[#151515]"
                                                     >
                                                         {payment.order_number ??
@@ -551,11 +507,7 @@ export default function PaymentsIndex({
                                             <td className="px-4 py-3.5">
                                                 <div className="flex flex-col gap-1">
                                                     <span className="font-medium text-zinc-900">
-                                                        {payment.midtrans_order_id ??
-                                                            '-'}
-                                                    </span>
-                                                    <span className="text-xs text-zinc-500">
-                                                        {payment.midtrans_transaction_id ??
+                                                        {payment.provider_reference ??
                                                             '-'}
                                                     </span>
                                                 </div>
@@ -563,7 +515,8 @@ export default function PaymentsIndex({
 
                                             <td className="px-4 py-3.5">
                                                 <span className="text-sm font-medium text-zinc-700 capitalize">
-                                                    {payment.payment_method ??
+                                                    {payment.payment_method_label ??
+                                                        payment.payment_method ??
                                                         '-'}
                                                 </span>
                                             </td>
@@ -591,23 +544,6 @@ export default function PaymentsIndex({
                                                             }
                                                         />
                                                         {statusConfig.label}
-                                                    </span>
-                                                    <span
-                                                        className={
-                                                            'inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold capitalize ' +
-                                                            fraudConfig.text +
-                                                            ' ' +
-                                                            fraudConfig.bg
-                                                        }
-                                                    >
-                                                        <span
-                                                            className={
-                                                                'h-1.5 w-1.5 rounded-full ' +
-                                                                fraudConfig.dot
-                                                            }
-                                                        />
-                                                        Fraud:{' '}
-                                                        {fraudConfig.label}
                                                     </span>
                                                 </div>
                                             </td>
@@ -650,7 +586,9 @@ export default function PaymentsIndex({
                                                             asChild
                                                         >
                                                             <Link
-                                                                href={`/admin/payments/${payment.id}`}
+                                                                href={show.url(
+                                                                    payment.id,
+                                                                )}
                                                                 className="flex w-full items-center gap-2"
                                                             >
                                                                 <Eye className="h-3.5 w-3.5" />
@@ -664,7 +602,9 @@ export default function PaymentsIndex({
                                                                 type="button"
                                                                 onClick={() =>
                                                                     router.post(
-                                                                        `/admin/payments/${payment.id}/sync`,
+                                                                        sync.url(
+                                                                            payment.id,
+                                                                        ),
                                                                         {},
                                                                         {
                                                                             preserveScroll: true,

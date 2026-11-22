@@ -3,11 +3,14 @@
 namespace App\Services\Admin;
 
 use App\Models\PaymentLog;
+use App\Services\Integrations\DokuService;
 use Illuminate\Http\Request;
 
 class PaymentLogManagementService
 {
     use ResolvesAdminPagination;
+
+    public function __construct(private readonly DokuService $doku) {}
 
     public function indexData(Request $request): array
     {
@@ -42,7 +45,8 @@ class PaymentLogManagementService
         return [
             'log' => [
                 ...$this->row($log),
-                'payload' => $log->payload,
+                'notification_request_id' => $log->notification_request_id,
+                'payload' => $this->doku->auditPayload($log->payload ?? []),
             ],
         ];
     }

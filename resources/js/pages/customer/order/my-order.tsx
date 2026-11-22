@@ -15,6 +15,7 @@ import {
     show as orderShow,
 } from '@/actions/App/Http/Controllers/Customer/OrderController';
 import ProfileLayout from '@/layouts/profile-layout';
+import { getPaginationDirection } from '@/lib/pagination';
 
 type PaginationLink = {
     url: string | null;
@@ -57,7 +58,7 @@ type Order = {
         service: string | null;
     };
     payment: {
-        midtrans_redirect_url: string | null;
+        checkout_url: string | null;
     };
 };
 
@@ -240,7 +241,7 @@ export default function ListOrder({ orders, filters }: Props) {
                             className="py-6 transition-colors duration-300 hover:bg-white/35 md:py-7"
                             style={{ animationDelay: `${idx * 50}ms` }}
                         >
-                            <div className="grid grid-cols-2 gap-4 px-1 md:grid-cols-4">
+                            <div className="grid grid-cols-2 gap-4 px-1 md:grid-cols-3">
                                 <div className="col-span-2 md:col-span-1">
                                     <p className="mb-1 text-[13px] text-ink">
                                         Pesanan #{order.order_number}
@@ -249,16 +250,6 @@ export default function ListOrder({ orders, filters }: Props) {
                                         {order.created_date ?? '-'} •{' '}
                                         {order.created_time ?? '-'}
                                     </p>
-                                </div>
-                                <div className="hidden md:block">
-                                    <p className="mb-1 text-[10px] text-muted-foreground">
-                                        Pembayaran
-                                    </p>
-                                    <span
-                                        className={`inline-block text-[10px] font-bold ${getStatusTextStyle(order.payment_status)}`}
-                                    >
-                                        {labelStatus(order.payment_status)}
-                                    </span>
                                 </div>
                                 <div className="block md:hidden">
                                     <p className="mb-1 text-[10px] text-muted-foreground">
@@ -332,31 +323,18 @@ export default function ListOrder({ orders, filters }: Props) {
                                 </div>
 
                                 <div className="mt-4 flex w-full shrink-0 flex-row gap-3 lg:mt-0 lg:w-[200px] lg:flex-col">
-                                    {order.order_status ===
-                                        'pending_payment' && (
-                                        <a
-                                            href={
-                                                order.payment
-                                                    .midtrans_redirect_url ??
-                                                '/checkout'
-                                            }
-                                            target={
-                                                order.payment
-                                                    .midtrans_redirect_url
-                                                    ? '_blank'
-                                                    : undefined
-                                            }
-                                            rel={
-                                                order.payment
-                                                    .midtrans_redirect_url
-                                                    ? 'noreferrer'
-                                                    : undefined
-                                            }
-                                            className="flex-1 rounded-[6px] bg-primary py-2.5 text-center text-[12px] font-bold text-white transition-colors hover:bg-[#E67312] lg:w-full"
-                                        >
-                                            Bayar Sekarang
-                                        </a>
-                                    )}
+                                    {order.payment_status === 'pending' &&
+                                        order.payment.checkout_url && (
+                                            <a
+                                                href={
+                                                    order.payment.checkout_url
+                                                }
+                                                rel="noreferrer"
+                                                className="flex-1 rounded-[6px] bg-primary py-2.5 text-center text-[12px] font-bold text-white transition-colors hover:bg-[#E67312] lg:w-full"
+                                            >
+                                                Bayar Sekarang
+                                            </a>
+                                        )}
                                     {order.order_status === 'shipped' && (
                                         <Link
                                             href={orderShow.url(order.id)}
@@ -460,23 +438,39 @@ export default function ListOrder({ orders, filters }: Props) {
 
 function PaginationButton({ link }: { link: PaginationLink }) {
     const label = cleanPageLabel(link.label);
+    const direction = getPaginationDirection(link.label);
+    const ariaLabel = direction
+        ? direction === 'previous'
+            ? 'Halaman sebelumnya'
+            : 'Halaman berikutnya'
+        : undefined;
     const content =
-        label === 'Previous' ? (
-            <ChevronLeft size={16} />
-        ) : label === 'Next' ? (
-            <ChevronRight size={16} />
+        direction === 'previous' ? (
+            <ChevronLeft size={16} aria-hidden="true" />
+        ) : direction === 'next' ? (
+            <ChevronRight size={16} aria-hidden="true" />
         ) : (
             label
         );
     const className = `flex h-8 min-w-8 items-center justify-center border-b px-2 font-medium transition-colors ${link.active ? 'border-ink text-ink' : 'border-transparent text-muted-foreground hover:border-hairline-strong hover:text-ink'}`;
 
     if (!link.url) {
-        return <span className={`${className} opacity-40`}>{content}</span>;
+        return (
+            <button
+                type="button"
+                disabled
+                aria-label={ariaLabel}
+                className={`${className} opacity-40`}
+            >
+                {content}
+            </button>
+        );
     }
 
     return (
         <Link
             href={link.url}
+            aria-label={ariaLabel}
             preserveScroll
             preserveState
             className={className}

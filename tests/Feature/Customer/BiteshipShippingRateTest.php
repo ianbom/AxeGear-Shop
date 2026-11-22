@@ -1,8 +1,10 @@
 <?php
 
+use App\Actions\Stock\FinalizeReservedStockAction;
 use App\Models\Cart;
 use App\Models\CustomerAddress;
 use App\Models\Order;
+use App\Models\Payment;
 use App\Models\Product;
 use App\Models\SiteSetting;
 use App\Models\User;
@@ -30,40 +32,55 @@ it('discards invalid shipping prices while preserving explicit free shipping', f
     expect(array_column($rates, 'price'))->toBe([0.0, 16000.0]);
 });
 
-it('preserves the cart and reservations when Snap creation is uncertain', function (string $outcome) {
-    $snapResponse = match ($outcome) {
-        'timeout' => fn () => throw new ConnectionException('Snap timeout'),
+it('cancels checkout without stock or voucher reservations when DOKU creation fails', function (string $outcome) {
+    $checkoutResponse = match ($outcome) {
+        'timeout' => fn () => throw new ConnectionException('DOKU timeout'),
         'server_error' => Http::response(['error' => 'Unavailable'], 503),
         'malformed_rejection' => Http::response([], 400),
-        'duplicate_order' => Http::response(['error_messages' => ['order_id has already been taken']], 406),
-        'missing_redirect' => Http::response(['token' => 'test-token']),
-        'invalid_redirect' => Http::response(['token' => 'test-token', 'redirect_url' => 'not-a-url']),
+        'duplicate_order' => Http::response(['error_messages' => ['duplicate invoice_number']], 400),
+        'missing_redirect' => Http::response(['response' => ['payment' => []]]),
+        'invalid_redirect' => Http::response(['response' => ['payment' => ['url' => 'https://evil.example/pay']]]),
         default => Http::response([]),
     };
-    [$customer, $address] = createCheckoutShippingCart([1], snapResponse: $snapResponse);
+    [$customer, $address] = createCheckoutShippingCart([1], checkoutResponse: $checkoutResponse);
     $voucher = Voucher::query()->create(['code' => 'REVIEW10', 'name' => 'Review test', 'discount_type' => 'percentage', 'discount_value' => 10, 'is_active' => true]);
     $this->actingAs($customer)->postJson(route('checkout.voucher.apply'), ['voucher_code' => 'REVIEW10'])->assertOk();
     $rate = $this->actingAs($customer)->postJson(route('checkout.shipping-rates'), ['customer_address_id' => $address->id])->assertOk()->json('rates.0');
     $this->postJson(route('checkout.shipping-rate'), ['shipping_rate_id' => $rate['id']])->assertOk();
-    $payload = ['customer_address_id' => $address->id, 'shipping_rate_id' => $rate['id'], 'idempotency_key' => (string) Str::uuid(), 'no_return_refund_agreed' => true];
+    $payload = ['customer_address_id' => $address->id, 'shipping_rate_id' => $rate['id'], 'idempotency_key' => (string) Str::uuid(), 'payment_method' => 'qris', 'no_return_refund_agreed' => true];
 
     $this->postJson(route('checkout.place-order'), $payload)->assertUnprocessable()->assertJsonValidationErrors('payment');
     $order = Order::query()->sole();
-    expect($order->payment_status)->toBe('manual_review')
-        ->and($order->payment->transaction_status)->toBe('manual_review')
-        ->and($order->stock_released_at)->toBeNull()
-        ->and($voucher->fresh()->used_count)->toBe(1)
-        ->and($order->items->first()->variant->reserved_stock)->toBe(1)
+    expect($order->payment_status)->toBe('failed')
+        ->and($order->payment->transaction_status)->toBe('failed')
+        ->and($order->stock_released_at)->not->toBeNull()
+        ->and($voucher->fresh()->used_count)->toBe(0)
+        ->and($order->items->first()->variant->reserved_stock)->toBe(0)
         ->and(Cart::query()->sole()->items()->count())->toBe(1);
-    $this->postJson(route('checkout.place-order'), $payload)->assertUnprocessable();
-    expect(Order::query()->count())->toBe(1);
+    expect($order->payment->raw_response['checkout_error']['type'] ?? null)->toBe(
+        $outcome === 'timeout' ? ConnectionException::class : RuntimeException::class,
+    )->and($order->payment->raw_response['checkout_error']['code'] ?? null)->toBe(match ($outcome) {
+        'server_error' => 503,
+        'malformed_rejection', 'duplicate_order' => 400,
+        default => 0,
+    });
+    $sent = count(Http::recorded());
+    $this->postJson(route('checkout.place-order'), $payload)->assertUnprocessable()
+        ->assertJsonPath('retry_allowed', true);
+    expect(Order::query()->count())->toBe(1)
+        ->and($order->fresh()->payment_status)->toBe('failed')
+        ->and($order->payment->fresh()->transaction_status)->toBe('failed')
+        ->and($order->items->first()->variant->fresh()->reserved_stock)->toBe(0)
+        ->and($order->items->first()->variant->fresh()->stock)->toBe(10)
+        ->and($voucher->fresh()->used_count)->toBe(0)
+        ->and(count(Http::recorded()))->toBe($sent);
 })->with(['timeout', 'empty_response', 'server_error', 'malformed_rejection', 'duplicate_order', 'missing_redirect', 'invalid_redirect']);
 
-it('releases reservations only for a confirmed Snap rejection', function () {
-    [$customer, $address] = createCheckoutShippingCart([1], snapResponse: Http::response(['error_messages' => ['transaction_details.gross_amount is invalid']], 400));
+it('releases reservations only for a confirmed DOKU rejection', function () {
+    [$customer, $address] = createCheckoutShippingCart([1], checkoutResponse: Http::response(['error_messages' => ['order.amount must greater than 0']], 400));
     $rate = $this->actingAs($customer)->postJson(route('checkout.shipping-rates'), ['customer_address_id' => $address->id])->assertOk()->json('rates.0');
     $this->postJson(route('checkout.shipping-rate'), ['shipping_rate_id' => $rate['id']])->assertOk();
-    $this->postJson(route('checkout.place-order'), ['customer_address_id' => $address->id, 'shipping_rate_id' => $rate['id'], 'idempotency_key' => (string) Str::uuid(), 'no_return_refund_agreed' => true])->assertUnprocessable();
+    $this->postJson(route('checkout.place-order'), ['customer_address_id' => $address->id, 'shipping_rate_id' => $rate['id'], 'idempotency_key' => (string) Str::uuid(), 'payment_method' => 'qris', 'no_return_refund_agreed' => true])->assertUnprocessable();
 
     $order = Order::query()->sole();
     expect($order->payment_status)->toBe('failed')
@@ -72,7 +89,59 @@ it('releases reservations only for a confirmed Snap rejection', function () {
         ->and(Cart::query()->sole()->items()->count())->toBe(1);
 });
 
-it('uses one rounded IDR total in checkout and the Snap item details', function () {
+it('retries a failed DOKU checkout with a new key without losing the cart or double reserving', function () {
+    $attempts = 0;
+    [$customer, $address] = createCheckoutShippingCart([1], checkoutResponse: function (Request $request) use (&$attempts) {
+        if (++$attempts === 1) {
+            return Http::response(['error' => 'Unavailable'], 503);
+        }
+
+        return Http::response(['response' => [
+            'order' => ['invoice_number' => $request['order']['invoice_number']],
+            'payment' => ['url' => 'https://sandbox.doku.com/checkout-link-v2/retry', 'expired_date' => now()->addMinutes(30)->setTimezone('Asia/Jakarta')->format('YmdHis')],
+        ]]);
+    });
+    $rate = $this->actingAs($customer)->postJson(route('checkout.shipping-rates'), ['customer_address_id' => $address->id])->assertOk()->json('rates.0');
+    $this->postJson(route('checkout.shipping-rate'), ['shipping_rate_id' => $rate['id']])->assertOk();
+    $payload = ['customer_address_id' => $address->id, 'shipping_rate_id' => $rate['id'], 'idempotency_key' => (string) Str::uuid(), 'payment_method' => 'qris', 'no_return_refund_agreed' => true];
+    $this->postJson(route('checkout.place-order'), $payload)->assertUnprocessable()->assertJsonPath('retry_allowed', true);
+    $this->postJson(route('checkout.place-order'), $payload)->assertUnprocessable();
+    expect($attempts)->toBe(1)->and(Cart::query()->sole()->items()->count())->toBe(1);
+    $this->postJson(route('checkout.place-order'), [...$payload, 'idempotency_key' => (string) Str::uuid()])->assertOk();
+
+    expect($attempts)->toBe(2)
+        ->and(Order::query()->count())->toBe(2)
+        ->and(Order::query()->oldest('id')->first()->payment->checkout_url)->toBeNull()
+        ->and(Order::query()->latest('id')->first()->items->first()->variant->reserved_stock)->toBe(1)
+        ->and(Order::query()->latest('id')->first()->items->first()->variant->stock)->toBe(10)
+        ->and(Cart::query()->sole()->items()->count())->toBe(0);
+});
+
+it('shows inactive QRIS configuration errors without losing the cart or reserving stock', function () {
+    [$customer, $address] = createCheckoutShippingCart([1], checkoutResponse: Http::response(['message' => ['PAYMENT CHANNEL IS INACTIVE']], 400));
+    $rate = $this->actingAs($customer)->postJson(route('checkout.shipping-rates'), ['customer_address_id' => $address->id])->assertOk()->json('rates.0');
+    $this->postJson(route('checkout.shipping-rate'), ['shipping_rate_id' => $rate['id']])->assertOk();
+    $payload = ['customer_address_id' => $address->id, 'shipping_rate_id' => $rate['id'], 'idempotency_key' => (string) Str::uuid(), 'payment_method' => 'qris', 'no_return_refund_agreed' => true];
+    $this->postJson(route('checkout.place-order'), $payload)
+        ->assertUnprocessable()
+        ->assertJsonPath('retry_allowed', true)
+        ->assertJsonPath('errors.payment.0', 'QRIS DOKU belum aktif untuk Client ID ini. Periksa aktivasi metode pembayaran dan pengaturan Checkout di dashboard DOKU atau hubungi admin.');
+
+    $order = Order::query()->sole();
+    expect($order->payment_status)->toBe('failed')
+        ->and($order->payment->failure_reason)->toContain('QRIS DOKU belum aktif')
+        ->and($order->payment->raw_response['checkout_creation_uncertain'])->toBeFalse()
+        ->and($order->items->first()->variant->reserved_stock)->toBe(0)
+        ->and(Cart::query()->sole()->items()->count())->toBe(1);
+
+    $this->postJson(route('checkout.place-order'), $payload)
+        ->assertUnprocessable()
+        ->assertJsonPath('retry_allowed', true);
+    expect(Order::query()->count())->toBe(1);
+    Http::assertSentCount(3);
+});
+
+it('uses one rounded IDR total in checkout and DOKU', function () {
     [$customer, $address, $products] = createCheckoutShippingCart([1]);
     $products[0]->update(['regular_price' => 100001]);
     Cart::query()->sole()->items()->update(['price_snapshot' => 100001]);
@@ -80,19 +149,75 @@ it('uses one rounded IDR total in checkout and the Snap item details', function 
     $this->actingAs($customer)->postJson(route('checkout.voucher.apply'), ['voucher_code' => 'ROUND10'])->assertOk()->assertJsonPath('summary.total', 90001);
     $rate = $this->actingAs($customer)->postJson(route('checkout.shipping-rates'), ['customer_address_id' => $address->id])->assertOk()->json('rates.0');
     $this->postJson(route('checkout.shipping-rate'), ['shipping_rate_id' => $rate['id']])->assertOk();
-    $this->postJson(route('checkout.place-order'), ['customer_address_id' => $address->id, 'shipping_rate_id' => $rate['id'], 'idempotency_key' => (string) Str::uuid(), 'no_return_refund_agreed' => true])->assertSuccessful();
+    $this->postJson(route('checkout.place-order'), ['customer_address_id' => $address->id, 'shipping_rate_id' => $rate['id'], 'idempotency_key' => (string) Str::uuid(), 'payment_method' => 'qris', 'no_return_refund_agreed' => true])->assertSuccessful();
 
     $order = Order::query()->sole();
     expect($order->grand_total)->toBe('110001.00')->and($order->payment->gross_amount)->toBe('110001.00');
     Http::assertSent(function (Request $request): bool {
-        return str_contains($request->url(), '/snap/v1/transactions')
-            && $request['transaction_details']['gross_amount'] === 110001
-            && collect($request['item_details'])->sum(fn ($item) => $item['price'] * $item['quantity']) === 110001;
+        return str_contains($request->url(), '/checkout/v1/payment')
+            && $request['order']['amount'] === 110001
+            && $request['payment']['payment_method_types'] === ['QRIS'];
     });
 });
 
+it('reuses one DOKU checkout without reserving twice and hides paid links', function () {
+    [$customer, $address] = createCheckoutShippingCart([1]);
+    SiteSetting::query()->create(['key' => 'payment_expiry_duration', 'value' => '30']);
+    $rate = $this->actingAs($customer)->postJson(route('checkout.shipping-rates'), ['customer_address_id' => $address->id])->assertOk()->json('rates.0');
+    $this->postJson(route('checkout.shipping-rate'), ['shipping_rate_id' => $rate['id']])->assertOk();
+    $payload = ['customer_address_id' => $address->id, 'shipping_rate_id' => $rate['id'], 'idempotency_key' => (string) Str::uuid(), 'payment_method' => 'qris', 'no_return_refund_agreed' => true];
+    $first = $this->postJson(route('checkout.place-order'), $payload)->assertOk()->json();
+    $this->postJson(route('checkout.place-order'), $payload)->assertOk()->assertExactJson($first);
+    $order = Order::query()->sole();
+    expect($order->payment->provider_reference)->toBe($order->order_number)
+        ->and($order->stock_reserved_at)->not->toBeNull()
+        ->and($order->payment->create_request_id)->not->toBeEmpty()
+        ->and($order->payment->raw_response['expiry_minutes'])->toBe(30)
+        ->and($order->items->first()->variant->reserved_stock)->toBe(1);
+    Http::assertSentCount(3);
+    $order->update(['payment_status' => 'paid']);
+    $order->payment->update(['paid_at' => now(), 'transaction_status' => 'success']);
+    $this->postJson(route('checkout.place-order'), $payload)->assertUnprocessable();
+    Http::assertSentCount(3);
+});
+
+it('rejects invalid DOKU configuration before creating reservations', function (string $key, mixed $value) {
+    [$customer, $address] = createCheckoutShippingCart([1]);
+    $rate = $this->actingAs($customer)->postJson(route('checkout.shipping-rates'), ['customer_address_id' => $address->id])->assertOk()->json('rates.0');
+    $this->postJson(route('checkout.shipping-rate'), ['shipping_rate_id' => $rate['id']])->assertOk();
+    if ($key === 'expiry') {
+        SiteSetting::query()->create(['key' => 'payment_expiry_duration', 'value' => $value]);
+    } else {
+        config(['services.doku.'.$key => $value]);
+    }
+    $this->postJson(route('checkout.place-order'), ['customer_address_id' => $address->id, 'shipping_rate_id' => $rate['id'], 'idempotency_key' => (string) Str::uuid(), 'payment_method' => 'qris', 'no_return_refund_agreed' => true])->assertUnprocessable()->assertJsonValidationErrors('payment');
+    expect(Order::query()->count())->toBe(0)
+        ->and(Cart::query()->sole()->items->first()->variant->reserved_stock)->toBe(0);
+    Http::assertSentCount(1);
+})->with([['expiry', ''], ['expiry', '0'], ['expiry', '10081'], ['expiry', '1.5'], ['client_id', ''], ['secret_key', null]]);
+
+it('does not overwrite payment evidence arriving before the DOKU create response', function () {
+    [$customer, $address] = createCheckoutShippingCart([1], checkoutResponse: function (Request $request) {
+        $payment = Payment::query()->sole();
+        expect($payment->create_request_id)->toBe($request->header('Request-Id')[0]);
+        $payment->order->update(['payment_status' => 'paid', 'order_status' => 'paid']);
+        $payment->update(['transaction_status' => 'success', 'paid_at' => now(), 'raw_response' => [...$payment->raw_response, 'notification' => ['transaction' => ['status' => 'SUCCESS']]]]);
+
+        return Http::response(['response' => [
+            'order' => ['invoice_number' => $request['order']['invoice_number']],
+            'payment' => ['url' => 'https://sandbox.doku.com/checkout-link-v2/test', 'expired_date' => now()->addMinutes(30)->setTimezone('Asia/Jakarta')->format('YmdHis')],
+        ]]);
+    });
+    $rate = $this->actingAs($customer)->postJson(route('checkout.shipping-rates'), ['customer_address_id' => $address->id])->assertOk()->json('rates.0');
+    $this->postJson(route('checkout.shipping-rate'), ['shipping_rate_id' => $rate['id']])->assertOk();
+    $this->postJson(route('checkout.place-order'), ['customer_address_id' => $address->id, 'shipping_rate_id' => $rate['id'], 'idempotency_key' => (string) Str::uuid(), 'payment_method' => 'qris', 'no_return_refund_agreed' => true])->assertOk()->assertJsonPath('redirect_url', null);
+    $payment = Payment::query()->sole();
+    expect($payment->transaction_status)->toBe('success')->and($payment->paid_at)->not->toBeNull()
+        ->and($payment->raw_response['notification']['transaction']['status'])->toBe('SUCCESS');
+});
+
 beforeEach(function () {
-    config(['services.biteship.api_key' => 'test-key', 'services.midtrans.server_key' => 'test-key']);
+    config(['services.biteship.api_key' => 'test-key', 'services.doku.client_id' => 'test-client', 'services.doku.secret_key' => 'test-secret', 'services.doku.is_production' => false]);
     Mail::fake();
     Http::preventStrayRequests();
 
@@ -109,7 +234,7 @@ beforeEach(function () {
 
 });
 
-function createCheckoutShippingCart(array $quantities = [4], bool $withDimensions = true, int $nextRatePrice = 20000, mixed $snapResponse = null, ?Closure $onRateRefresh = null): array
+function createCheckoutShippingCart(array $quantities = [4], bool $withDimensions = true, int $nextRatePrice = 20000, mixed $checkoutResponse = null, ?Closure $onRateRefresh = null): array
 {
     $rate = [
         'courier_company' => 'jne',
@@ -128,7 +253,12 @@ function createCheckoutShippingCart(array $quantities = [4], bool $withDimension
 
             return Http::response(['pricing' => [[...$rate, 'price' => $rateRequests > 1 ? $nextRatePrice : $rate['price']]]]);
         },
-        '*/snap/v1/transactions' => $snapResponse ?? Http::response(['token' => 'test-token', 'redirect_url' => 'https://example.test/payment']),
+        'api-sandbox.doku.com/checkout/v1/payment' => $checkoutResponse ?? function (Request $request) {
+            return Http::response(['response' => [
+                'order' => ['invoice_number' => $request['order']['invoice_number'], 'amount' => $request['order']['amount']],
+                'payment' => ['url' => 'https://sandbox.doku.com/checkout-link-v2/test', 'expired_date' => now()->addMinutes($request['payment']['payment_due_date'])->setTimezone('Asia/Jakarta')->format('YmdHis')],
+            ]]);
+        },
         'api.biteship.com/v1/orders' => Http::response(['id' => 'test-booking', 'status' => 'confirmed']),
     ]);
     $customer = User::factory()->create();
@@ -252,7 +382,7 @@ it('quotes and books matching unit weights and dimensions from the order snapsho
         'customer_address_id' => $address->id,
         'shipping_rate_id' => $rate['id'],
         'idempotency_key' => (string) Str::uuid(),
-        'no_return_refund_agreed' => true,
+        'payment_method' => 'qris', 'no_return_refund_agreed' => true,
     ])->assertOk()->json();
     $order = Order::query()->findOrFail($result['order_id']);
 
@@ -262,6 +392,7 @@ it('quotes and books matching unit weights and dimensions from the order snapsho
         $product->variants()->update(['weight' => 7777, 'length' => 77, 'width' => 77, 'height' => 77]);
     }
 
+    app(FinalizeReservedStockAction::class)->execute($order);
     $order->update(['order_status' => 'ready_to_ship', 'payment_status' => 'paid']);
     $admin = User::factory()->create(['role' => 'admin', 'is_active' => true]);
     $this->actingAs($admin)->post(route('admin.orders.shipments.store', $order), ['source' => 'order_detail'])->assertSessionHasNoErrors();
@@ -308,7 +439,7 @@ it('rejects a selected rate when variant shipping attributes change', function (
         'customer_address_id' => $address->id,
         'shipping_rate_id' => $rate['id'],
         'idempotency_key' => (string) Str::uuid(),
-        'no_return_refund_agreed' => true,
+        'payment_method' => 'qris', 'no_return_refund_agreed' => true,
     ])->assertUnprocessable()->assertJsonValidationErrors('shipping_rate_id')
         ->assertJsonPath('errors.shipping_rate_id.0', 'Keranjang berubah. Pilih ulang ongkir.');
 
@@ -342,7 +473,7 @@ it('rejects invalid variant dimensions after selecting a rate without creating a
 
     $this->postJson(route('checkout.place-order'), [
         'customer_address_id' => $address->id, 'shipping_rate_id' => $rate['id'],
-        'idempotency_key' => (string) Str::uuid(), 'no_return_refund_agreed' => true,
+        'idempotency_key' => (string) Str::uuid(), 'payment_method' => 'qris', 'no_return_refund_agreed' => true,
     ])->assertUnprocessable()->assertJsonValidationErrors('shipping');
 
     expect(Order::query()->count())->toBe(0)->and($variant->fresh()->reserved_stock)->toBe(0);
@@ -357,7 +488,7 @@ it('does not invalidate a shipping quote when only product dimensions change', f
 
     $this->postJson(route('checkout.place-order'), [
         'customer_address_id' => $address->id, 'shipping_rate_id' => $rate['id'],
-        'idempotency_key' => (string) Str::uuid(), 'no_return_refund_agreed' => true,
+        'idempotency_key' => (string) Str::uuid(), 'payment_method' => 'qris', 'no_return_refund_agreed' => true,
     ])->assertOk();
 
     $item = Order::query()->sole()->items()->sole();
@@ -379,7 +510,7 @@ it('uses distinct sizes for two variants of the same product', function () {
     $this->postJson(route('checkout.shipping-rate'), ['shipping_rate_id' => $rate['id']])->assertOk();
     $this->postJson(route('checkout.place-order'), [
         'customer_address_id' => $address->id, 'shipping_rate_id' => $rate['id'],
-        'idempotency_key' => (string) Str::uuid(), 'no_return_refund_agreed' => true,
+        'idempotency_key' => (string) Str::uuid(), 'payment_method' => 'qris', 'no_return_refund_agreed' => true,
     ])->assertOk();
 
     $item = Order::query()->sole()->items()->where('product_variant_id', $variant->id)->sole();
@@ -388,6 +519,7 @@ it('uses distinct sizes for two variants of the same product', function () {
         && collect($request['items'])->firstWhere('description', 'SECOND-VARIANT')['weight'] === 350);
 
     $order = Order::query()->sole();
+    app(FinalizeReservedStockAction::class)->execute($order);
     $order->update(['order_status' => 'ready_to_ship', 'payment_status' => 'paid']);
     $this->actingAs(User::factory()->create(['role' => 'admin', 'is_active' => true]))
         ->post(route('admin.orders.shipments.store', $order), ['source' => 'order_detail'])->assertSessionHasNoErrors();
@@ -409,7 +541,7 @@ it('rechecks locked variant dimensions after refreshing the provider quote', fun
 
     $this->postJson(route('checkout.place-order'), [
         'customer_address_id' => $address->id, 'shipping_rate_id' => $rate['id'],
-        'idempotency_key' => (string) Str::uuid(), 'no_return_refund_agreed' => true,
+        'idempotency_key' => (string) Str::uuid(), 'payment_method' => 'qris', 'no_return_refund_agreed' => true,
     ])->assertUnprocessable()->assertJsonValidationErrors($weight ? 'shipping_rate_id' : 'shipping');
 
     expect(Order::query()->count())->toBe(0)->and($variant->fresh()->reserved_stock)->toBe(0);
@@ -426,10 +558,32 @@ it('rejects a selected rate when Biteship changes the price before payment', fun
         'customer_address_id' => $address->id,
         'shipping_rate_id' => $rate['id'],
         'idempotency_key' => (string) Str::uuid(),
-        'no_return_refund_agreed' => true,
+        'payment_method' => 'qris', 'no_return_refund_agreed' => true,
     ])->assertUnprocessable()->assertJsonValidationErrors('shipping_rate_id')
         ->assertJsonPath('errors.shipping_rate_id.0', 'Ongkir berubah. Pilih ulang ongkir.');
 
     expect(Order::query()->count())->toBe(0);
     Http::assertSentCount(2);
+});
+
+it('requires a listed payment method before any reservation or external request', function (mixed $method) {
+    [$customer, $address] = createCheckoutShippingCart([1]);
+    $this->actingAs($customer)->postJson(route('checkout.place-order'), [
+        'customer_address_id' => $address->id, 'shipping_rate_id' => 'unused',
+        'idempotency_key' => (string) Str::uuid(), 'no_return_refund_agreed' => true,
+        'payment_method' => $method,
+    ])->assertUnprocessable()->assertJsonValidationErrors('payment_method');
+    expect(Order::count())->toBe(0)->and(Cart::query()->sole()->items()->count())->toBe(1);
+    Http::assertNothingSent();
+})->with([null, '', 'va', 'va_bca', 'va_mandiri', 'va_bni', 'va_bri', 'va_bsi', 'va_permata', 'va_cimb', 'va_danamon', 'va_btn', 'va_bnc', 'credit_card', [['va_bca']]]);
+
+it('exposes only QRIS and rejects a bank switch on an existing checkout', function () {
+    [$customer, $address] = createCheckoutShippingCart([1]);
+    $rate = $this->actingAs($customer)->postJson(route('checkout.shipping-rates'), ['customer_address_id' => $address->id])->assertOk()->json('rates.0');
+    $this->postJson(route('checkout.shipping-rate'), ['shipping_rate_id' => $rate['id']])->assertOk();
+    $payload = ['customer_address_id' => $address->id, 'shipping_rate_id' => $rate['id'], 'idempotency_key' => (string) Str::uuid(), 'payment_method' => 'qris', 'no_return_refund_agreed' => true];
+    $this->postJson(route('checkout.place-order'), $payload)->assertOk();
+    $this->postJson(route('checkout.place-order'), [...$payload, 'payment_method' => 'va_bni'])->assertUnprocessable()->assertJsonValidationErrors('payment_method');
+    expect(Order::query()->sole()->payment->payment_method)->toBe('qris');
+    Http::assertSent(fn (Request $request): bool => str_contains($request->url(), '/checkout/v1/payment') && $request['payment']['payment_method_types'] === ['QRIS']);
 });

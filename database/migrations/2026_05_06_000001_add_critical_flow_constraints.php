@@ -20,7 +20,6 @@ return new class extends Migration
         Schema::table('payments', function (Blueprint $table): void {
             if (! Schema::hasColumn('payments', 'last_synced_at')) {
                 $table->unique('order_id');
-                $table->index('midtrans_transaction_id');
                 $table->timestamp('last_synced_at')->nullable()->after('expired_at');
                 $table->text('failure_reason')->nullable()->after('last_synced_at');
             }
@@ -68,7 +67,6 @@ return new class extends Migration
 
         Schema::table('payments', function (Blueprint $table): void {
             $table->dropUnique(['order_id']);
-            $table->dropIndex(['midtrans_transaction_id']);
             $table->dropColumn(['last_synced_at', 'failure_reason']);
         });
 
@@ -84,7 +82,7 @@ return new class extends Migration
         });
 
         Schema::table('payment_logs', function (Blueprint $table): void {
-            $table->dropUnique(['payload_hash']);
+            $table->dropIndex(['payload_hash']);
             $table->dropColumn('payload_hash');
         });
     }

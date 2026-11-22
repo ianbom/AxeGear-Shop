@@ -13,7 +13,7 @@ use App\Models\ProductVariant;
 use App\Models\User;
 use App\Models\Voucher;
 use App\Services\Integrations\BiteshipService;
-use App\Services\Integrations\MidtransService;
+use App\Services\Integrations\DokuService;
 use App\Services\Settings\SiteSettingService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -26,7 +26,7 @@ class CheckoutService
 {
     public function __construct(
         private readonly BiteshipService $biteship,
-        private readonly MidtransService $midtrans,
+        private readonly DokuService $doku,
         private readonly SiteSettingService $settings,
         private readonly ReleaseStockReservationAction $releaseStock,
         private readonly ReleaseVoucherReservationAction $releaseVoucher,
@@ -166,20 +166,29 @@ class CheckoutService
             ->first();
 
         if ($existingOrder) {
-            if ($existingOrder->payment?->midtrans_redirect_url) {
-                return [
-                    'order_id' => $existingOrder->id,
-                    'payment_id' => $existingOrder->payment->id,
-                    'redirect_url' => $existingOrder->payment->midtrans_redirect_url,
-                ];
-            }
+            $this->assertPaymentMethodUnchanged($existingOrder->payment, $payload['payment_method']);
 
-            throw ValidationException::withMessages(['checkout' => 'Checkout sebelumnya belum selesai. Periksa pesanan atau hubungi admin sebelum mencoba lagi.']);
+            return $this->resumeCheckout($existingOrder->payment);
         }
 
+        $this->doku->assertConfigured();
+        $expiry = $this->settings->get('payment_expiry_duration', '1440');
+        if (! is_string($expiry) || ! preg_match('/^[1-9][0-9]{0,4}$/D', $expiry) || (int) $expiry > 10080) {
+            throw ValidationException::withMessages(['payment' => 'Durasi pembayaran tidak valid. Hubungi admin.']);
+        }
+        $expiryMinutes = (int) $expiry;
         $this->validateSelectedShippingRate($user, (int) $payload['customer_address_id'], (string) $payload['shipping_rate_id']);
 
-        $payment = DB::transaction(function () use ($user, $payload): Payment {
+        $created = false;
+        $payment = DB::transaction(function () use ($user, $payload, $expiryMinutes, &$created): Payment {
+            User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
+            $existing = Order::query()->where('user_id', $user->id)->where('checkout_idempotency_key', $payload['idempotency_key'])->first();
+            if ($existing) {
+                $payment = $existing->payment()->firstOrFail();
+                $this->assertPaymentMethodUnchanged($payment, $payload['payment_method']);
+
+                return $payment;
+            }
             $address = $this->ownedAddress($user, (int) $payload['customer_address_id']);
             $rate = $this->rateFromPayload((string) $payload['shipping_rate_id']);
             $items = $this->lockedCartItems($user);
@@ -251,6 +260,7 @@ class CheckoutService
                 'voucher_id' => $voucher?->id,
                 'voucher_code' => $voucher?->code,
                 'payment_status' => 'pending',
+                'stock_reserved_at' => now(),
                 'order_status' => 'pending_payment',
                 'shipping_status' => 'not_created',
                 'no_return_refund_agreed' => (bool) ($payload['no_return_refund_agreed'] ?? false),
@@ -309,54 +319,81 @@ class CheckoutService
                 'raw_rate_response' => $rate['raw'] ?? $rate,
             ]);
 
+            if ((float) $order->grand_total < 1 || (float) $order->grand_total > 999999999999) {
+                throw ValidationException::withMessages(['payment' => 'Nominal pembayaran tidak valid.']);
+            }
             $payment = $order->payment()->create([
-                'payment_provider' => 'midtrans',
-                'midtrans_order_id' => $order->order_number,
+                'payment_provider' => 'doku',
+                'payment_method' => $payload['payment_method'],
+                'provider_reference' => $order->order_number,
+                'create_request_id' => (string) Str::uuid(),
                 'gross_amount' => $order->grand_total,
                 'currency' => 'IDR',
                 'transaction_status' => 'pending',
-                'expires_at' => now()->addMinutes((int) ($this->settings->first(['payment_expiry_duration'], '1440') ?: 1440)),
+                'expires_at' => now()->addMinutes($expiryMinutes),
+                'raw_response' => ['expiry_minutes' => $expiryMinutes, 'checkout_creation_uncertain' => true],
             ]);
+            $created = true;
 
             return $payment;
         });
 
+        if (! $created) {
+            return $this->resumeCheckout($payment);
+        }
+
         try {
-            $snap = $this->midtrans->createSnapTransaction($payment->order()->with(['items', 'address'])->firstOrFail());
-            DB::transaction(function () use ($payment, $snap): void {
-                $payment->refresh()->update([
-                    'midtrans_snap_token' => $snap['token'] ?? null,
-                    'midtrans_redirect_url' => $snap['redirect_url'] ?? null,
-                    'raw_response' => $snap,
+            $checkout = $this->doku->createCheckout($payment->order, $payment->create_request_id, $expiryMinutes, $payment->payment_method);
+            DB::transaction(function () use ($payment, $checkout): void {
+                $order = $payment->order()->lockForUpdate()->firstOrFail();
+                $locked = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
+                $locked->setRelation('order', $order);
+                $locked->update([
+                    'checkout_url' => $checkout['checkout_url'],
+                    'expires_at' => $checkout['expires_at'],
+                    'raw_response' => [...($locked->raw_response ?? []), 'checkout' => $checkout['raw_response'], 'checkout_creation_uncertain' => false],
                 ]);
             });
         } catch (\Throwable $exception) {
-            DB::transaction(function () use ($payment, $exception): void {
+            $rejected = DB::transaction(function () use ($payment, $exception): bool {
                 $order = $payment->order()->lockForUpdate()->firstOrFail();
                 $payment = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
 
                 if ($order->payment_status !== 'pending') {
-                    return;
+                    return false;
                 }
 
-                if ($exception instanceof ValidationException) {
-                    $this->releaseStock->execute($order);
-                    $this->releaseVoucher->execute($order);
-                    $order->update(['payment_status' => 'failed', 'order_status' => 'payment_failed', 'cancelled_at' => now()]);
-                    $payment->update(['transaction_status' => 'snap_failed', 'failure_reason' => $exception->getMessage(), 'raw_response' => ['error' => $exception->getMessage()]]);
-
-                    return;
-                }
-
-                $order->update(['payment_status' => 'manual_review']);
+                $this->releaseStock->execute($order);
+                $this->releaseVoucher->execute($order);
+                $order->update(['payment_status' => 'failed', 'order_status' => 'payment_failed', 'cancelled_at' => now()]);
                 $payment->update([
-                    'transaction_status' => 'manual_review',
-                    'failure_reason' => 'Pembuatan pembayaran belum dapat dipastikan. Sinkronkan status Midtrans sebelum tindakan lebih lanjut.',
-                    'raw_response' => ['snap_creation_uncertain' => true, 'error' => $exception->getMessage()],
+                    'transaction_status' => 'failed',
+                    'failure_reason' => $exception instanceof ValidationException
+                        ? ($exception->errors()['payment'][0] ?? 'Data checkout ditolak DOKU.')
+                        : 'DOKU belum dapat membuat pembayaran QRIS. Checkout dibatalkan. Silakan coba lagi.',
+                    'raw_response' => [
+                        ...($payment->raw_response ?? []),
+                        'checkout_creation_uncertain' => ! ($exception instanceof ValidationException),
+                        'checkout_rejected' => true,
+                        'checkout_error' => ['type' => $exception::class, 'code' => $exception->getCode()],
+                    ],
                 ]);
+
+                return true;
             });
 
-            throw ValidationException::withMessages(['payment' => 'Pembayaran belum tersedia. Periksa pesanan atau hubungi admin sebelum mencoba lagi.']);
+            if ($exception instanceof ValidationException) {
+                if ($rejected) {
+                    $exception->response = response()->json(['errors' => $exception->errors(), 'retry_allowed' => true], 422);
+                }
+                throw $exception;
+            }
+
+            $failure = ValidationException::withMessages(['payment' => 'DOKU belum dapat membuat pembayaran QRIS. Checkout dibatalkan. Silakan coba lagi.']);
+            if ($rejected) {
+                $failure->response = response()->json(['errors' => $failure->errors(), 'retry_allowed' => true], 422);
+            }
+            throw $failure;
         }
 
         $cart = Cart::query()->firstWhere('user_id', $user->id);
@@ -367,8 +404,30 @@ class CheckoutService
         return [
             'order_id' => $payment->order_id,
             'payment_id' => $payment->id,
-            'redirect_url' => $payment->midtrans_redirect_url,
+            'redirect_url' => $this->doku->resumableCheckoutUrl($payment),
         ];
+    }
+
+    private function assertPaymentMethodUnchanged(?Payment $payment, string $method): void
+    {
+        if ($payment && $payment->payment_method !== $method && data_get($payment->raw_response, 'checkout_rejected') !== true) {
+            throw ValidationException::withMessages(['payment_method' => 'Metode pembayaran pesanan sebelumnya berbeda. Lanjutkan pembayaran melalui detail pesanan.']);
+        }
+    }
+
+    private function resumeCheckout(?Payment $payment): array
+    {
+        if ($payment?->transaction_status === 'failed' && data_get($payment->raw_response, 'checkout_rejected') === true) {
+            $exception = ValidationException::withMessages(['payment' => $payment->failure_reason ?? 'Pembayaran ditolak. Silakan coba checkout kembali.']);
+            $exception->response = response()->json(['errors' => $exception->errors(), 'retry_allowed' => true], 422);
+            throw $exception;
+        }
+        $url = $payment ? $this->doku->resumableCheckoutUrl($payment) : null;
+        if ($url === null) {
+            throw ValidationException::withMessages(['checkout' => 'Checkout sebelumnya belum dapat dilanjutkan. Periksa pesanan atau hubungi admin sebelum mencoba lagi.']);
+        }
+
+        return ['order_id' => $payment->order_id, 'payment_id' => $payment->id, 'redirect_url' => $url];
     }
 
     private function cartItems(User $user): Collection

@@ -112,6 +112,7 @@ class ShipmentManagementService
     public function canCreateShipment(Order $order, ?Shipment $shipment): bool
     {
         return $order->payment_status === PaymentStatus::Paid->value
+            && (! $order->stock_reserved_at || $order->stock_finalized_at)
             && ! (ShippingStatus::issueDetails($shipment?->shipping_status ?? $order->shipping_status, $shipment?->raw_order_response)['is_terminal'] ?? false)
             && in_array($order->order_status, [OrderStatus::ReadyToShip->value, OrderStatus::ShipmentFailed->value, OrderStatus::ShipmentProblem->value], true)
             && (! $shipment || (! $shipment->biteship_order_id && ! data_get($shipment->raw_order_response, 'booking_uncertain', false) && in_array($shipment->shipping_status, ShippingStatus::retryableValues(), true)));
@@ -173,6 +174,9 @@ class ShipmentManagementService
 
             if ($order->payment_status !== PaymentStatus::Paid->value) {
                 throw ValidationException::withMessages(['shipment' => 'Shipment hanya bisa dibuat untuk order paid.']);
+            }
+            if ($order->stock_reserved_at && ! $order->stock_finalized_at) {
+                throw ValidationException::withMessages(['shipment' => 'Stok pesanan belum berhasil diproses. Pengiriman belum dapat dibuat.']);
             }
 
             if (! in_array($order->order_status, [OrderStatus::ReadyToShip->value, OrderStatus::ShipmentFailed->value, OrderStatus::ShipmentProblem->value], true)) {
