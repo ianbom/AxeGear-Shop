@@ -1,0 +1,1 @@
+function e(e){let t=e.trim().toLowerCase();return/(?:^|\s)(?:pagination\.)?previous(?:\s|$)|&laquo;|«|←/.test(t)?`previous`:/(?:^|\s)(?:pagination\.)?next(?:\s|$)|&raquo;|»|→/.test(t)?`next`:null}export{e as t};
