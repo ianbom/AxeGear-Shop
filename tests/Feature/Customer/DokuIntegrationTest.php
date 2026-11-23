@@ -72,7 +72,24 @@ it('uses the configured environment for QRIS checkout and status lookup', functi
     Http::assertSent(fn ($request) => $request->url() === 'https://'.$apiHost.'/checkout/v1/payment'
         && $request['payment']['payment_method_types'] === ['QRIS']
         && $request->header('Client-Id') === ['test-client']);
-})->with([[false, 'api-sandbox.doku.com', 'sandbox.doku.com'], [true, 'api.doku.com', 'jokul.doku.com']]);
+})->with([
+    [false, 'api-sandbox.doku.com', 'sandbox.doku.com'],
+    [true, 'api.doku.com', 'jokul.doku.com'],
+    [true, 'api.doku.com', 'checkout.doku.com'],
+]);
+
+it('accepts the new production checkout host only over HTTPS and only in production', function () {
+    $service = app(DokuService::class);
+    expect($service->checkoutUrlIsValid('https://checkout.doku.com/checkout-link-v2/test'))->toBeFalse();
+
+    config(['services.doku.is_production' => true]);
+
+    expect($service->checkoutUrlIsValid('https://checkout.doku.com/checkout-link-v2/test'))->toBeTrue()
+        ->and($service->checkoutUrlIsValid('http://checkout.doku.com/pay'))->toBeFalse()
+        ->and($service->checkoutUrlIsValid('https://checkout.doku.com.example.test/pay'))->toBeFalse()
+        ->and($service->checkoutUrlIsValid('https://user@checkout.doku.com/pay'))->toBeFalse()
+        ->and($service->checkoutUrlIsValid('https://checkout.doku.com:8443/pay'))->toBeFalse();
+});
 
 it('rejects unlisted methods before contacting DOKU', function () {
     expect(fn () => app(DokuService::class)->createCheckout(new Order(['order_number' => 'INV-1', 'grand_total' => 125000]), 'request-1', 30, 'credit_card'))->toThrow(ValidationException::class);

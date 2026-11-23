@@ -2,9 +2,11 @@
 
 namespace App\Services\Integrations;
 
+use App\Exceptions\DokuCheckoutResponseException;
 use App\Models\Order;
 use App\Models\Payment;
 use Carbon\CarbonImmutable;
+use Carbon\Exceptions\InvalidFormatException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -84,23 +86,36 @@ class DokuService
         }
 
         $payload = $response->json();
-        $invoice = data_get($payload, 'response.order.invoice_number');
+        $invoiceMatches = data_get($payload, 'response.order.invoice_number') === $order->order_number;
         $url = data_get($payload, 'response.payment.url');
+        $validUrl = $this->checkoutUrlIsValid($url);
         $expiry = data_get($payload, 'response.payment.expired_date');
-        if ($invoice !== $order->order_number || ! $this->checkoutUrlIsValid($url) || ! is_string($expiry) || ! preg_match('/^\d{14}$/D', $expiry)) {
-            throw new RuntimeException('Respons checkout DOKU tidak lengkap atau tidak valid.');
-        }
         $responseAmount = data_get($payload, 'response.order.amount');
-        if ($responseAmount !== null && $this->wholeAmount($responseAmount) !== $amount) {
-            throw new RuntimeException('Nominal response DOKU tidak sesuai.');
-        }
-        try {
-            $expiresAt = CarbonImmutable::createFromFormat('!YmdHis', $expiry, 'Asia/Jakarta');
-            if (! $expiresAt || $expiresAt->format('YmdHis') !== $expiry || $expiresAt->isPast()) {
-                throw new RuntimeException('Deadline checkout DOKU tidak valid.');
+        $amountMatches = $responseAmount === null ? null : $this->wholeAmount($responseAmount) === $amount;
+        $expiryFormatValid = is_string($expiry) && preg_match('/^\d{14}$/D', $expiry) === 1;
+        $expiresAt = null;
+        if ($expiryFormatValid) {
+            try {
+                $expiresAt = CarbonImmutable::createFromFormat('!YmdHis', $expiry, 'Asia/Jakarta');
+            } catch (InvalidFormatException) {
+                $expiresAt = null;
             }
-        } catch (\Throwable $exception) {
-            throw new RuntimeException('Deadline checkout DOKU tidak valid.', previous: $exception);
+        }
+        if (! $invoiceMatches || ! $validUrl || $amountMatches === false
+            || ! $expiresAt || $expiresAt->format('YmdHis') !== $expiry || $expiresAt->isPast()) {
+            $host = is_string($url) ? parse_url($url, PHP_URL_HOST) : null;
+            Log::warning('DOKU checkout response invalid', [
+                'request_id' => $requestId,
+                'http_status' => $response->status(),
+                'checkout_host' => is_string($host) && filter_var($host, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) ? $host : null,
+                'checkout_url_valid' => $validUrl,
+                'invoice_matches' => $invoiceMatches,
+                'amount_matches' => $amountMatches,
+                'expiry_type' => get_debug_type($expiry),
+                'expiry_format_valid' => $expiryFormatValid,
+            ]);
+
+            throw new DokuCheckoutResponseException('Respons checkout DOKU tidak lengkap atau tidak valid.');
         }
 
         return ['checkout_url' => $url, 'expires_at' => $expiresAt->setTimezone(config('app.timezone', 'UTC')), 'raw_response' => $payload];
@@ -209,8 +224,8 @@ class DokuService
         $parts = parse_url($url);
 
         return ($parts['scheme'] ?? null) === 'https'
-            && in_array($parts['host'] ?? null, config('services.doku.is_production') ? ['jokul.doku.com'] : ['sandbox.doku.com', 'staging.doku.com'], true)
-            && ! isset($parts['user'], $parts['pass']) && ! isset($parts['user']) && ! isset($parts['port']);
+            && in_array($parts['host'] ?? null, config('services.doku.is_production') ? ['jokul.doku.com', 'checkout.doku.com'] : ['sandbox.doku.com', 'staging.doku.com'], true)
+            && ! isset($parts['user']) && ! isset($parts['pass']) && ! isset($parts['port']);
     }
 
     private function wholeAmount(mixed $amount): ?string

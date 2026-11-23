@@ -38,9 +38,6 @@ it('cancels checkout without stock or voucher reservations when DOKU creation fa
         'server_error' => Http::response(['error' => 'Unavailable'], 503),
         'malformed_rejection' => Http::response([], 400),
         'duplicate_order' => Http::response(['error_messages' => ['duplicate invoice_number']], 400),
-        'missing_redirect' => Http::response(['response' => ['payment' => []]]),
-        'invalid_redirect' => Http::response(['response' => ['payment' => ['url' => 'https://evil.example/pay']]]),
-        default => Http::response([]),
     };
     [$customer, $address] = createCheckoutShippingCart([1], checkoutResponse: $checkoutResponse);
     $voucher = Voucher::query()->create(['code' => 'REVIEW10', 'name' => 'Review test', 'discount_type' => 'percentage', 'discount_value' => 10, 'is_active' => true]);
@@ -74,7 +71,52 @@ it('cancels checkout without stock or voucher reservations when DOKU creation fa
         ->and($order->items->first()->variant->fresh()->stock)->toBe(10)
         ->and($voucher->fresh()->used_count)->toBe(0)
         ->and(count(Http::recorded()))->toBe($sent);
-})->with(['timeout', 'empty_response', 'server_error', 'malformed_rejection', 'duplicate_order', 'missing_redirect', 'invalid_redirect']);
+})->with(['timeout', 'server_error', 'malformed_rejection', 'duplicate_order']);
+
+it('keeps an accepted DOKU checkout pending when its link cannot be validated or saved', function (string $outcome) {
+    config(['services.doku.is_production' => true]);
+    [$customer, $address] = createCheckoutShippingCart([1], checkoutResponse: function (Request $request) use ($outcome) {
+        $url = match ($outcome) {
+            'invalid redirect' => 'https://checkout.doku.com.example.test/pay',
+            'missing redirect' => null,
+            'save failure' => 'https://checkout.doku.com/checkout-link-v2/test',
+        };
+
+        return Http::response(['response' => [
+            'order' => ['invoice_number' => $request['order']['invoice_number'], 'amount' => $request['order']['amount']],
+            'payment' => ['url' => $url, 'expired_date' => now()->addHour()->setTimezone('Asia/Jakarta')->format('YmdHis')],
+        ]]);
+    });
+    if ($outcome === 'save failure') {
+        Payment::updating(function (Payment $payment): void {
+            if ($payment->isDirty('checkout_url')) {
+                throw new RuntimeException('Simulated checkout persistence failure');
+            }
+        });
+    }
+    $voucher = Voucher::query()->create(['code' => 'KEEP10', 'name' => 'Pending test', 'discount_type' => 'percentage', 'discount_value' => 10, 'is_active' => true]);
+    $this->actingAs($customer)->postJson(route('checkout.voucher.apply'), ['voucher_code' => $voucher->code])->assertOk();
+    $rate = $this->postJson(route('checkout.shipping-rates'), ['customer_address_id' => $address->id])->assertOk()->json('rates.0');
+    $this->postJson(route('checkout.shipping-rate'), ['shipping_rate_id' => $rate['id']])->assertOk();
+    $payload = ['customer_address_id' => $address->id, 'shipping_rate_id' => $rate['id'], 'idempotency_key' => (string) Str::uuid(), 'payment_method' => 'qris', 'no_return_refund_agreed' => true];
+
+    $this->postJson(route('checkout.place-order'), $payload)->assertUnprocessable()
+        ->assertJsonValidationErrors('payment')->assertJsonMissingPath('retry_allowed');
+    $sent = count(Http::recorded());
+    $this->postJson(route('checkout.place-order'), $payload)->assertUnprocessable()
+        ->assertJsonValidationErrors('payment')->assertJsonMissingPath('retry_allowed');
+
+    $order = Order::query()->sole();
+    expect($order->payment_status)->toBe('pending')
+        ->and($order->payment->transaction_status)->toBe('pending')
+        ->and($order->payment->checkout_url)->toBeNull()
+        ->and($order->payment->failure_reason)->not->toBeNull()
+        ->and($order->stock_released_at)->toBeNull()
+        ->and($voucher->fresh()->used_count)->toBe(1)
+        ->and($order->items->first()->variant->reserved_stock)->toBe(1)
+        ->and(Cart::query()->sole()->items()->count())->toBe(1)
+        ->and(count(Http::recorded()))->toBe($sent);
+})->with(['invalid redirect', 'missing redirect', 'save failure']);
 
 it('releases reservations only for a confirmed DOKU rejection', function () {
     [$customer, $address] = createCheckoutShippingCart([1], checkoutResponse: Http::response(['error_messages' => ['order.amount must greater than 0']], 400));
@@ -160,16 +202,19 @@ it('uses one rounded IDR total in checkout and DOKU', function () {
     });
 });
 
-it('reuses one DOKU checkout without reserving twice and hides paid links', function () {
+it('reuses one DOKU checkout without reserving twice and hides paid links', function (bool $production, string $host) {
+    config(['services.doku.is_production' => $production]);
     [$customer, $address] = createCheckoutShippingCart([1]);
     SiteSetting::query()->create(['key' => 'payment_expiry_duration', 'value' => '30']);
     $rate = $this->actingAs($customer)->postJson(route('checkout.shipping-rates'), ['customer_address_id' => $address->id])->assertOk()->json('rates.0');
     $this->postJson(route('checkout.shipping-rate'), ['shipping_rate_id' => $rate['id']])->assertOk();
     $payload = ['customer_address_id' => $address->id, 'shipping_rate_id' => $rate['id'], 'idempotency_key' => (string) Str::uuid(), 'payment_method' => 'qris', 'no_return_refund_agreed' => true];
-    $first = $this->postJson(route('checkout.place-order'), $payload)->assertOk()->json();
+    $first = $this->postJson(route('checkout.place-order'), $payload)->assertOk()
+        ->assertJsonPath('redirect_url', 'https://'.$host.'/checkout-link-v2/test')->json();
     $this->postJson(route('checkout.place-order'), $payload)->assertOk()->assertExactJson($first);
     $order = Order::query()->sole();
-    expect($order->payment->provider_reference)->toBe($order->order_number)
+    expect($order->payment->transaction_status)->toBe('pending')
+        ->and($order->payment->provider_reference)->toBe($order->order_number)
         ->and($order->stock_reserved_at)->not->toBeNull()
         ->and($order->payment->create_request_id)->not->toBeEmpty()
         ->and($order->payment->raw_response['expiry_minutes'])->toBe(30)
@@ -179,7 +224,7 @@ it('reuses one DOKU checkout without reserving twice and hides paid links', func
     $order->payment->update(['paid_at' => now(), 'transaction_status' => 'success']);
     $this->postJson(route('checkout.place-order'), $payload)->assertUnprocessable();
     Http::assertSentCount(3);
-});
+})->with([[false, 'sandbox.doku.com'], [true, 'checkout.doku.com']]);
 
 it('rejects invalid DOKU configuration before creating reservations', function (string $key, mixed $value) {
     [$customer, $address] = createCheckoutShippingCart([1]);
@@ -244,6 +289,9 @@ function createCheckoutShippingCart(array $quantities = [4], bool $withDimension
         'price' => 20000,
     ];
     $rateRequests = 0;
+    $dokuProduction = config('services.doku.is_production') === true;
+    $dokuApiHost = $dokuProduction ? 'api.doku.com' : 'api-sandbox.doku.com';
+    $dokuCheckoutHost = $dokuProduction ? 'checkout.doku.com' : 'sandbox.doku.com';
     Http::fake([
         'api.biteship.com/v1/rates/couriers' => function () use (&$rateRequests, $rate, $nextRatePrice, $onRateRefresh) {
             $rateRequests++;
@@ -253,10 +301,10 @@ function createCheckoutShippingCart(array $quantities = [4], bool $withDimension
 
             return Http::response(['pricing' => [[...$rate, 'price' => $rateRequests > 1 ? $nextRatePrice : $rate['price']]]]);
         },
-        'api-sandbox.doku.com/checkout/v1/payment' => $checkoutResponse ?? function (Request $request) {
+        $dokuApiHost.'/checkout/v1/payment' => $checkoutResponse ?? function (Request $request) use ($dokuCheckoutHost) {
             return Http::response(['response' => [
                 'order' => ['invoice_number' => $request['order']['invoice_number'], 'amount' => $request['order']['amount']],
-                'payment' => ['url' => 'https://sandbox.doku.com/checkout-link-v2/test', 'expired_date' => now()->addMinutes($request['payment']['payment_due_date'])->setTimezone('Asia/Jakarta')->format('YmdHis')],
+                'payment' => ['url' => 'https://'.$dokuCheckoutHost.'/checkout-link-v2/test', 'expired_date' => now()->addMinutes($request['payment']['payment_due_date'])->setTimezone('Asia/Jakarta')->format('YmdHis')],
             ]]);
         },
         'api.biteship.com/v1/orders' => Http::response(['id' => 'test-booking', 'status' => 'confirmed']),

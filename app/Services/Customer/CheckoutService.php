@@ -4,6 +4,7 @@ namespace App\Services\Customer;
 
 use App\Actions\Stock\ReleaseStockReservationAction;
 use App\Actions\Vouchers\ReleaseVoucherReservationAction;
+use App\Exceptions\DokuCheckoutResponseException;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\CustomerAddress;
@@ -17,13 +18,17 @@ use App\Services\Integrations\DokuService;
 use App\Services\Settings\SiteSettingService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class CheckoutService
 {
+    private const CHECKOUT_PENDING_MESSAGE = 'DOKU sudah menerima pesanan, tetapi tautan pembayaran belum tersedia. Periksa pesanan Anda atau hubungi admin.';
+
     public function __construct(
         private readonly BiteshipService $biteship,
         private readonly DokuService $doku,
@@ -355,6 +360,21 @@ class CheckoutService
                 ]);
             });
         } catch (\Throwable $exception) {
+            if (isset($checkout) || $exception instanceof DokuCheckoutResponseException) {
+                if (isset($checkout)) {
+                    Log::error('DOKU checkout persistence failed', [
+                        'request_id' => $payment->create_request_id,
+                        'exception' => $exception::class,
+                        'sqlstate' => $exception instanceof QueryException ? ($exception->errorInfo[0] ?? null) : null,
+                    ]);
+                }
+                Payment::query()->whereKey($payment->id)->where('transaction_status', 'pending')->update([
+                    'failure_reason' => self::CHECKOUT_PENDING_MESSAGE,
+                ]);
+
+                throw ValidationException::withMessages(['payment' => self::CHECKOUT_PENDING_MESSAGE]);
+            }
+
             $rejected = DB::transaction(function () use ($payment, $exception): bool {
                 $order = $payment->order()->lockForUpdate()->firstOrFail();
                 $payment = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
@@ -417,13 +437,18 @@ class CheckoutService
 
     private function resumeCheckout(?Payment $payment): array
     {
-        if ($payment?->transaction_status === 'failed' && data_get($payment->raw_response, 'checkout_rejected') === true) {
-            $exception = ValidationException::withMessages(['payment' => $payment->failure_reason ?? 'Pembayaran ditolak. Silakan coba checkout kembali.']);
+        if (($payment?->transaction_status === 'failed' && data_get($payment->raw_response, 'checkout_rejected') === true)
+            || ($payment?->transaction_status === 'expired' && data_get($payment->raw_response, 'checkout_creation_uncertain') === true)) {
+            $exception = ValidationException::withMessages(['payment' => $payment->failure_reason ?? 'Pembayaran sudah berakhir atau ditolak. Silakan coba checkout kembali.']);
             $exception->response = response()->json(['errors' => $exception->errors(), 'retry_allowed' => true], 422);
             throw $exception;
         }
         $url = $payment ? $this->doku->resumableCheckoutUrl($payment) : null;
         if ($url === null) {
+            if ($payment?->transaction_status === 'pending' && $payment->failure_reason !== null
+                && data_get($payment->raw_response, 'checkout_creation_uncertain') === true) {
+                throw ValidationException::withMessages(['payment' => self::CHECKOUT_PENDING_MESSAGE]);
+            }
             throw ValidationException::withMessages(['checkout' => 'Checkout sebelumnya belum dapat dilanjutkan. Periksa pesanan atau hubungi admin sebelum mencoba lagi.']);
         }
 
